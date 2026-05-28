@@ -1,4 +1,10 @@
 # Neptun Mobile
+
+##
+# All downloads: [![GitHub all releases](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/total?style=for-the-badge&color=blue)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+# Latest downloads: [![GitHub release (latest by asset)](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/latest/total?style=for-the-badge&color=green)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+##
+
 # Ne maradj le a frissítésekről: https://github.com/zoligamer/Neptun-Mobile-fork/releases/latest
 # BUG REPORT OLDAL: https://kuci.mludio.my.id/index.html OR https://github.com/zoligamer/Neptun-Mobile-fork/issues/new/choose
 
