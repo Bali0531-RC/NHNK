@@ -8,10 +8,8 @@ import 'package:neptun2/API/ics_calendar.dart';
 import 'package:neptun2/Misc/clickable_text_span.dart';
 import 'package:neptun2/colors.dart';
 import 'package:neptun2/language.dart';
-import '../app_analitics.dart';
 import '../storage.dart' as storage;
 import 'dart:developer' as debug;
-
 import '../storage.dart';
   
   class URLs{
@@ -51,14 +49,12 @@ import '../storage.dart';
         if (response != null) {
           String responseString = response.toString().trim();
           if (responseString.startsWith('<!DOCTYPE html') || responseString.startsWith('<html')){
-            AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => _APIRequest.postRequest() Erorr: HTML response recieved from $url');
             client.close();
             return '{"ErrorMessage": "Hibás URL vagy a Neptun szervere weboldalt küldött válaszként"}';
           }
         }
       }
       catch(error){
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => _APIRequest.postRequest() NeptunError: PostRequest Error: $error');
         client.close();
         return '{"ErrorMessage": "Hálózati hiba: $error"}';
       }
@@ -69,7 +65,89 @@ import '../storage.dart';
       return response ?? '{}';
     }
 
+    static Future<http.Response> postRequestRaw(Uri url, String requestBody,{String? bearerToken, String? cookie}) async {
+      HttpOverrides.global = NeptunCerts.getCerts();
+  
+      final client = http.Client();
+      final request = http.Request('POST', url);
+
+      request.headers['Content-Type'] = 'application/json';
+      if (bearerToken != null && bearerToken.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $bearerToken';
+      }
+      if (cookie != null && cookie.isNotEmpty) {
+        request.headers['Cookie'] = cookie;
+      }
+      request.body = requestBody;
+
+      try {
+        final streamedResponse = await client.send(request);
+        final response = await http.Response.fromStream(streamedResponse);
+        client.close();
+        return response;
+      } catch (e) {
+        client.close();
+        rethrow;
+      }
+    }
+
+    static void _extractAndSaveCookiesAndTokens(http.Response response, String username) {
+      final setCookie = response.headers['set-cookie'];
+      if (setCookie == null || setCookie.isEmpty) return;
+
+      // Extract device cookie: devicecookie-<BASE64_NEPTUN_CODE>=<VALUE>
+      final deviceCookieRegExp = RegExp(r'devicecookie-[a-zA-Z0-9+/=]+=([a-zA-Z0-9+/=]+)');
+      final deviceCookieMatch = deviceCookieRegExp.firstMatch(setCookie);
+      if (deviceCookieMatch != null) {
+        final cookieValue = deviceCookieMatch.group(1);
+        storage.DataCache.setDeviceCookie(username, cookieValue);
+      }
+
+      // Extract refresh token: <GUID>=<JWT_REFRESH_TOKEN>
+      // The key is a 36-char GUID (optional check), value starts with eyJ
+      final refreshTokenRegExp = RegExp(r'[^=;\s,]+=(eyJ[a-zA-Z0-9\-_\.]+)');
+      final refreshTokenMatch = refreshTokenRegExp.firstMatch(setCookie);
+      if (refreshTokenMatch != null) {
+        final tokenValue = refreshTokenMatch.group(1);
+        storage.DataCache.setRefreshToken(tokenValue);
+      }
+    }
+
     static bool _isRefreshingToken = false;
+
+    static Future<bool> tryTokenRefresh() async {
+      try {
+        final refreshToken = storage.DataCache.getRefreshToken();
+        if (refreshToken == null || refreshToken.isEmpty) {
+          return false;
+        }
+
+        final baseUrl = storage.DataCache.getInstituteUrl();
+        if (baseUrl == null || baseUrl.isEmpty) {
+          return false;
+        }
+
+        final refreshUrl = Uri.parse("$baseUrl/api/Account/GetNewTokens");
+        final response = await postRequestRaw(refreshUrl, "{}", bearerToken: refreshToken);
+
+        if (response.statusCode == 200) {
+          final bodyJson = conv.jsonDecode(response.body);
+          if (bodyJson["data"] != null && bodyJson["data"]["accessToken"] != null) {
+            final newAccessToken = bodyJson["data"]["accessToken"];
+            await storage.DataCache.setAccessToken(newAccessToken);
+            
+            final username = storage.DataCache.getUsername();
+            if (username != null) {
+              _extractAndSaveCookiesAndTokens(response, username);
+            }
+            return true;
+          }
+        }
+      } catch (e) {
+        debug.log("Error during token refresh: $e");
+      }
+      return false;
+    }
 
     static Future<String> getRequest(Uri url, {required String bearerToken, bool isRetry = false}) async {
       HttpOverrides.global = NeptunCerts.getCerts();
@@ -91,11 +169,18 @@ import '../storage.dart';
             _isRefreshingToken = true; // Bezárjuk a lakatot
             debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
 
-            final username = storage.DataCache.getUsername()!;
-            final password = storage.DataCache.getPassword()!;
-            final baseUrl = storage.DataCache.getInstituteUrl()!;
+            bool refreshSuccess = false;
+            if (storage.DataCache.getIsModernApi()) {
+              refreshSuccess = await tryTokenRefresh();
+            }
 
-            await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            if (!refreshSuccess) {
+              final username = storage.DataCache.getUsername()!;
+              final password = storage.DataCache.getPassword()!;
+              final baseUrl = storage.DataCache.getInstituteUrl()!;
+
+              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+            }
 
             _isRefreshingToken = false; // Kinyitjuk a lakatot
           } else {
@@ -166,7 +251,6 @@ import '../storage.dart';
         json = await getRawJsonWithNameUrlPairs();
       }
       catch(error){
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => InstitudesRequest.fetchInstitudesJSON() Error: $error');
       }
       return json;
     }
@@ -176,7 +260,6 @@ import '../storage.dart';
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => InstitudesRequest.getRawJsonWithNameUrlPairs() Error: Failed to fetch universityNameUrlPairs.json');
         return null;
       }
 
@@ -233,9 +316,19 @@ import '../storage.dart';
           "captcha": "", "captchaIdentifier": "", "token": "", "LCID": 1038
         });
 
-        final responseRaw = await _APIRequest.postRequest(modernApiUrl, body);
-        final response = conv.jsonDecode(responseRaw);
+        // Load device cookie if exists
+        final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
+        String? cookieHeader;
+        if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+          final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+          cookieHeader = 'devicecookie-$b64=$savedCookieVal';
+        }
 
+        final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
+        final response = conv.jsonDecode(responseRaw.body);
+
+        // Extract and save cookies/tokens
+        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
 
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
@@ -269,8 +362,19 @@ import '../storage.dart';
           "LCID":1038
         });
 
-        final responseRaw = await _APIRequest.postRequest(url, body);
-        final response = conv.jsonDecode(responseRaw);
+        // Load device cookie if exists
+        final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
+        String? cookieHeader;
+        if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
+          final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+          cookieHeader = 'devicecookie-$b64=$savedCookieVal';
+        }
+
+        final responseRaw = await _APIRequest.postRequestRaw(url, body, cookie: cookieHeader);
+        final response = conv.jsonDecode(responseRaw.body);
+
+        // Extract and save cookies/tokens
+        _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
 
         if (response["data"] != null && response["data"]["accessToken"] != null) {
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
@@ -307,7 +411,6 @@ import '../storage.dart';
       }
       final now = DateTime.now().millisecondsSinceEpoch;
       if(periods == null){
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => InstitudesRequest.getFirstStudyweek() Error: No period available');
         return null;
       }
   
@@ -331,7 +434,6 @@ import '../storage.dart';
           }
         }
         if(period == null){
-          AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => InstitudesRequest.getFirstStudyweek() Error: No "végleges tárgyjelenkezés" or "bejelentkezési időszak" period available, ${periods.toString()}');
           return null;
         }
       }
@@ -1749,7 +1851,6 @@ class CashinEntry{
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => Generic.getAppUpdateHelper() Error: Failed to fetch appMinimumAllowedVersion.json');
         return null;
       }
 
@@ -1803,7 +1904,6 @@ class CashinEntry{
       final url = Uri.parse(langUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => Generic.getLanguagePackById() Error: Failed to fetch $langUrl $neededID');
         return null;
       }
       return LanguagePack.fromJson(neededID, response.body, (){}); // auto registers itself, as its downloaded, no need for the callback, def not invalid as it has just been downloaded
@@ -1829,7 +1929,6 @@ class CashinEntry{
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => Language.getUserLanguageFromServer() Error: Failed to fetch supportedLanguages.json');
         return null;
       }
 
@@ -1872,7 +1971,6 @@ class CashinEntry{
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => Coloring.getAllThemes() Error: Failed to fetch supportedThemes.json');
         return null;
       }
 
@@ -1904,7 +2002,6 @@ class CashinEntry{
       final url = Uri.parse(themeUrl);
       final response = await http.get(url);
       if (response.statusCode != 200) {
-        AppAnalitics.sendAnaliticsData(AppAnalitics.ERROR, 'api_coms.dart => Coloring.getThemePackById() Error: Failed to fetch $themeUrl $neededID');
         return null;
       }
       return AppPalette.fromJson(response.body, (){}); // auto registers itself, as its downloaded, no need for the callback, def not invalid as it has just been downloaded

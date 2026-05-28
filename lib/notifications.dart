@@ -30,16 +30,16 @@ class AppNotifications{
   static Future<void> cancelScheduledNotifs()async{
     //log('cancle');
     await _localnotifs.cancelAll();
+    _scheduledNotifLinks.clear();
     Counter.reset();
   }
 
   static Future<void> cancelScheduledNotifsId(int id)async{
-    for (var item in _scheduledNotifLinks){
-      if(item.id != id){
-        continue;
-      }
+    final matches = _scheduledNotifLinks.where((item) => item.id == id).toList();
+    for (var item in matches){
       await _localnotifs.cancel(id: item.counter);
     }
+    _scheduledNotifLinks.removeWhere((item) => item.id == id);
   }
 
   static tz.TZDateTime _convert(int year, int month, int day, int hour, int minute){

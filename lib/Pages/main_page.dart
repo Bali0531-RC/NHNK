@@ -15,10 +15,7 @@ import 'package:neptun2/colors.dart';
 import 'package:neptun2/language.dart';
 import 'package:neptun2/notifications.dart';
 import 'package:neptun2/Misc/emojirich_text.dart';
-import 'package:neptun2/Misc/popup.dart';
 import 'package:neptun2/PaymentsElements/payment_element_widget.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/auto_updater.dart';
 import '../haptics.dart';
@@ -363,41 +360,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setupCalendarGreetText();
     setupCalendarController(true, true);
 
-    if(storage.DataCache.getAnalyticsFirstAppOpenTime()! == 0){
-      storage.DataCache.setAnalyticsFirstAppOpenTime(DateTime.now().millisecondsSinceEpoch);
-    }
-
-    Future.delayed(const Duration(seconds: 2), ()async{
-      final pinfo = await PackageInfo.fromPlatform();
-      if(pinfo.installerStore != 'com.android.vending'){ // cant rate
-        return;
-      }
-      if(storage.DataCache.getAnalyticsNextRatePopupTime()! == 0){
-        final appUsedDays = Duration(milliseconds: DateTime.now().millisecondsSinceEpoch - storage.DataCache.getAnalyticsFirstAppOpenTime()!).inDays;
-        await storage.DataCache.setAnalyticsNextRatePopupTime(DateTime.now().add(Duration(days: 2 + (appUsedDays > 30 ? 10 : appUsedDays / 3).round())).millisecondsSinceEpoch);
-      }
-
-      if(storage.DataCache.getAnalyticsHasRatedApp()! || DateTime.now().millisecondsSinceEpoch < storage.DataCache.getAnalyticsNextRatePopupTime()! || storage.DataCache.getAnalyticsRateNudgedAmount()! >= 5){
-        return;
-      }
-
-      final appUsedDays = Duration(milliseconds: DateTime.now().millisecondsSinceEpoch - storage.DataCache.getAnalyticsFirstAppOpenTime()!).inDays;
-      await storage.DataCache.setAnalyticsNextRatePopupTime(DateTime.now().add(Duration(days: 2 + (appUsedDays > 30 ? 10 : appUsedDays / 3).round())).millisecondsSinceEpoch);
-
-      final nudge = storage.DataCache.getAnalyticsRateNudgedAmount()!;
-      await storage.DataCache.setAnalyticsRateNudgedAmount(nudge + 1);
-
-      PopupWidgetHandler(mode: 2, callback: (_)async{
-        //only called, when the button is pressed
-        if(!Platform.isAndroid){
-          return;
-        }
-        launchUrl(Uri.parse('market://details?id=com.domedav.neptun2'), mode: LaunchMode.externalNonBrowserApplication);
-        await storage.DataCache.setAnalyticsHasRatedApp(1);
-      });
-      PopupWidgetHandler.doPopup(context);
-    });
-
     Future.delayed(const Duration(seconds: 1), (){
       final size = MediaQuery.of(context).size;
 
@@ -620,6 +582,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final _examNotificationList = <api.CalendarEntry>[];
   
   Future<void> _skimForExams()async{
+    _examNotificationList.clear();
     for(int i = 0; i < 3; i++){
       final result = await fetchCalendarToList(i);
       _examNotificationList.addAll(result);
@@ -629,6 +592,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
   
   Future<void> _setupExamNotifications(List<api.CalendarEntry> items)async{
+    await _cancelExamNotifications();
     if(_examNotificationList.isEmpty){
       return;
     }
@@ -675,8 +639,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final List<api.CalendarEntry> _classesNotificationList = <api.CalendarEntry>[].toList();
 
   Future<void> _setupClassesNotifications(List<api.CalendarEntry> items)async{
-    // Megj: Itt a 'getNeedExamNotifications'-t ellenőrzöd, ha van külön 'getNeedClassesNotifications', érdemes lehet arra cserélni!
-    if(!storage.DataCache.getNeedExamNotifications()!){
+    await _cancelClassesNotifications();
+    if(!storage.DataCache.getNeedClassNotifications()!){
       return;
     }
     for(var item in items){
@@ -719,6 +683,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final List<api.CashinEntry> _paymentsNotificationList = <api.CashinEntry>[].toList();
 
   Future<void> _setupPaymentsNotification(List<api.CashinEntry> items)async{
+    await _cancelPaymentsNotifications();
     if(!storage.DataCache.getNeedPaymentsNotifications()! || _paymentsNotificationList.isEmpty){
       return;
     }
@@ -757,6 +722,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final List<api.PeriodEntry> _periodsNotificationList = <api.PeriodEntry>[].toList();
   
   Future<void> _setupPeriodsNotification(List<api.PeriodEntry> items)async{
+    await _cancelPeriodsNotifications();
     if(!storage.DataCache.getNeedPeriodsNotifications()! || _periodsNotificationList.isEmpty){
       return;
     }
@@ -773,6 +739,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void _setupCalendar(bool thisweekCalendar){
+    if (thisweekCalendar) {
+      _classesNotificationList.clear();
+    }
     int idx = 1;
     int prev = 0;
     api.CalendarEntry? prevEntry;
@@ -1170,6 +1139,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void _setupPayments(){
+    _paymentsNotificationList.clear();
     totalMoney = 0;
     //order them
     for (int i = 0; i < paymentsEntries.length; i++){
@@ -1258,6 +1228,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void _setupPeriods(){
+    _periodsNotificationList.clear();
     //order them
     for (int i = 0; i < periodEntries.length; i++){
       for (int j = i; j < periodEntries.length; j++){

@@ -22,7 +22,7 @@ class AppHaptics{
     }
     final canVibrate = await Vibration.hasVibrator();
     final settingsVibrate = await DataCache.getNeedsHaptics()!;
-    if(!canVibrate! || !settingsVibrate){
+    if(!canVibrate || !settingsVibrate){
       return false;
     }
     return true;

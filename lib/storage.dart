@@ -1,7 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-//import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> saveString(String key, String value) async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -62,6 +61,7 @@ class DataCache{
     _password = '';
     _instituteUrl = '';
     _accessToken = '';
+    _refreshToken = '';
     _hasNetwork = false;
     _hasLogin = false;
     _hasCachedCalendar = false;
@@ -81,10 +81,6 @@ class DataCache{
     setUserWeekOffset(_persistentSetting_weekOffset!);
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
     setNeedsHaptics(_persistentSetting_needBetterHaptics! ? 1 : 0);
-    setAnalyticsFirstAppOpenTime(_persistentAnalytics_firstAppOpenTimeMs!);
-    setAnalyticsNextRatePopupTime(_persistentAnalytics_nextRatePopupShowMs!);
-    setAnalyticsRateNudgedAmount(_persistentAnalytics_userRateNudgedAmount!);
-    setAnalyticsHasRatedApp(_persistentAnalytics_hasRatedApp! ? 1 : 0);
     setIsInstalledFromGPlay(_permanentConfiguration_isInstalledFromGooglePlay!);
     setDownloadedSupportedLanguages(_languageJsonSupportedLangs);
     setDownloadedSupportedLanguagesData(_languageJsonBatch);
@@ -98,6 +94,7 @@ class DataCache{
   late String? _password = '';
   late String? _instituteUrl = '';
   late String? _accessToken = ''; //new systems token query
+  late String? _refreshToken = '';
   late bool _hasNetwork = false;
   late bool? _hasLogin = false;
   late bool? _hasCachedCalendar = false;
@@ -148,12 +145,7 @@ class DataCache{
 
   late int? _permanentConfiguration_isInstalledFromGooglePlay = 0;
 
-  late int? _persistentAnalytics_firstAppOpenTimeMs = 0;
-  late int? _persistentAnalytics_nextRatePopupShowMs = 0;
-  late int? _persistentAnalytics_userRateNudgedAmount = 0;
-  late bool? _persistentAnalytics_hasRatedApp = false;
 
-  late bool? _persistentAnalytics_enrolledInSendingAnaliticsData = true;
 
   late List<String> _languageJsonSupportedLangs = [];
   late List<String> _languageJsonBatch = [];
@@ -172,21 +164,18 @@ class DataCache{
     _username = await getString('Username');
     _instituteUrl = await getString('URL');
 
-    // --- 🔒 BIZTONSÁGOS JELSZÓ BETÖLTÉS ÉS MIGRÁCIÓ ---
     _password = await _secureStorage.read(key: 'neptun_password');
 
-    // Ha a Secure Storage üres, de a régi SharedPrefs-ben van jelszó (pl. app frissítéskor)
+
     if (_password == null) {
       String? oldPassword = await getString('Password');
       if (oldPassword != null && oldPassword.isNotEmpty) {
         _password = oldPassword;
-        // Átmentjük a titkosított helyre
         await _secureStorage.write(key: 'neptun_password', value: oldPassword);
-        // Itt opcionálisan törölhetnéd a régi jelszót, ha van rá függvényed pl: clearString('Password');
+
       }
     }
 
-    // --- 🔒 BIZTONSÁGOS TOKEN BETÖLTÉS ÉS MIGRÁCIÓ ---
     _accessToken = await _secureStorage.read(key: 'neptun_jwt_token');
 
     if (_accessToken == null) {
@@ -197,9 +186,10 @@ class DataCache{
       }
     }
 
-    // --- MODERN API (Óbudai / Új Neptun) JELZŐ BETÖLTÉSE ---
+    _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
+
     tmp = await getInt('IsModernApi');
-    _isModernApi = tmp != null && tmp != 0; // Ezt a változót majd hozd létre az osztály tetején! (bool _isModernApi = false;)
+    _isModernApi = tmp != null && tmp != 0;
 
     tmp = await getInt('HasLogin');
     _hasLogin = tmp != null && tmp != 0;
@@ -232,6 +222,11 @@ class DataCache{
 
     tmp = await getInt('IsDemoAccount');
     _isDemoAccount = tmp != null && tmp != 0;
+
+    final prefs = await SharedPreferences.getInstance();
+    _displayClasses = prefs.getBool('CALENDAR_DisplayClasses') ?? true;
+    _displayExams = prefs.getBool('CALENDAR_DisplayExams') ?? true;
+    _displayPeriods = prefs.getBool('CALENDAR_DisplayPeriods') ?? true;
 
     tmp = await getInt('SETTING_IsFamilyFriendlyLoading');
     _persistentSetting_familyFriendlyLoadingComments = tmp != null && tmp != 0;
@@ -278,24 +273,6 @@ class DataCache{
     tmp = await getInt('CONFIG_IsInstalledFromGPlay');
     _permanentConfiguration_isInstalledFromGooglePlay = tmp ?? 0;
 
-
-    tmp = await getInt('ANALYTICS_FirstAppOpenTime');
-    _persistentAnalytics_firstAppOpenTimeMs = tmp ?? 0;
-
-    tmp = await getInt('ANALYTICS_NextRatePopupTime');
-    _persistentAnalytics_nextRatePopupShowMs = tmp ?? 0;
-
-    tmp = await getInt('ANALYTICS_RateNudgeAmount');
-    _persistentAnalytics_userRateNudgedAmount = tmp ?? 0;
-
-    tmp = await getInt('ANALYTICS_HasRatedApp');
-    _persistentAnalytics_hasRatedApp = tmp != null && tmp != 0;
-
-    tmp = await getInt('ANALYTICS_EnrolledInSendingAnaliticsData');
-    _persistentAnalytics_enrolledInSendingAnaliticsData = tmp != null && tmp != 0;
-    if(tmp == null){
-      _persistentAnalytics_enrolledInSendingAnaliticsData = true;  // this is the default value, not false
-    }
 
     _languageJsonSupportedLangs = await getStringList('LANGUAGE_DownloadedSupportedLangs') ?? [];
     _languageJsonBatch = await getStringList('LANGUAGE_DownloadedLanguagesJsonBatch') ?? [];
@@ -361,24 +338,41 @@ class DataCache{
       await _secureStorage.write(key: 'neptun_jwt_token', value: token);
     }
   }
-/* OLD CODE
-  static Future<void> setAccessToken(String value) async{
-    _instance._accessToken = value; //update in memory .-.
-    await saveString('AccessToken', value ?? ''); //save to disk with segédfüggvény lol nem tudok angolul nyelvvizsgával
-  }
-*//* new code
-  static Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: 'neptun_jwt_token');
-  }*/
-/* OLD CODE*/
+
   static String? getAccessToken() {
     return _instance._accessToken;
   }
 
-// --- SECURE DATA TÖRLÉSE (Kijelentkezéskor) ---
+  static String? getRefreshToken() {
+    return _instance._refreshToken;
+  }
+
+  static Future<void> setRefreshToken(String? token) async {
+    _instance._refreshToken = token;
+    if (token == null) {
+      await _secureStorage.delete(key: 'neptun_refresh_token');
+    } else {
+      await _secureStorage.write(key: 'neptun_refresh_token', value: token);
+    }
+  }
+
+  static Future<String?> getDeviceCookie(String username) async {
+    return await _secureStorage.read(key: 'devicecookie_${username.toUpperCase()}');
+  }
+
+  static Future<void> setDeviceCookie(String username, String? cookieValue) async {
+    if (cookieValue == null) {
+      await _secureStorage.delete(key: 'devicecookie_${username.toUpperCase()}');
+    } else {
+      await _secureStorage.write(key: 'devicecookie_${username.toUpperCase()}', value: cookieValue);
+    }
+  }
+
+// --- SECURE DATA clear ---
   static Future<void> clearSecureData() async {
     _instance._password = null;
     _instance._accessToken = null;
+    _instance._refreshToken = null;
     await _secureStorage.deleteAll();
   }
 
@@ -492,36 +486,6 @@ class DataCache{
     await saveInt('CONFIG_IsInstalledFromGPlay', value ?? 0);
   }
 
-  static int? getAnalyticsFirstAppOpenTime(){return _instance._persistentAnalytics_firstAppOpenTimeMs;}
-  static Future<void> setAnalyticsFirstAppOpenTime(int? value) async{
-    _instance._persistentAnalytics_firstAppOpenTimeMs = value ?? 0;
-    await saveInt('ANALYTICS_FirstAppOpenTime', value ?? 0);
-  }
-
-  static int? getAnalyticsNextRatePopupTime(){return _instance._persistentAnalytics_nextRatePopupShowMs;}
-  static Future<void> setAnalyticsNextRatePopupTime(int? value) async{
-    _instance._persistentAnalytics_nextRatePopupShowMs = value ?? 0;
-    await saveInt('ANALYTICS_NextRatePopupTime', value ?? 0);
-  }
-
-  static int? getAnalyticsRateNudgedAmount(){return _instance._persistentAnalytics_userRateNudgedAmount;}
-  static Future<void> setAnalyticsRateNudgedAmount(int? value) async{
-    _instance._persistentAnalytics_userRateNudgedAmount = value ?? 0;
-    await saveInt('ANALYTICS_RateNudgeAmount', value ?? 0);
-  }
-
-  static bool? getAnalyticsHasRatedApp(){return _instance._persistentAnalytics_hasRatedApp;}
-  static Future<void> setAnalyticsHasRatedApp(int? value) async{
-    _instance._persistentAnalytics_hasRatedApp = value != null && value != 0;
-    await saveInt('ANALYTICS_HasRatedApp', value ?? 0);
-  }
-
-  static bool? getAnalyticsEnrolledState(){return _instance._persistentAnalytics_enrolledInSendingAnaliticsData;}
-  static Future<void> setAnalyticsEnrolledState(int? value) async{
-    _instance._persistentAnalytics_enrolledInSendingAnaliticsData = value != null && value != 0;
-    await saveInt('ANALYTICS_EnrolledInSendingAnaliticsData', value ?? 1);
-  }
-
   static List<String> getDownloadedSupportedLanguages(){return _instance._languageJsonSupportedLangs;}
   static Future<void> setDownloadedSupportedLanguages(List<String>? value)async{
     _instance._languageJsonSupportedLangs = value ?? [];
@@ -557,8 +521,6 @@ class DataCache{
     _instance._icsIsUploaded = value ?? false;
     await saveInt('ICS_HasIcsUpload', value != null && value != 0 ? 1 : 0);
   }
-  // --- NAPTÁR SZŰRŐK ---
-// --- NAPTÁR SZŰRŐK ---
   // Saját memóriaváltozók, hogy ne kelljen a _prefs-re támaszkodni
   static bool? _displayClasses = true;
   static bool? _displayExams = true;

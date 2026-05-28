@@ -1124,8 +1124,6 @@ class LanguagePack{
       );
     }
     catch(error){
-      //log(error.toString());
-      //log("${AppStrings._downloadedSupportedLanguages}");
       Future.delayed(Duration.zero,(){
         onLanguageOutdated();
       });

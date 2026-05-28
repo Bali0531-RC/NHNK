@@ -15,7 +15,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/custom_snackbar.dart';
 import '../Misc/emojirich_text.dart';
-import '../app_analitics.dart';
 import '../Misc/auto_updater.dart';
 import '../storage.dart' as storage;
 import '../storage.dart';
@@ -106,8 +105,6 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
     FlutterNativeSplash.remove();
   }
 
-  bool _analiticsDebounce = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,10 +140,6 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                         GestureDetector(
                           onTap: (){
                             AppHaptics.lightImpact();
-                            if(!_analiticsDebounce){
-                              _analiticsDebounce = true;
-                              AppAnalitics.sendAnaliticsData(AppAnalitics.INFO, 'setup_page.dart => _SetupPageLoginTypeSelectionState.build() Info: Institude selection login');
-                            }
                             Navigator.push(context, MaterialPageRoute(builder: (context) => SetupPageInstitudeSelection(fetchData: _obtainFreshData, callback: changeFreshDataVal)));
                           },
                           child: Container(
@@ -204,10 +197,6 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                         GestureDetector(
                           onTap: (){
                             AppHaptics.lightImpact();
-                            if(!_analiticsDebounce){
-                              _analiticsDebounce = true;
-                              AppAnalitics.sendAnaliticsData(AppAnalitics.INFO, 'setup_page.dart => _SetupPageLoginTypeSelectionState.build() Info: URL input login');
-                            }
                             Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupPageURLInput()));
                           },
                           child: Container(
@@ -265,98 +254,6 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                       ],
                     ),
                     const SizedBox(height: 10),
-                    /*Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                            height: 1,
-                            margin: EdgeInsets.only(right: 15, left: 85)
-                          ),
-                        ),
-                        Text(
-                          AppStrings.getLanguagePack().rootpage_setupPage_OtherUsageModes,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                            height: 1,
-                            margin: EdgeInsets.only(right: 85, left: 15),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),*/
-                  /* ICS BUTTON
-                    GestureDetector(
-                      onTap: (){
-                        AppHaptics.lightImpact();
-                        if(!_analiticsDebounce){
-                          _analiticsDebounce = true;
-                          AppAnalitics.sendAnaliticsData(AppAnalitics.INFO, 'setup_page.dart => _SetupPageLoginTypeSelectionState.build() Info: Calendar ICS Login');
-                        }
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupPageCalendarLogin()));
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        margin: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: AppColors.getTheme().rootBackground,
-                            borderRadius: const BorderRadius.all(Radius.circular(30)),
-                            border: Border.all(
-                                color: AppColors.getTheme().textColor.withValues(alpha: .3),
-                                width: 1
-                            )
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Icon(
-                                  Icons.calendar_month_rounded,
-                                  color: AppColors.getTheme().textColor,
-                                  size: 40,
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    AppStrings.getLanguagePack().rootpage_setupPage_IcsImport,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: AppColors.getTheme().textColor,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              AppStrings.getLanguagePack().rootpage_setupPage_IcsImportDescription,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),*/
                     const SizedBox(height: 50),
                     Container(
                         margin: const EdgeInsets.all(20),
@@ -1139,23 +1036,6 @@ class _SetupPageURLInputState extends State<SetupPageURLInput>{
                               _showSnackbar(AppStrings.getLanguagePack().urlLogin_setupPage_InstituteNeptunUrlInvalid, 18);
                               AppHaptics.attentionLightImpact();
                             });
-
-                            /* OLD CODE
-                            PageDTO.validatedURL = _rawNeptunURL.toLowerCase().contains(regex);
-                            if(_rawNeptunURL.isEmpty){
-                              return;
-                            }
-                            if(_rawNeptunURL.toLowerCase().contains(regex)){
-                              setState(() {
-                                _canProceed = true;
-                                PageDTO.validatedURL = true;
-                              });
-                              return;
-                            }
-                            _warnTimer = Timer(const Duration(seconds: 2),(){
-                              _showSnackbar(AppStrings.getLanguagePack().urlLogin_setupPage_InstituteNeptunUrlInvalid, 18);
-                              AppHaptics.attentionLightImpact();
-                            });*/
                           },
                         ),
                       ),
@@ -1283,7 +1163,7 @@ class _SetupPageURLInputState extends State<SetupPageURLInput>{
             ),
             Visibility(
               visible: _shouldShowSnackbar,
-              child: AppSnackbar(text: _snackbarMessage, displayDuration: _displayDuration, /*dragAmmount: _snackbarDelta,*/ changer: (){
+              child: AppSnackbar(text: _snackbarMessage, displayDuration: _displayDuration, changer: (){
                 if(!mounted){
                   return;
                 }
@@ -1402,7 +1282,6 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
       });
     });
 
-    AppAnalitics.sendAnaliticsData(AppAnalitics.INFO, 'api_coms.dart => SetupPageLogin.finishLogin() Info: Login: ${selected.Name} - ${selected.URL}');
     api.InstitutesRequest.validateLoginCredentials(selected, _username.toUpperCase(), _password).then((value)
     {
       if(value == 1){ // 1: SIKERES BELÉPÉS
@@ -1910,33 +1789,6 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
       Navigator.popUntil(context, (route) => route.willHandlePopInternally);
       Navigator.push(context, MaterialPageRoute(builder: (context) => const main_page.HomePage()));
     });
-
-    /*IcsImportHelper.streamIcsFileContent(ICSCalendar.icsStream).then((status){
-      if(!status){
-        setState(() {
-          _canProceed = false;
-          _showSnackbar(AppStrings.getLanguagePack().calendarLogin_setupPage_InvalidFile, 5);
-        });
-        return; // ics has issue
-      }
-      try{
-        final first = ICSCalendar.getFirstEventStartMs();
-        ICSCalendar.clearAll(first);
-        storage.DataCache.setUsername('');
-        storage.DataCache.setPassword('');
-        storage.DataCache.setInstituteUrl('');
-        storage.DataCache.setHasLogin(1);
-        // proceed logic
-        Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const main_page.HomePage()));
-      }
-      catch (_){
-        setState(() {
-          _canProceed = false;
-          _showSnackbar(AppStrings.getLanguagePack().calendarLogin_setupPage_InvalidFile, 5);
-        });
-      }
-    });*/
   }
 
   @override
@@ -2052,49 +1904,6 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
                           ),
                         ),
                         const SizedBox(height: 60),
-                        /*Container(
-                          padding: const EdgeInsets.all(8),
-                          child: TextField(
-                            keyboardType: TextInputType.url,
-                            decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.all(18),
-                                suffixIcon: Icon(Icons.link_rounded),
-                                labelText: AppStrings.getLanguagePack().urlLogin_setupPage_InstituteNeptunUrl,
-                                labelStyle: TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                                    fontWeight: FontWeight.w400
-                                ),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                                    borderSide: BorderSide.none
-                                ),
-                                filled: true,
-                                fillColor: AppColors.getTheme().textColor.withValues(alpha: .05)
-                            ),
-                            style: TextStyle(
-                                fontSize: 16,
-                                color: AppColors.getTheme().textColor,
-                                fontWeight: FontWeight.w600
-                            ),
-                            autofocus: true,
-                            enableSuggestions: false,
-                            autocorrect: false,
-                            onChanged: (value) {
-                              AppHaptics.textEditingImpact();
-                              setState(() {
-                                _canProceed = false;
-                              });
-                              if(_warnTimer != null){
-                                _warnTimer!.cancel();
-                              }
-                              _warnTimer = Timer(const Duration(seconds: 2),(){
-                                _showSnackbar(AppStrings.getLanguagePack().urlLogin_setupPage_InstituteNeptunUrlInvalid, 18);
-                                AppHaptics.attentionLightImpact();
-                              });
-                            },
-                          ),
-                        ),*/
                         Container(
                           padding: const EdgeInsets.all(8),
                           child: Column(
