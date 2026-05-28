@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert' as conv;
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:neptun2/API/api_coms.dart';
 import 'package:neptun2/storage.dart';
@@ -53,27 +52,7 @@ class AppColors{
         currentClassGreen: Color.fromRGBO(0x46, 0x97, 0x32, 1.0),
         basedOnDark: false
     ));
-    //log(AppPalette.toJson(_appColors[0]).toString());
-    /*
-      primary: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
-      onPrimary: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
-      onPrimaryContainer: Color.fromRGBO(0x45, 0x6C, 0x76, 1.0),
-      secondary: Color.fromRGBO(0xA7, 0xC4, 0xC8, 1.0),
-      onSecondary: Color.fromRGBO(0x1B, 0x1B, 0x1B, 1.0),
-      onSecondaryContainer: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
-      grade1: Color.fromRGBO(0xBD, 0x2E, 0x2E, 1.0),
-      grade2: Color.fromRGBO(0x95, 0x51, 0x51, 1.0),
-      grade3: Color.fromRGBO(0x9E, 0x97, 0x54, 1.0),
-      grade4: Color.fromRGBO(0x72, 0x88, 0x5A, 1.0),
-      grade5: Color.fromRGBO(0x56, 0x7B, 0x58, 1.0),
-      navbarStatusBarColor: Color.fromRGBO(0xF0, 0xF0, 0xF0, 1.0),
-      navbarNavibarColor: Color.fromRGBO(0xE0, 0xE0, 0xE0, 1.0),
-      rootBackground: Color.fromRGBO(0xE2, 0xE2, 0xE2, 1.0),
-      textColor: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
-      buttonEnabled: Color.fromRGBO(0xA7, 0xC4, 0xC8, 1.0),
-      buttonDisabled: Color.fromRGBO(0xD3, 0xDD, 0xDD, 1.0),
-      errorRed: Color.fromRGBO(0xFF, 0x52, 0x52, 1.0),
-      currentClassGreen: Color.fromRGBO(0x46, 0x97, 0x32, 1.0),*/
+
     _appColors.add(AppPalette('Dark',
         primary: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
         onPrimary: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
@@ -96,27 +75,7 @@ class AppColors{
         currentClassGreen: Color.fromRGBO(0x8B, 0xD4, 0x81, 1.0),
         basedOnDark: true
     ));
-    /*
-        primary: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
-        onPrimary: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
-        onPrimaryContainer: Color.fromRGBO(0x8A, 0xB6, 0xBF, 1.0),
-        secondary: Color.fromRGBO(0x4F, 0x69, 0x6E, 1.0),
-        onSecondary: Color.fromRGBO(0xB6, 0xB6, 0xB6, 1.0),
-        onSecondaryContainer: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
-        grade1: Color.fromRGBO(0xFF, 0x52, 0x52, 1.0),
-        grade2: Color.fromRGBO(0xEF, 0x9A, 0x9A, 1.0),
-        grade3: Color.fromRGBO(0xFF, 0xF5, 0x9D, 1.0),
-        grade4: Color.fromRGBO(0xC5, 0xE1, 0xA5, 1.0),
-        grade5: Color.fromRGBO(0xA5, 0xD6, 0xA7, 1.0),
-        navbarStatusBarColor: Color.fromRGBO(0x0C, 0x0C, 0x0C, 1.0),
-        navbarNavibarColor: Color.fromRGBO(0x1A, 0x1A, 0x1A, 1.0),
-        rootBackground: Color.fromRGBO(0x22, 0x22, 0x22, 1.0),
-        textColor: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
-        buttonEnabled: Color.fromRGBO(0x31, 0x42, 0x42, 1.0),
-        buttonDisabled: Color.fromRGBO(0x22, 0x2B, 0x2B, 1.0),
-        errorRed: Color.fromRGBO(0xFF, 0xB0, 0xB0, 1.0),
-        currentClassGreen: Color.fromRGBO(0x8B, 0xD4, 0x81, 1.0),
-    */
+
     final target = DataCache.getPreferredAppTheme()!;
     for(var item in getAllThemes()){
       if(item.paletteName == target){
@@ -376,25 +335,25 @@ class AppPalette{
   static String toJson(AppPalette palette){
     final json = conv.json.encode({
       'paletteName':palette.paletteName,
-      'primary':palette.primary.value,
-      'onPrimary':palette.onPrimary.value,
-      'onPrimaryContainer':palette.onPrimaryContainer.value,
-      'secondary':palette.secondary.value,
-      'onSecondary':palette.onSecondary.value,
-      'onSecondaryContainer':palette.onSecondaryContainer.value,
-      'grade1':palette.grade1.value,
-      'grade2':palette.grade2.value,
-      'grade3':palette.grade3.value,
-      'grade4':palette.grade4.value,
-      'grade5':palette.grade5.value,
-      'navbarNavibarColor':palette.navbarNavibarColor.value,
-      'navbarStatusBarColor':palette.navbarStatusBarColor.value,
-      'rootBackground':palette.rootBackground.value,
-      'textColor':palette.textColor.value,
-      'buttonEnabled':palette.buttonEnabled.value,
-      'buttonDisabled':palette.buttonDisabled.value,
-      'errorRed':palette.errorRed.value,
-      'currentClassGreen':palette.currentClassGreen.value,
+      'primary':palette.primary.toARGB32(),
+      'onPrimary':palette.onPrimary.toARGB32(),
+      'onPrimaryContainer':palette.onPrimaryContainer.toARGB32(),
+      'secondary':palette.secondary.toARGB32(),
+      'onSecondary':palette.onSecondary.toARGB32(),
+      'onSecondaryContainer':palette.onSecondaryContainer.toARGB32(),
+      'grade1':palette.grade1.toARGB32(),
+      'grade2':palette.grade2.toARGB32(),
+      'grade3':palette.grade3.toARGB32(),
+      'grade4':palette.grade4.toARGB32(),
+      'grade5':palette.grade5.toARGB32(),
+      'navbarNavibarColor':palette.navbarNavibarColor.toARGB32(),
+      'navbarStatusBarColor':palette.navbarStatusBarColor.toARGB32(),
+      'rootBackground':palette.rootBackground.toARGB32(),
+      'textColor':palette.textColor.toARGB32(),
+      'buttonEnabled':palette.buttonEnabled.toARGB32(),
+      'buttonDisabled':palette.buttonDisabled.toARGB32(),
+      'errorRed':palette.errorRed.toARGB32(),
+      'currentClassGreen':palette.currentClassGreen.toARGB32(),
       'basedOnDark':palette.basedOnDark
     });
     return json;
