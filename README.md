@@ -1,6 +1,9 @@
 # Neptun Mobile
 
-##
+## 
+# All downloads: [![GitHub all releases](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/total?style=for-the-badge&color=blue&maxAge=3600)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+# Latest downloads: [![GitHub release (by asset)](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/latest/total?style=for-the-badge&color=green&maxAge=3600)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
+
 # All downloads: [![GitHub all releases](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/total?style=for-the-badge&color=blue)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
 # Latest downloads: [![GitHub release (latest by asset)](https://img.shields.io/github/downloads/zoligamer/Neptun-Mobile-fork/latest/total?style=for-the-badge&color=green)](https://github.com/zoligamer/Neptun-Mobile-fork/releases)
 ##
