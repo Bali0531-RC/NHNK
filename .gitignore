@@ -45,3 +45,11 @@ app.*.map.json
 
 # Dont leak anything server related into the internet
 /lib/app_analitics_server_send.dart
+
+# Signing material must never be committed, wherever it is placed in the tree.
+*.jks
+*.keystore
+key.properties
+
+# Packaged release artifacts, produced locally and by the release workflow.
+/dist/

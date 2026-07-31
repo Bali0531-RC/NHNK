@@ -1,16 +1,16 @@
 # Copy to android/key.properties and fill in. This file is gitignored -- never commit the real one.
 #
 # Create the keystore with:
-#   keytool -genkeypair -v -keystore ~/neptun-release.jks -keyalg RSA -keysize 4096 \
-#           -validity 10000 -alias neptun
+#   keytool -genkeypair -v -keystore ~/nhnk-release.jks -keyalg RSA -keysize 4096 \
+#           -validity 10000 -alias nhnk
 #
-# Back the .jks file up somewhere safe. Losing it means no future build can ever be
-# installed as an upgrade over an existing install.
+# Keep the .jks outside the repository and back it up somewhere safe. Losing it means no
+# future build can ever be installed as an upgrade over an existing install.
 #
-# CI can supply these as NEPTUN_KEYSTORE, NEPTUN_KEYSTORE_PASSWORD,
-# NEPTUN_KEY_ALIAS and NEPTUN_KEY_PASSWORD instead of using this file.
+# CI can supply these as NHNK_KEYSTORE, NHNK_KEYSTORE_PASSWORD,
+# NHNK_KEY_ALIAS and NHNK_KEY_PASSWORD instead of using this file.
 
-storeFile=/absolute/path/to/neptun-release.jks
+storeFile=/absolute/path/to/nhnk-release.jks
 storePassword=
-keyAlias=neptun
+keyAlias=nhnk
 keyPassword=
