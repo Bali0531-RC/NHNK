@@ -37,8 +37,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # A flavor is required now that the project defines them; without one Gradle emits
+      # app-<flavor>-debug.apk and the Flutter tool fails looking for app-debug.apk.
       - name: Build for Android
-        run: flutter build apk --debug --no-shrink
+        run: flutter build apk --debug --no-shrink --flavor github --dart-define=NHNK_DISTRIBUTION=github
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
