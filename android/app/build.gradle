@@ -32,10 +32,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 // Signing credentials come from key.properties locally, or from the environment in CI.
-def releaseStoreFile = System.getenv('NEPTUN_KEYSTORE') ?: keystoreProperties['storeFile']
-def releaseStorePassword = System.getenv('NEPTUN_KEYSTORE_PASSWORD') ?: keystoreProperties['storePassword']
-def releaseKeyAlias = System.getenv('NEPTUN_KEY_ALIAS') ?: keystoreProperties['keyAlias']
-def releaseKeyPassword = System.getenv('NEPTUN_KEY_PASSWORD') ?: keystoreProperties['keyPassword']
+def releaseStoreFile = System.getenv('NHNK_KEYSTORE') ?: keystoreProperties['storeFile']
+def releaseStorePassword = System.getenv('NHNK_KEYSTORE_PASSWORD') ?: keystoreProperties['storePassword']
+def releaseKeyAlias = System.getenv('NHNK_KEY_ALIAS') ?: keystoreProperties['keyAlias']
+def releaseKeyPassword = System.getenv('NHNK_KEY_PASSWORD') ?: keystoreProperties['keyPassword']
 def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 
 if (!hasReleaseSigning) {
@@ -44,7 +44,7 @@ if (!hasReleaseSigning) {
 }
 
 android {
-    namespace "com.zoligamer.neptun_mobile.app"
+    namespace "hu.bali0531.nhnk.app"
     compileSdkVersion 36
     ndkVersion flutter.ndkVersion
 
@@ -59,8 +59,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.zoligamer.neptun_mobile.app"
+        applicationId "hu.bali0531.nhnk.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
@@ -68,7 +67,19 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        setProperty("archivesBaseName", "Neptun_Mobile")
+        setProperty("archivesBaseName", "NHNK")
+    }
+
+    // Play forbids self-updating APKs, so the store build drops the updater and the
+    // REQUEST_INSTALL_PACKAGES permission that goes with it. See src/<flavor>/AndroidManifest.xml.
+    flavorDimensions "distribution"
+    productFlavors {
+        github {
+            dimension "distribution"
+        }
+        playstore {
+            dimension "distribution"
+        }
     }
 
     signingConfigs {
@@ -88,8 +99,8 @@ android {
         release {
             // Falls back to debug signing so a fresh clone without a keystore still builds.
             signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
-            // Set NEPTUN_NO_SHRINK=1 to build an unshrunk release when diagnosing R8 stripping.
-            if (System.getenv('NEPTUN_NO_SHRINK')) {
+            // Set NHNK_NO_SHRINK=1 to build an unshrunk release when diagnosing R8 stripping.
+            if (System.getenv('NHNK_NO_SHRINK')) {
                 minifyEnabled false
                 shrinkResources false
             } else {
@@ -112,14 +123,14 @@ android {
                 def customName = ""
 
                 if (abiFilter == "armeabi-v7a") {
-                    customName = "Neptun_Mobile_ARM7.apk"
+                    customName = "NHNK_ARM7.apk"
                 } else if (abiFilter == "arm64-v8a") {
-                    customName = "Neptun_Mobile_ARM8.apk"
+                    customName = "NHNK_ARM8.apk"
                 } else if (abiFilter == "x86_64") {
-                    customName = "Neptun_Mobile_x86_64.apk" // Ha esetleg ezt is buildelnéd
+                    customName = "NHNK_x86_64.apk" // Ha esetleg ezt is buildelnéd
                 } else {
                     // Fallback, ha valami más jönne ki (pl. universal apk)
-                    customName = "Neptun_Mobile_Universal.apk"
+                    customName = "NHNK_Universal.apk"
                 }
 
                 // Csak akkor nevezzük át, ha meg tudtuk határozni az ABI-t

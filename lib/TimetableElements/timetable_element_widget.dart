@@ -1,6 +1,6 @@
 import '../storage.dart' as storage;
 import 'package:flutter/material.dart';
-import 'package:neptun2/language.dart';
+import 'package:nhnk/language.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/emojirich_text.dart';
 import '../Misc/popup.dart';

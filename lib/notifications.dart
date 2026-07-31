@@ -64,11 +64,11 @@ class AppNotifications{
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
           '0',
-          'Neptun Mobile Időzített',
+          'NHNK Időzített',
           channelDescription: 'Olyan értesítések csatornája, amelyeket időzítetten, azaz a nap folyamán valamikor akar az applikáció megjeleníteni neked.',
           importance: Importance.high,
           priority: Priority.high,
-          ticker: 'Neptun Mobile Időzített Értesítés',
+          ticker: 'NHNK Időzített Értesítés',
           styleInformation: BigTextStyleInformation(content, contentTitle: title)
       ),
       linux: const LinuxNotificationDetails(
@@ -94,11 +94,11 @@ class AppNotifications{
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
           '1',
-          'Neptun Mobile Azonnali',
+          'NHNK Azonnali',
           channelDescription: 'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
           importance: Importance.high,
           priority: Priority.high,
-          ticker: 'Neptun Mobile Azonnali Értesítés',
+          ticker: 'NHNK Azonnali Értesítés',
           styleInformation: BigTextStyleInformation(desc, contentTitle: title)
       ),
       linux: const LinuxNotificationDetails(

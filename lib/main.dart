@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/storage.dart';
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
 import 'language.dart';
@@ -13,7 +13,7 @@ void main() {
   DataCache.loadThemeOnly().whenComplete((){
     AppColors.initialize();
     AppStrings.initialize();
-    final app = const NeptunApp();
+    final app = const NhnkApp();
     final themeNotifier = ThemeNotifier(ThemeNotifier._initialTheme(AppColors.getTheme().basedOnDark));
     runApp(
       ChangeNotifierProvider(
@@ -26,8 +26,8 @@ void main() {
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-class NeptunApp extends StatelessWidget with WidgetsBindingObserver {
-  const NeptunApp({super.key});
+class NhnkApp extends StatelessWidget with WidgetsBindingObserver {
+  const NhnkApp({super.key});
 
   @override
   void didChangePlatformBrightness(){
@@ -65,7 +65,7 @@ class NeptunApp extends StatelessWidget with WidgetsBindingObserver {
     }
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'Neptun Mobile',
+      title: 'NHNK',
       theme: themeNotifier._themeData,
       home: const Splitter(),
     );

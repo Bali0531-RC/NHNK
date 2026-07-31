@@ -1,13 +1,23 @@
-# Neptun Mobile
+# NHNK
 
-Alternatív Neptun mobilalkalmazás, a modern Neptun REST API-ra építve.
+**Nem Hivatalos Neptun Kliens** — alternatív Neptun mobilalkalmazás, a modern Neptun REST API-ra építve.
 
-[![Letöltések](https://img.shields.io/github/downloads/Bali0531-RC/Neptun-Mobile/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/Neptun-Mobile/releases)
-[![Legfrissebb verzió](https://img.shields.io/github/v/release/Bali0531-RC/Neptun-Mobile?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/Neptun-Mobile/releases/latest)
+[![Letöltések](https://img.shields.io/github/downloads/Bali0531-RC/NHNK/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/NHNK/releases)
+[![Legfrissebb verzió](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
+
+> [!IMPORTANT]
+> **Ez egy független, nem hivatalos alkalmazás.** Nem áll kapcsolatban az SDA Informatika Zrt.-vel
+> (a Neptun rendszer fejlesztőjével), sem bármely felsőoktatási intézménnyel, és azok nem támogatják
+> vagy hagyták jóvá. A „Neptun" név és védjegy a jogosultja tulajdona, itt kizárólag leíró jelleggel
+> szerepel. A belépési adatok közvetlenül az intézmény Neptun-kiszolgálójára mennek; az NHNK nem
+> üzemeltet saját szervert és nem gyűjt felhasználói adatokat. Hivatalos adatnak minden esetben a
+> webes Neptun felületén látható információ számít.
+
+Weboldal: **https://nhnk.bali0531.hu**
 
 ## Letöltés
 
-Legfrissebb kiadás: **https://github.com/Bali0531-RC/Neptun-Mobile/releases/latest**
+Legfrissebb kiadás: **https://github.com/Bali0531-RC/NHNK/releases/latest**
 
 A legtöbb telefonra az `arm64-v8a` APK kell. Automatikus frissítéshez ajánlott az
 [Obtainium](https://github.com/ImranR98/Obtainium): add meg neki ezt a repót, és a
@@ -15,7 +25,7 @@ későbbi kiadások maguktól települnek.
 
 ## Hibabejelentés
 
-**https://github.com/Bali0531-RC/Neptun-Mobile/issues/new/choose**
+**https://github.com/Bali0531-RC/NHNK/issues/new/choose**
 
 Hasznos, ha leírod a telefon típusát, az Android verziót és az app verzióját.
 
@@ -60,11 +70,32 @@ keresztül. MIT licenc, a korábbi szerzői jogi megjelölések megtartásával.
 
 ## Fejlesztés
 
+Két build flavor van, mert a Google Play tiltja az önmagukat frissítő alkalmazásokat:
+
+| Flavor | Terítés | Beépített frissítő | `REQUEST_INSTALL_PACKAGES` |
+| --- | --- | --- | --- |
+| `github` | sideload / Obtainium | igen | igen |
+| `playstore` | Google Play | nem | nem |
+
 ```sh
 flutter pub get
-flutter build apk --release --split-per-abi
+
+# Sideload kiadás (GitHub Releases)
+flutter build apk --release --split-per-abi \
+  --flavor github --dart-define=NHNK_DISTRIBUTION=github
+
+# Google Play kiadás
+flutter build appbundle --release \
+  --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
 ```
+
+A `--dart-define` és a `--flavor` mindig együtt járjon: a flavor a manifest jogosultságát
+dönti el, a dart-define pedig a Dart oldali frissítőt kapcsolja ki.
 
 Kiadáshoz aláírókulcs kell: másold az `android/key.properties.example` fájlt
 `android/key.properties` néven, és töltsd ki. Enélkül a release build a debug kulcsot
 használja, ami nem telepíthető frissítésként a korábbi verzióra.
+
+## Licenc
+
+MIT — lásd a [LICENSE](LICENSE) fájlt.

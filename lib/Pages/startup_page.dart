@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:neptun2/API/api_coms.dart' as api;
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/language.dart';
+import 'package:nhnk/API/api_coms.dart' as api;
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/haptics.dart';
+import 'package:nhnk/language.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../storage.dart';
 import 'main_page.dart' as main_page;

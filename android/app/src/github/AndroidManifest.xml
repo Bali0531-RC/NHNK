@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sideload-only: lets the in-app updater install the APK it downloads from GitHub.
+         Deliberately absent from the playstore flavor, which Play would reject for it. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+</manifest>

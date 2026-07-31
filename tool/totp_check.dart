@@ -2,7 +2,7 @@
 // Usage: dart run tool/totp_check.dart <base32secret> <unixSeconds...>
 import 'dart:io';
 
-import 'package:neptun2/API/totp.dart';
+import 'package:nhnk/API/totp.dart';
 
 void main(List<String> args) {
   if (args.length < 2) {

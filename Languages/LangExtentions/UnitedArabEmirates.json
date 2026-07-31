@@ -28,8 +28,7 @@
   "loginPage_setupPage_NeptunCode":"رمز نيبتون",
   "loginPage_setupPage_Password":"كلمة المرور",
   "loginPage_setupPage_InvalidCredentialsEntered":"اسم المستخدم أو كلمة المرور غير صحيحة!",
-  "loginPage_setupPage_2faWarning":"إذا كان لديك تفعيل المصادقة الثنائية عامل على حسابك، فلن تتمكن من تسجيل الدخول!",
-  "loginPage_setupPage_2faWarningDescription":"نيبتون2 يستخدم واجهة برمجة تطبيقات تطبيق Neptun القديمة، والتي لم تتضمن المصادقة الثنائية العاملة. إذا كان حسابك محميًا به، فلن تتمكن من تسجيل الدخول عبر Neptun2.\n\n لكن يمكنك تعطيلها، وستتمكن من استخدام Neptun2 بدون مشكلة.\nلتعطيلها، انتقل إلى \"بياناتي/الإعدادات\" في موقع Neptun الإلكتروني.",
+
   "loginPage_setupPage_LogInButton":"تسجيل الدخول",
   "loginPage_setupPage_LoginInProgress":"تسجيل الدخول...",
   "loginPage_setupPage_LoginInProgressSlow":"خوادم Neptun تواجه مشكلة...",
@@ -97,6 +96,7 @@
   "topmenu_buttons_Settings":"الإعدادات",
   "topmenu_buttons_SupportDev":"دعم المطور",
   "topmenu_buttons_Bugreport":"تقرير عن خطأ",
+  "topmenu_buttons_About":"حول",
   "topmenu_buttons_Logout":"تسجيل الخروج",
   "topmenu_buttons_LogoutSuccessToast":"لقد قمت بتسجيل الخروج بنجاح!",
   "calendarPage_FreeDay":"يوم عطلة!",

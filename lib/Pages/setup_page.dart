@@ -6,11 +6,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:neptun2/API/ics_calendar.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/local_file_actions.dart';
-import 'package:neptun2/language.dart';
+import 'package:nhnk/API/ics_calendar.dart';
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/haptics.dart';
+import 'package:nhnk/local_file_actions.dart';
+import 'package:nhnk/language.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/custom_snackbar.dart';
@@ -289,7 +289,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                                     return;
                                   }
 
-                                  final url = Uri.parse('https://github.com/Bali0531-RC/Neptun-Mobile/issues/new/choose');
+                                  final url = Uri.parse('https://github.com/Bali0531-RC/NHNK/issues/new/choose');
                                   launchUrl(url);
                                 },
                                 icon: Icon(
@@ -1557,47 +1557,6 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12
                             ),
-                          ),
-                          const SizedBox(height: 45),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Container(
-                                  margin: const EdgeInsets.all(15),
-                                  child: Text(
-                                    AppStrings.getLanguagePack().loginPage_setupPage_2faWarning,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.getTheme().textColor.withValues(alpha: .6)
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                margin: const EdgeInsets.all(15),
-                                decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.all(Radius.circular(90)),
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .06)
-                                ),
-                                child: IconButton(
-                                  onPressed: (){
-                                    _showSnackbar(AppStrings.getLanguagePack().loginPage_setupPage_2faWarningDescription, 18);
-                                    AppHaptics.attentionLightImpact();
-                                  },
-                                  icon: Icon(
-                                    Icons.question_mark_rounded,
-                                    color: AppColors.getTheme().textColor.withValues(alpha: .4),
-                                  ),
-                                  enableFeedback: true,
-                                  iconSize: 24,
-                                ),
-                              ),
-                            ],
                           ),
                           const SizedBox(height: 50),
                           SingleChildScrollView(

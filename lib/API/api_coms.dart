@@ -4,11 +4,11 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:neptun2/API/ics_calendar.dart';
-import 'package:neptun2/API/totp.dart';
-import 'package:neptun2/Misc/clickable_text_span.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/language.dart';
+import 'package:nhnk/API/ics_calendar.dart';
+import 'package:nhnk/API/totp.dart';
+import 'package:nhnk/Misc/clickable_text_span.dart';
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/language.dart';
 import '../storage.dart' as storage;
 import 'dart:developer' as debug;
 import '../storage.dart';
@@ -270,7 +270,7 @@ import '../storage.dart';
     }
 
     static Future<List<dynamic>?> getRawJsonWithNameUrlPairs() async{
-      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/Neptun-Mobile/refs/heads/main/universityNameUrlPairs.json');
+      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/universityNameUrlPairs.json');
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
@@ -1940,7 +1940,7 @@ class CashinEntry{
           case 6:
             return AppStrings.getLanguagePack().api_loadingScreenHintFriendly7_Universal;
           default:
-            return 'Neptun 2';
+            return 'NHNK';
         }
       }
       final gen = Random().nextInt(100) % 7;
@@ -1960,7 +1960,7 @@ class CashinEntry{
         case 6:
           return AppStrings.getLanguagePack().api_loadingScreenHint7_Universal;
         default:
-          return 'Neptun 2';
+          return 'NHNK';
       }
     }
     static String randomLoadingCommentMini(bool familyFriendlyMode) {
@@ -1976,7 +1976,7 @@ class CashinEntry{
           case 3:
             return AppStrings.getLanguagePack().api_loadingScreenHintFriendlyMini4_Universal;
           default:
-            return 'Neptun 2';
+            return 'NHNK';
         }
       }
       final gen = Random().nextInt(100) % 3;
@@ -1988,7 +1988,7 @@ class CashinEntry{
         case 2:
           return AppStrings.getLanguagePack().api_loadingScreenHintMini3_Universal;
         default:
-          return 'Neptun 2';
+          return 'NHNK';
       }
     }
 
@@ -2077,7 +2077,7 @@ class CashinEntry{
       return (daylightSavingsTimeFrom.microsecondsSinceEpoch < time.microsecondsSinceEpoch && time.microsecondsSinceEpoch < daylightSavingsTimeTo.microsecondsSinceEpoch);
     }
     static Future<AppUpdateHelper?> getAppUpdateHelper() async{
-      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/Neptun-Mobile/refs/heads/main/appMinimumAllowedVersion.json');
+      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/appMinimumAllowedVersion.json');
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
@@ -2155,7 +2155,7 @@ class CashinEntry{
       if(_langMapCache != null){
         return _langMapCache;
       }
-      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/Neptun-Mobile/refs/heads/main/Languages/supportedLanguages.json');
+      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/Languages/supportedLanguages.json');
       final response = await http.get(url);
 
       if (response.statusCode != 200) {
@@ -2197,7 +2197,7 @@ class CashinEntry{
       if(_themeMapCache != null){
         return _themeMapCache;
       }
-      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/Neptun-Mobile/refs/heads/main/Themes/supportedThemes.json');
+      final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/Themes/supportedThemes.json');
       final response = await http.get(url);
 
       if (response.statusCode != 200) {

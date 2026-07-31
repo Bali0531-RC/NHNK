@@ -1,4 +1,4 @@
-package com.zoligamer.neptun_mobile.app;
+package hu.bali0531.nhnk.app;
 
 import io.flutter.embedding.android.FlutterActivity;
 

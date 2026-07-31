@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
-import 'package:neptun2/Misc/custom_snackbar.dart';
-import 'package:neptun2/Pages/main_page.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/haptics.dart';
-import 'package:neptun2/language.dart';
-import 'package:neptun2/storage.dart';
+import 'package:nhnk/Misc/custom_snackbar.dart';
+import 'package:nhnk/Pages/main_page.dart';
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/haptics.dart';
+import 'package:nhnk/language.dart';
+import 'package:nhnk/storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../API/api_coms.dart';
 import '../API/api_coms.dart' as api;
@@ -1275,7 +1275,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )
         );
         list.add(const SizedBox(height: 6));
-        final pinfo = widget.pinfo ?? PackageInfo(appName: 'Neptun Mobile', packageName: 'com.zoligamer.neptun_mobile.app', version: '1.0.7', buildNumber: '13', buildSignature: '');
+        final pinfo = widget.pinfo ?? PackageInfo(appName: 'NHNK', packageName: 'hu.bali0531.nhnk.app', version: '1.0.7', buildNumber: '13', buildSignature: '');
         list.add(Container(
           alignment: Alignment.bottomLeft,
           margin: const EdgeInsets.all(10),

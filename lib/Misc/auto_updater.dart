@@ -15,10 +15,18 @@ class AppUpdater {
   // Must track this fork: upstream releases are signed with a different key and
   // would fail to install over builds from this repository.
   static const String repoOwner = "Bali0531-RC";
-  static const String repoName = "Neptun-Mobile";
+  static const String repoName = "NHNK";
+
+  /// Google Play bans APKs that update themselves, so the playstore flavor ships without this.
+  static const bool isSupported =
+      String.fromEnvironment('NHNK_DISTRIBUTION', defaultValue: 'github') != 'playstore';
 
   /// Fő belépési pont. Ezt hívd meg a main_page initState-jében!
   static Future<void> checkAndInstallUpdate(BuildContext context) async {
+    if (!isSupported) {
+      return;
+    }
+
     // 1. Internet ellenőrzés
     if (await Connectivity().checkConnectivity() == ConnectivityResult.none) {
       return;

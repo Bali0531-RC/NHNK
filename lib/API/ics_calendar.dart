@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:neptun2/API/api_coms.dart';
+import 'package:nhnk/API/api_coms.dart';
 import '../local_file_actions.dart';
 
 class ICSCalendar{

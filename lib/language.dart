@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert' as conv;
 import 'package:flutter/material.dart';
-import 'package:neptun2/storage.dart';
+import 'package:nhnk/storage.dart';
 import 'API/api_coms.dart';
 import 'Misc/popup.dart';
 import 'Pages/startup_page.dart';
@@ -53,8 +53,6 @@ class AppStrings{
       loginPage_setupPage_NeptunCode: 'Neptun kód',
       loginPage_setupPage_Password: 'Jelszó',
       loginPage_setupPage_InvalidCredentialsEntered: 'Hibás felhasználónév vagy jelszó!',
-      loginPage_setupPage_2faWarning: 'Ha két lépcsős azonosítás van a fiókodon, nem fogsz tudni bejelenzkezni!',
-      loginPage_setupPage_2faWarningDescription: 'A Neptun2 a régi Neptun mobilapp API-jait használja, amiben nem volt 2 lépcsős azonosítás. Így, ha a fiókod 2 lépcsős azonosítással van védve, a Neptun2 nem fog tudni bejelentkeztetni.\n\n Viszont, ha kikapcsolod, hiba nélkül tudod használni a Neptun2-t.\nKikapcsolni a webes neptunban, a "Saját Adatok/Beállítások"-ban tudod.',
       loginPage_setupPage_LogInButton: 'Belépés',
       loginPage_setupPage_LoginInProgress: 'Bejelentkezés...',
       loginPage_setupPage_LoginInProgressSlow: 'Neptun szervereivel lehet problémák vannak...',
@@ -82,7 +80,7 @@ class AppStrings{
       api_loadingScreenHintFriendly3_Universal: 'Már bármelyik milleniumban betölthet...',
       api_loadingScreenHintFriendly4_Universal: 'Áramszünet van az SDA Informatikánál...',
       api_loadingScreenHintFriendly5_Universal: 'Az SDA Informatika egy nagyon jó cég...',
-      api_loadingScreenHintFriendly6_Universal: 'Tudtad? A "Neptun 2" alapja csupán 1 hét alatt készült...',
+      api_loadingScreenHintFriendly6_Universal: 'Tudtad? Az alapjául szolgáló "Neptun 2" csupán 1 hét alatt készült...',
       api_loadingScreenHintFriendly7_Universal: 'Túl lassú? Panaszkodj az SDA Informatikának...',
       api_loadingScreenHint1_Universal: 'Úgy dolgoznak a Neptun szerverek, mint egy átlagos államilag finanszírozott útépítés...',
       api_loadingScreenHint2_Universal: 'Megvárjuk, amíg az SDA Informatika főnöke kávéba fullad...',
@@ -122,6 +120,7 @@ class AppStrings{
       topmenu_buttons_Settings: 'Beállítások',
       topmenu_buttons_SupportDev: 'Fejlesztés támogatása',
       topmenu_buttons_Bugreport: 'Hibabejelentés',
+      topmenu_buttons_About: 'Névjegy',
       topmenu_buttons_Logout: 'Kijelentkezés',
       topmenu_buttons_LogoutSuccessToast: 'Sikeresen kijelentkeztél!',
       calendarPage_FreeDay: 'Szabadnap!',
@@ -239,8 +238,6 @@ class AppStrings{
       loginPage_setupPage_NeptunCode: 'Neptun code',
       loginPage_setupPage_Password: 'Password',
       loginPage_setupPage_InvalidCredentialsEntered: 'Invalid username or password!',
-      loginPage_setupPage_2faWarning: 'If you have multi-factor authentication enabled on your account, you won\'t be able to log in!',
-      loginPage_setupPage_2faWarningDescription: 'Neptun2 uses the old Neptun mobile app API, which didn\'t include multi-factor authentication. If your account is protected by it, you won\'t be able to log in via Neptun2.\n\n But you can turn it off, and you will be able to use Neptun2 without a problem.\nTo turn it off, go to "My Data/Settings" in Neptun web.',
       loginPage_setupPage_LogInButton: 'Login',
       loginPage_setupPage_LoginInProgress: 'Logging in...',
       loginPage_setupPage_LoginInProgressSlow: 'Neptun servers are having a hard time...',
@@ -268,7 +265,7 @@ class AppStrings{
       api_loadingScreenHintFriendly3_Universal: 'Loads in any millennium now...',
       api_loadingScreenHintFriendly4_Universal: 'There\'s a power outage at SDA informatics...',
       api_loadingScreenHintFriendly5_Universal: 'SDA informatics is an amazing company...',
-      api_loadingScreenHintFriendly6_Universal: 'Did you know? "Neptun 2" was created in about 1 week...',
+      api_loadingScreenHintFriendly6_Universal: 'Did you know? "Neptun 2", the project this is based on, was created in about 1 week...',
       api_loadingScreenHintFriendly7_Universal: 'Too slow? Send a complaint to SDA informatics...',
       api_loadingScreenHint1_Universal: 'The Neptun servers are working as hard as an average Hungarian construction worker...',
       api_loadingScreenHint2_Universal: 'We are waiting until the CEO of SDA informatics drowns in coffee...',
@@ -308,6 +305,7 @@ class AppStrings{
       topmenu_buttons_Settings: 'Settings',
       topmenu_buttons_SupportDev: 'Support developer',
       topmenu_buttons_Bugreport: 'Bug report',
+      topmenu_buttons_About: 'About',
       topmenu_buttons_Logout: 'Log out',
       topmenu_buttons_LogoutSuccessToast: 'You have logged out successfully!',
       calendarPage_FreeDay: 'Free Day!',
@@ -423,6 +421,8 @@ class AppStrings{
     }
     return selectonList[currLangId];
   }
+
+  static String getCurrentLangCode() => _getCurrentLang();
 
   static LanguagePack _getLangPack(String id){
     final selectonList = _languages;
@@ -563,8 +563,6 @@ class LanguagePack{
   final String loginPage_setupPage_NeptunCode;
   final String loginPage_setupPage_Password;
   final String loginPage_setupPage_InvalidCredentialsEntered;
-  final String loginPage_setupPage_2faWarning;
-  final String loginPage_setupPage_2faWarningDescription;
   final String loginPage_setupPage_LogInButton;
   final String loginPage_setupPage_LoginInProgress;
   final String loginPage_setupPage_LoginInProgressSlow;
@@ -646,6 +644,7 @@ class LanguagePack{
   final String topmenu_buttons_Settings;
   final String topmenu_buttons_SupportDev;
   final String topmenu_buttons_Bugreport;
+  final String topmenu_buttons_About;
   final String topmenu_buttons_Logout;
   final String topmenu_buttons_LogoutSuccessToast;
 
@@ -769,8 +768,6 @@ class LanguagePack{
     required this.loginPage_setupPage_NeptunCode,
     required this.loginPage_setupPage_Password,
     required this.loginPage_setupPage_InvalidCredentialsEntered,
-    required this.loginPage_setupPage_2faWarning,
-    required this.loginPage_setupPage_2faWarningDescription,
     required this.loginPage_setupPage_LogInButton,
     required this.loginPage_setupPage_LoginInProgress,
     required this.loginPage_setupPage_LoginInProgressSlow,
@@ -834,6 +831,7 @@ class LanguagePack{
     required this.topheader_periods_MainHeader,
     required this.topheader_messages_UnreadMessages,
     required this.topmenu_buttons_Bugreport,
+    required this.topmenu_buttons_About,
     required this.topmenu_buttons_Logout,
     required this.topmenu_buttons_Settings,
     required this.topmenu_buttons_SupportDev,
@@ -967,8 +965,6 @@ class LanguagePack{
         loginPage_setupPage_NeptunCode:lang['loginPage_setupPage_NeptunCode'],
         loginPage_setupPage_Password:lang['loginPage_setupPage_Password'],
         loginPage_setupPage_InvalidCredentialsEntered:lang['loginPage_setupPage_InvalidCredentialsEntered'],
-        loginPage_setupPage_2faWarning:lang['loginPage_setupPage_2faWarning'],
-        loginPage_setupPage_2faWarningDescription:lang['loginPage_setupPage_2faWarningDescription'],
         loginPage_setupPage_LogInButton:lang['loginPage_setupPage_LogInButton'],
         loginPage_setupPage_LoginInProgress:lang['loginPage_setupPage_LoginInProgress'],
         loginPage_setupPage_LoginInProgressSlow:lang['loginPage_setupPage_LoginInProgressSlow'],
@@ -1032,6 +1028,7 @@ class LanguagePack{
         topheader_periods_MainHeader:lang['topheader_periods_MainHeader'],
         topheader_messages_UnreadMessages:lang['topheader_messages_UnreadMessages'],
         topmenu_buttons_Bugreport:lang['topmenu_buttons_Bugreport'],
+        topmenu_buttons_About:lang['topmenu_buttons_About'] ?? 'Névjegy',
         topmenu_buttons_Logout:lang['topmenu_buttons_Logout'],
         topmenu_buttons_Settings:lang['topmenu_buttons_Settings'],
         topmenu_buttons_SupportDev:lang['topmenu_buttons_SupportDev'],
@@ -1168,8 +1165,6 @@ class LanguagePack{
       'loginPage_setupPage_NeptunCode':lang.loginPage_setupPage_NeptunCode,
       'loginPage_setupPage_Password':lang.loginPage_setupPage_Password,
       'loginPage_setupPage_InvalidCredentialsEntered':lang.loginPage_setupPage_InvalidCredentialsEntered,
-      'loginPage_setupPage_2faWarning':lang.loginPage_setupPage_2faWarning,
-      'loginPage_setupPage_2faWarningDescription':lang.loginPage_setupPage_2faWarningDescription,
       'loginPage_setupPage_LogInButton':lang.loginPage_setupPage_LogInButton,
       'loginPage_setupPage_LoginInProgress':lang.loginPage_setupPage_LoginInProgress,
       'loginPage_setupPage_LoginInProgressSlow':lang.loginPage_setupPage_LoginInProgressSlow,
@@ -1233,6 +1228,7 @@ class LanguagePack{
       'topheader_periods_MainHeader':lang.topheader_periods_MainHeader,
       'topheader_messages_UnreadMessages':lang.topheader_messages_UnreadMessages,
       'topmenu_buttons_Bugreport':lang.topmenu_buttons_Bugreport,
+      'topmenu_buttons_About':lang.topmenu_buttons_About,
       'topmenu_buttons_Logout':lang.topmenu_buttons_Logout,
       'topmenu_buttons_Settings':lang.topmenu_buttons_Settings,
       'topmenu_buttons_SupportDev':lang.topmenu_buttons_SupportDev,

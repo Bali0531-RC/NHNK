@@ -11,6 +11,7 @@ import '../Misc/emojirich_text.dart';
 import '../language.dart';
 import '../notifications.dart';
 import '../Pages/settings_page.dart';
+import '../Pages/about_page.dart';
 
 class AppDrawer extends StatelessWidget {
   final String loggedInUsername;
@@ -87,7 +88,7 @@ class AppDrawer extends StatelessWidget {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
                 if(Platform.isAndroid){
-                  launchUrl(Uri.parse('https://buymeacoffee.com/zoligamer')).whenComplete(() {
+                  launchUrl(Uri.parse('https://nhnk.bali0531.hu/tamogatas')).whenComplete(() {
                     Fluttertoast.showToast(msg: '❤️', toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
                   });
                 }
@@ -100,8 +101,20 @@ class AppDrawer extends StatelessWidget {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
                 if(Platform.isAndroid){
-                  launchUrl(Uri.parse('https://github.com/Bali0531-RC/Neptun-Mobile/issues/new/choose'));
+                  launchUrl(Uri.parse('https://github.com/Bali0531-RC/NHNK/issues/new/choose'));
                 }
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.info_outline_rounded, color: AppColors.getTheme().textColor),
+              title: Text(AppStrings.getLanguagePack().topmenu_buttons_About, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+              onTap: () {
+                AppHaptics.lightImpact();
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutPage()),
+                );
               },
             ),
 

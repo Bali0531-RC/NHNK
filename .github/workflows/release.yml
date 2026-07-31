@@ -44,11 +44,12 @@ jobs:
 
       - name: Build signed APKs
         env:
-          NEPTUN_KEYSTORE: ${{ runner.temp }}/release.jks
-          NEPTUN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          NEPTUN_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          NEPTUN_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: flutter build apk --release --split-per-abi
+          NHNK_KEYSTORE: ${{ runner.temp }}/release.jks
+          NHNK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          NHNK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          NHNK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        # The github flavor keeps the in-app updater; the playstore flavor is uploaded to Play separately.
+        run: flutter build apk --release --split-per-abi --flavor github --dart-define=NHNK_DISTRIBUTION=github
 
       - name: Verify the APKs are not debug-signed
         run: |
@@ -66,9 +67,9 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist
-          for apk in build/app/outputs/flutter-apk/*-release.apk; do
-            abi=$(basename "$apk" | sed -E 's/^app-(.*)-release\.apk$/\1/')
-            cp "$apk" "dist/Neptun_Mobile-${VERSION}-${abi}.apk"
+          for apk in build/app/outputs/flutter-apk/*-github-release.apk; do
+            abi=$(basename "$apk" | sed -E 's/^app-(.*)-github-release\.apk$/\1/')
+            cp "$apk" "dist/NHNK-${VERSION}-${abi}.apk"
           done
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
           ls -lh dist
@@ -76,4 +77,4 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "Neptun Mobile $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "NHNK $GITHUB_REF_NAME" --generate-notes

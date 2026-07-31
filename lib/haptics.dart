@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:neptun2/storage.dart';
+import 'package:nhnk/storage.dart';
 import 'package:vibration/vibration.dart';
 
 class AppHaptics{

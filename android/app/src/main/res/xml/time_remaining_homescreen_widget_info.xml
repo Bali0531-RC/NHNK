@@ -4,4 +4,4 @@
 	android:minHeight="40dp"
 	android:updatePeriodMillis="1800000"
 	android:initialLayout="@layout/time_remaining_homescreen_widget"
-	android:configure="com.domedav.neptun2.TimeRemainingHomescreenWidgetProvider" />
+	android:configure="hu.bali0531.nhnk.app.TimeRemainingHomescreenWidgetProvider" />

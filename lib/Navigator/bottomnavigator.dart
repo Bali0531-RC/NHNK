@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:neptun2/colors.dart';
-import 'package:neptun2/language.dart';
+import 'package:nhnk/colors.dart';
+import 'package:nhnk/language.dart';
 import '../Pages/main_page.dart';
 import '../haptics.dart';
 
