@@ -135,6 +135,7 @@ import '../storage.dart';
           if (bodyJson["data"] != null && bodyJson["data"]["accessToken"] != null) {
             final newAccessToken = bodyJson["data"]["accessToken"];
             await storage.DataCache.setAccessToken(newAccessToken);
+            CalendarRequest.invalidateTrainingId();
             
             final username = storage.DataCache.getUsername();
             if (username != null) {
@@ -341,6 +342,7 @@ import '../storage.dart';
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
           await storage.DataCache.setInstituteUrl(baseUrl);
+          CalendarRequest.invalidateTrainingId();
           return 1;
         }
       } catch (e) { }
@@ -379,6 +381,7 @@ import '../storage.dart';
         if (response["data"] != null && response["data"]["accessToken"] != null) {
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
+          CalendarRequest.invalidateTrainingId();
           return true;
         }
       } catch (e) { }
@@ -450,6 +453,15 @@ import '../storage.dart';
 
 class CalendarRequest {
   static String? _cachedTrainingId;
+  static int _sessionGeneration = 0;
+
+  static int get sessionGeneration => _sessionGeneration;
+
+  // Neptun regenerates studentTrainingId on every login, so any new session invalidates it.
+  static void invalidateTrainingId() {
+    _cachedTrainingId = null;
+    _sessionGeneration++;
+  }
 
   static Future<String?> getStudentTrainingId({bool forceRefresh = false}) async {
     if (forceRefresh) {
@@ -546,16 +558,28 @@ class CalendarRequest {
         bool dispExams = storage.DataCache.getDisplayExams() ?? true;
         bool dispPeriods = storage.DataCache.getDisplayPeriods() ?? true;
 
+        String buildEventsUrl(String trainingId) =>
+            "$baseUrl/api/Calendar/GetCalendarEvents?startDate=$startIso&endDate=$endIso"
+            "&studentTrainingIds[0]=$trainingId"
+            "&displayClasses=$dispClasses&displayExams=$dispExams"
+            "&displayOnlineMeetings=false&displayOtherEvents=true"
+            "&displayPeriods=$dispPeriods&displayTasks=true";
+
         try {
+          final generationBefore = sessionGeneration;
           final trainingId = await getStudentTrainingId(forceRefresh: false);
           if (trainingId != null) {
             final token = await storage.DataCache.getAccessToken();
 
-            final url = Uri.parse("$baseUrl/api/Calendar/GetCalendarEvents?startDate=$startIso&endDate=$endIso&studentTrainingIds[0]=$trainingId&displayClasses=true&displayExams=true&displayOnlineMeetings=false&displayOtherEvents=true&displayPeriods=false&displayTasks=true");
+            final url = Uri.parse(buildEventsUrl(trainingId));
 
             responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
 
             if (responseRaw.contains('"statusCode":410') || responseRaw.contains('Authorization has been denied') || responseRaw.contains('"statusCode": 401')) {
+              needsReAuth = true;
+            }
+            // A refresh mid-request rotates the session, which retires the training ID we just used.
+            if (sessionGeneration != generationBefore) {
               needsReAuth = true;
             }
           } else {
@@ -567,15 +591,22 @@ class CalendarRequest {
 
         if (needsReAuth) {
           debug.log("Naptár: Lejárt token/ID érzékelve. Újra-azonosítás indul...");
-          final username = storage.DataCache.getUsername()!;
-          final password = storage.DataCache.getPassword()!;
-          await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+          // Refresh first: a full re-login re-triggers the 2FA prompt.
+          bool reauthed = await _APIRequest.tryTokenRefresh();
+          if (!reauthed) {
+            final username = storage.DataCache.getUsername();
+            final password = storage.DataCache.getPassword();
+            if (username == null || username.isEmpty || password == null || password.isEmpty) {
+              return '{"calendarData": []}';
+            }
+            await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+          }
 
           final newTrainingId = await getStudentTrainingId(forceRefresh: true);
           if (newTrainingId == null) return '{"calendarData": []}';
 
           final newToken = await storage.DataCache.getAccessToken();
-          final retryUrl = Uri.parse("$baseUrl/api/Calendar/GetCalendarEvents?startDate=$startIso&endDate=$endIso&studentTrainingIds[0]=$newTrainingId&displayClasses=$dispClasses&displayExams=$dispExams&displayOnlineMeetings=false&displayOtherEvents=false&displayPeriods=$dispPeriods&displayTasks=false");
+          final retryUrl = Uri.parse(buildEventsUrl(newTrainingId));
 
           responseRaw = await _APIRequest.getRequest(retryUrl, bearerToken: newToken!);
         }
@@ -767,19 +798,11 @@ class CalendarRequest {
         return '';
       }
       final DateTime now = DateTime.now();
-      DateTime previousMonday = now.subtract(Duration(days: now.weekday));
-      if (previousMonday.weekday == 7) {
-        previousMonday = previousMonday.subtract(const Duration(days: 7));
-      }
-      previousMonday = DateTime(previousMonday.year, previousMonday.month, previousMonday.day, 0, 0);
+      // Pure calendar arithmetic: Duration-based day maths drifts across DST boundaries.
+      final DateTime thisMonday = DateTime(now.year, now.month, now.day - (now.weekday - DateTime.monday));
 
-      DateTime nextSunday = previousMonday.add(const Duration(days: 6, hours: 23, minutes: 59));
-      if (nextSunday.weekday == 7) {
-        nextSunday = nextSunday.subtract(const Duration(days: 7));
-      }
-
-      DateTime startOfTargetWeek = previousMonday.add(Duration(days: weekOffset * 7));
-      DateTime endOfTargetWeek = nextSunday.add(Duration(days: weekOffset * 7));//.add(Duration(days: 7));
+      final DateTime startOfTargetWeek = DateTime(thisMonday.year, thisMonday.month, thisMonday.day + (weekOffset * 7));
+      final DateTime endOfTargetWeek = DateTime(startOfTargetWeek.year, startOfTargetWeek.month, startOfTargetWeek.day + 6, 23, 59, 59);
 
       final epochStart = startOfTargetWeek.millisecondsSinceEpoch;
       final epochEnd = endOfTargetWeek.millisecondsSinceEpoch;
@@ -830,25 +853,22 @@ class MarkbookRequest{
         List<Subject> modernSubjects = [];
 
         if (subjectsDecoded['data'] != null) {
-          // PÁRHUZAMOS LEKÉRÉS ELŐKÉSZÍTÉSE
-          List<Future<Subject?>> fetchTasks = [];
+          final entries = (subjectsDecoded['data'] as List<dynamic>);
 
-          for (var item in subjectsDecoded['data']) {
-            String subjectId = item['subjectId'];
-            String subjectName = item['subjectName'] ?? 'Ismeretlen';
-            int credit = item['subjectCredit'] ?? 0;
+          // Fetched in small batches: firing every subject at once gets throttled by Neptun.
+          const int batchSize = 6;
+          for (int i = 0; i < entries.length; i += batchSize) {
+            final batch = entries.skip(i).take(batchSize).map((item) {
+              String subjectId = item['subjectId'];
+              String subjectName = item['subjectName'] ?? 'Ismeretlen';
+              int credit = item['subjectCredit'] ?? 0;
+              return _fetchSubjectGrade(baseUrl, token, subjectId, activeTermId, subjectName, credit);
+            }).toList();
 
-            // Hozzáadjuk a listához a lekérési feladatot, de még NEM várjuk meg!
-            fetchTasks.add(_fetchSubjectGrade(baseUrl, token, subjectId, activeTermId, subjectName, credit));
-          }
-
-          // MOST lőjük ki mindet EGYSZERRE! (Villámgyors)
-          List<Subject?> results = await Future.wait(fetchTasks);
-
-          // Összefűzzük a sikeres válaszokat
-          for (var res in results) {
-            if (res != null) {
-              modernSubjects.add(res);
+            for (var res in await Future.wait(batch)) {
+              if (res != null) {
+                modernSubjects.add(res);
+              }
             }
           }
         }
@@ -1000,7 +1020,8 @@ class CashinRequest{
 
         if (decoded['data'] != null) {
           for (var item in decoded['data']) {
-            int amount = (item['transactionValue'] as double).toInt();
+            // JSON whole numbers decode as int, so a hard `as double` cast would throw.
+            int amount = ((item['transactionValue'] as num?) ?? 0).round();
             if (item['sign'] == '-') {
               amount = -amount;
             }
@@ -1133,10 +1154,32 @@ class PeriodsRequest{
 }
 
 class MailRequest{
+  static const int _modernMailCountWindow = 200;
+
   static Future<List<int>> getUnreadMessagesAndAllMessages()async{
     try{
       if (storage.DataCache.getIsModernApi()/* ?? false*/) {
-        return [0, 0, 0];
+        final token = await storage.DataCache.getAccessToken();
+        final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        if (token == null || token.isEmpty || baseUrl.isEmpty) {
+          return [0, 0, 0];
+        }
+
+        // The modern API exposes no count endpoint, so the list itself is counted.
+        final url = Uri.parse("$baseUrl/api/Message/GetReceivedMessages?firstRow=0&lastRow=$_modernMailCountWindow&filterType=0");
+        final decoded = conv.json.decode(await _APIRequest.getRequest(url, bearerToken: token));
+        final messages = decoded['data']?['receivedMessages'] as List<dynamic>?;
+        if (messages == null) {
+          return [0, 0, 0];
+        }
+
+        int unread = 0;
+        for (var item in messages) {
+          if (((item['unreadedPostCount'] ?? 0) as int) > 0) {
+            unread++;
+          }
+        }
+        return [unread, messages.length];
       }
       List<int> list = [];
       final json = await _getMailJson(0);
@@ -1228,6 +1271,25 @@ class MailRequest{
   }
 
   static Future<void> setMailRead(String id)async{
+    if ((storage.DataCache.getIsDemoAccount() ?? false) || (storage.DataCache.getHasICSFile() ?? false)) {
+      return;
+    }
+    // On the modern API fetching the message posts already clears the unread flag server-side.
+    if (storage.DataCache.getIsModernApi()) {
+      return;
+    }
+    try {
+      final username = storage.DataCache.getUsername();
+      final password = storage.DataCache.getPassword();
+      final baseUrl = storage.DataCache.getInstituteUrl();
+      if (username == null || password == null || baseUrl == null) {
+        return;
+      }
+      final url = Uri.parse(baseUrl + URLs.MESSAGE_SET_READ);
+      await _APIRequest.postRequest(url, '{"UserLogin":"$username","Password":"$password","MessageID":$id}');
+    } catch (e) {
+      debug.log("Nem siker\u00fclt olvasottnak jel\u00f6lni az \u00fczenetet: $e");
+    }
   }
   static Future<String> getMailContent(String messageId, String oldDetails) async {
     if (storage.DataCache.getIsDemoAccount() ?? false) {
@@ -2036,9 +2098,10 @@ class CashinEntry{
     }
     @override
     HttpClient createHttpClient(SecurityContext? context) {
-      return super.createHttpClient(context)
-        ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-          return true;
-        };
+      // Certificate validation is left at the platform default on purpose:
+      // accepting any certificate here would expose the Neptun password to MITM.
+      final client = super.createHttpClient(context);
+      client.connectionTimeout = const Duration(seconds: 20);
+      return client;
     }
   }

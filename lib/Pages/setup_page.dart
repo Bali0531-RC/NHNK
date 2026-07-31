@@ -1305,7 +1305,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
             mode: 9,
             callback: (kod) async {
               // JAVÍTVA: Hozzáadva az InstitutesRequest és a .toString()
-              bool isOk = await api.InstitutesRequest.submitTwoFactorCode( _username, _password, kod.toString());
+              bool isOk = await api.InstitutesRequest.submitTwoFactorCode( _username.toUpperCase(), _password, kod.toString());
 
               if (isOk) {
                 PopupWidgetHandler.closePopup(context);
