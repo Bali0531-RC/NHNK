@@ -31,6 +31,18 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Signing credentials come from key.properties locally, or from the environment in CI.
+def releaseStoreFile = System.getenv('NEPTUN_KEYSTORE') ?: keystoreProperties['storeFile']
+def releaseStorePassword = System.getenv('NEPTUN_KEYSTORE_PASSWORD') ?: keystoreProperties['storePassword']
+def releaseKeyAlias = System.getenv('NEPTUN_KEY_ALIAS') ?: keystoreProperties['keyAlias']
+def releaseKeyPassword = System.getenv('NEPTUN_KEY_PASSWORD') ?: keystoreProperties['keyPassword']
+def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
+if (!hasReleaseSigning) {
+    logger.warn("WARNING: no release signing key found; release builds fall back to the debug key " +
+                "and cannot be installed as an upgrade. See android/key.properties.example.")
+}
+
 android {
     namespace "com.zoligamer.neptun_mobile.app"
     compileSdkVersion 36
@@ -61,10 +73,12 @@ android {
 
     signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
+            if (hasReleaseSigning) {
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+            }
         }
         debug {
 
@@ -72,8 +86,8 @@ android {
     }
     buildTypes {
         release {
-            // Falls back to debug signing so a fresh clone without key.properties still builds.
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            // Falls back to debug signing so a fresh clone without a keystore still builds.
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
             minifyEnabled true // Opcionális: extra tömörítés
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
