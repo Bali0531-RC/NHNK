@@ -100,7 +100,7 @@ class AppDrawer extends StatelessWidget {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
                 if(Platform.isAndroid){
-                  launchUrl(Uri.parse('https://github.com/zoligamer/Neptun-Mobile-fork/issues/new/choose'));
+                  launchUrl(Uri.parse('https://github.com/Bali0531-RC/Neptun-Mobile/issues/new/choose'));
                 }
               },
             ),

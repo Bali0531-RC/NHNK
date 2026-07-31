@@ -289,7 +289,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                                     return;
                                   }
 
-                                  final url = Uri.parse('https://github.com/domedav/Neptun-2/issues/new/choose');
+                                  final url = Uri.parse('https://github.com/Bali0531-RC/Neptun-Mobile/issues/new/choose');
                                   launchUrl(url);
                                 },
                                 icon: Icon(

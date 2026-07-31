@@ -96,11 +96,11 @@ class TimetableElementWidget extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("📚 Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                              Text("Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                               const SizedBox(height: 10),
-                              Text("📝 Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                              Text("Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                               const SizedBox(height: 10),
-                              Text("🎯 Eredmény: ${resSnapshot.data ?? 'Nincs még kiírva'}", style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text("Eredmény: ${resSnapshot.data ?? 'Nincs még kiírva'}", style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
                             ],
                           );
                         }
@@ -140,9 +140,9 @@ class TimetableElementWidget extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("📍 Terem: ${snapshot.data!['room']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                        Text("Terem: ${snapshot.data!['room']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                         const SizedBox(height: 10),
-                        Text("👨‍🏫 Tanár: ${snapshot.data!['teacher']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                        Text("Tanár: ${snapshot.data!['teacher']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                       ],
                     );
                   }
@@ -229,7 +229,7 @@ class TimetableElementWidget extends StatelessWidget {
                     visible: entry.location.trim().isNotEmpty,
                     child: Text(
                       entry.location == "Nincs megadva" || entry.location.isEmpty || entry.location == "NULL"
-                          ? "⏳ Terem betöltése..."
+                          ? "Terem betöltése..."
                           : entry.location,
                       style: TextStyle(
                           color: isExam ? AppColors.getTheme().errorRed.withValues(alpha: .8) : AppColors.getTheme().textColor.withValues(alpha: 0.8),

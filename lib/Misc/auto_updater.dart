@@ -12,8 +12,10 @@ import '../storage.dart'; // A getInt és saveInt miatt kell
 import '../colors.dart';
 
 class AppUpdater {
-  static const String repoOwner = "zoligamer";
-  static const String repoName = "Neptun-Mobile-fork";
+  // Must track this fork: upstream releases are signed with a different key and
+  // would fail to install over builds from this repository.
+  static const String repoOwner = "Bali0531-RC";
+  static const String repoName = "Neptun-Mobile";
 
   /// Fő belépési pont. Ezt hívd meg a main_page initState-jében!
   static Future<void> checkAndInstallUpdate(BuildContext context) async {

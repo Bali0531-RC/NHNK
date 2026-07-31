@@ -65,7 +65,7 @@ class MarkbookElementWidget extends StatelessWidget{
             children: [
               // Bal oldali rész: Kreditérték
               EmojiRichText(
-                text: "$credit🎖️",
+                text: "$credit",
                 defaultStyle: TextStyle(
                   color: AppColors.getTheme().onPrimaryContainer,
                   fontWeight: FontWeight.w900,
