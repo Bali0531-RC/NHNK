@@ -88,7 +88,13 @@ android {
         release {
             // Falls back to debug signing so a fresh clone without a keystore still builds.
             signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
-            minifyEnabled true // Opcionális: extra tömörítés
+            // Set NEPTUN_NO_SHRINK=1 to build an unshrunk release when diagnosing R8 stripping.
+            if (System.getenv('NEPTUN_NO_SHRINK')) {
+                minifyEnabled false
+                shrinkResources false
+            } else {
+                minifyEnabled true
+            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
