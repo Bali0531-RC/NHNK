@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:neptun2/Pages/main_page.dart';
 import '../API/api_coms.dart';
+import '../API/totp.dart';
 import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
@@ -21,6 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _languageCurrSelect;
   late String _themesCurrSelect;
   late double _currentFontScale;
+  bool _hasTotpSecret = false;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
     // loading defaults
     _currentFontScale = DataCache.getFontScale();
     _themesCurrSelect = AppColors.getTheme().paletteName;
+    _hasTotpSecret = DataCache.getTotpSecret()?.isNotEmpty ?? false;
 
     final lIdx = DataCache.getUserSelectedLanguage()!;
     if (lIdx <= -1) {
@@ -39,9 +42,103 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  void _showTotpSecretDialog() {
+    final controller = TextEditingController();
+    String? parsed;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final preview = parsed == null ? null : Totp.generate(parsed!);
+          return AlertDialog(
+            backgroundColor: AppColors.getTheme().rootBackground,
+            title: Text("2FA titkos kulcs", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Ez az a kulcs, amit a hitelesítő alkalmazás beállításakor kaptál a Neptuntól. Beillesztheted magát a kulcsot, vagy a teljes otpauth:// linket is.",
+                  style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Ha elmented, a kétlépcsős védelem ezen a készüléken gyakorlatilag egylépcsőssé válik.",
+                  style: TextStyle(color: AppColors.getTheme().errorRed.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: "pl. JBSWY3DPEHPK3PXP",
+                    hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.3), fontSize: 12),
+                    filled: true,
+                    fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  onChanged: (val) => setDialogState(() => parsed = Totp.extractSecret(val)),
+                ),
+                const SizedBox(height: 10),
+                // Showing the live code lets the user check it against their authenticator before saving.
+                if (controller.text.trim().isNotEmpty)
+                  Text(
+                    preview == null ? "Érvénytelen kulcs" : "Jelenlegi kód: $preview",
+                    style: TextStyle(
+                      color: preview == null ? AppColors.getTheme().errorRed : AppColors.getTheme().secondary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              if (_hasTotpSecret)
+                TextButton(
+                  onPressed: () async {
+                    AppHaptics.lightImpact();
+                    await DataCache.setTotpSecret(null);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    setState(() => _hasTotpSecret = false);
+                  },
+                  child: Text("Törlés", style: TextStyle(color: AppColors.getTheme().errorRed)),
+                ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text("Mégse", style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7))),
+              ),
+              TextButton(
+                onPressed: parsed == null
+                    ? null
+                    : () async {
+                        AppHaptics.lightImpact();
+                        await DataCache.setTotpSecret(parsed);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        setState(() => _hasTotpSecret = true);
+                      },
+                child: Text(
+                  "Mentés",
+                  style: TextStyle(
+                    color: parsed == null
+                        ? AppColors.getTheme().textColor.withValues(alpha: 0.3)
+                        : AppColors.getTheme().secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   // header helpers
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Padding(
+  Widget _buildSectionHeader(String title, IconData icon) {    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
       child: Row(
         children: [
@@ -308,6 +405,27 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
+          ),
+
+          // --- 4. security ---
+          _buildSectionHeader("Biztonság", Icons.lock_rounded),
+
+          ListTile(
+            title: Text("2FA titkos kulcs", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              _hasTotpSecret
+                  ? "Mentve - az app magától lép be, ha lejár a munkamenet"
+                  : "Nincs mentve - újra belépéskor kézzel kell kódot megadni",
+              style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.5), fontSize: 12),
+            ),
+            trailing: Icon(
+              _hasTotpSecret ? Icons.verified_user_rounded : Icons.key_off_rounded,
+              color: _hasTotpSecret ? AppColors.getTheme().secondary : AppColors.getTheme().textColor.withValues(alpha: 0.4),
+            ),
+            onTap: () {
+              AppHaptics.lightImpact();
+              _showTotpSecretDialog();
+            },
           ),
           const SizedBox(height: 40),
         ],

@@ -334,7 +334,7 @@ class FreedayElementWidget extends StatelessWidget{
 class WeekoffseterElementWidget extends StatelessWidget{
   final HomePageState homePage;
 
-  WeekoffseterElementWidget({super.key, required this.week, required this.from, required this.to, required this.onBackPressed, required this.onForwardPressed, required this.canDoPaging, required this.homePage, required this.isLoading}){
+  WeekoffseterElementWidget({super.key, required this.week, required this.from, required this.to, required this.onBackPressed, required this.onForwardPressed, required this.canDoPaging, required this.homePage, required this.isLoading, required this.weekStart, required this.weekEnd}){
     final startMonth = from != null ? api.Generic.monthToText(from!.month) : "_";
     final startDay = from != null ? from!.day : "";
 
@@ -348,8 +348,12 @@ class WeekoffseterElementWidget extends StatelessWidget{
       return;
     }
 
+    // Taken from the week window rather than the events, so a week with no classes still shows its dates.
     if(startMonth == "_"){
-      displayString2 = AppStrings.getLanguagePack().calendarPage_weekNav_ClassesThisWeekEmpty;
+      final range = weekStart.month == weekEnd.month
+          ? '${api.Generic.monthToText(weekStart.month)} ${weekStart.day}-${weekEnd.day}.'
+          : '${api.Generic.monthToText(weekStart.month)} ${weekStart.day}. - ${api.Generic.monthToText(weekEnd.month)} ${weekEnd.day}.';
+      displayString2 = '${AppStrings.getLanguagePack().calendarPage_weekNav_ClassesThisWeekEmpty}  \u00b7  ${weekStart.year}. $range';
       return;
     }
     if("$startMonth $startDay" == "$endMonth $endDay"){
@@ -367,6 +371,8 @@ class WeekoffseterElementWidget extends StatelessWidget{
 
   final Callback onBackPressed;
   final Callback onForwardPressed;
+  final DateTime weekStart;
+  final DateTime weekEnd;
 
   late final String displayString;
   late final String displayString2;
@@ -388,8 +394,8 @@ class WeekoffseterElementWidget extends StatelessWidget{
         if(!homePage.calendarWeekCanNavigate || !canDoPaging){
           return;
         }
-        if(homePage.calendarWeekSwitchValue < -20 && week < 52){
-          if(homePage.weeksSinceStart + 1 > 52){
+        if(homePage.calendarWeekSwitchValue < -20){
+          if(!homePage.canStepCalendarForward){
             homePage.calendarWeekCanNavigate = false;
             homePage.calendarWeekSwitchValue = 0.0;
             return;
@@ -398,8 +404,8 @@ class WeekoffseterElementWidget extends StatelessWidget{
           onForwardPressed();
           return;
         }
-        else if(homePage.calendarWeekSwitchValue > 20 && week > 1){
-          if(homePage.weeksSinceStart - 1 < 1){
+        else if(homePage.calendarWeekSwitchValue > 20){
+          if(!homePage.canStepCalendarBack){
             homePage.calendarWeekCanNavigate = false;
             homePage.calendarWeekSwitchValue = 0.0;
             return;
@@ -429,7 +435,7 @@ class WeekoffseterElementWidget extends StatelessWidget{
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     IconButton(
-                      onPressed: week <= 1 || !canDoPaging ? null : onBackPressed,
+                      onPressed: !homePage.canStepCalendarBack || !canDoPaging ? null : onBackPressed,
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     Expanded(
@@ -444,7 +450,7 @@ class WeekoffseterElementWidget extends StatelessWidget{
                       ),
                     ),
                     IconButton(
-                        onPressed: week >= 52 || !canDoPaging ? null : onForwardPressed,
+                        onPressed: !homePage.canStepCalendarForward || !canDoPaging ? null : onForwardPressed,
                         icon: const Icon(Icons.arrow_forward_rounded)
                     ),
                   ],

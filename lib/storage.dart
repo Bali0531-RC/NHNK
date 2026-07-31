@@ -62,6 +62,9 @@ class DataCache{
     _instituteUrl = '';
     _accessToken = '';
     _refreshToken = '';
+    _sessionCookie = '';
+    _icsExportUrl = '';
+    _totpSecret = '';
     _hasNetwork = false;
     _hasLogin = false;
     _hasCachedCalendar = false;
@@ -95,6 +98,9 @@ class DataCache{
   late String? _instituteUrl = '';
   late String? _accessToken = ''; //new systems token query
   late String? _refreshToken = '';
+  late String? _sessionCookie = '';
+  late String? _icsExportUrl = '';
+  late String? _totpSecret = '';
   late bool _hasNetwork = false;
   late bool? _hasLogin = false;
   late bool? _hasCachedCalendar = false;
@@ -187,6 +193,9 @@ class DataCache{
     }
 
     _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
+    _sessionCookie = await _secureStorage.read(key: 'neptun_session_cookie');
+    _icsExportUrl = await _secureStorage.read(key: 'neptun_ics_url');
+    _totpSecret = await _secureStorage.read(key: 'neptun_totp_secret');
 
     tmp = await getInt('IsModernApi');
     _isModernApi = tmp != null && tmp != 0;
@@ -356,10 +365,51 @@ class DataCache{
     }
   }
 
+  /// Full "name=value" pair; GetNewTokens rejects the request without it.
+  static String? getSessionCookie() {
+    return _instance._sessionCookie;
+  }
+
+  static Future<void> setSessionCookie(String? cookie) async {
+    _instance._sessionCookie = cookie;
+    if (cookie == null) {
+      await _secureStorage.delete(key: 'neptun_session_cookie');
+    } else {
+      await _secureStorage.write(key: 'neptun_session_cookie', value: cookie);
+    }
+  }
+
+  /// Self-authenticating timetable export link, so the calendar survives session loss.
+  static String? getIcsExportUrl() {
+    return _instance._icsExportUrl;
+  }
+
+  static Future<void> setIcsExportUrl(String? url) async {
+    _instance._icsExportUrl = url;
+    if (url == null) {
+      await _secureStorage.delete(key: 'neptun_ics_url');
+    } else {
+      await _secureStorage.write(key: 'neptun_ics_url', value: url);
+    }
+  }
+
+  /// Opt-in: lets the app answer the 2FA prompt itself instead of asking on every re-login.
+  static String? getTotpSecret() {
+    return _instance._totpSecret;
+  }
+
+  static Future<void> setTotpSecret(String? secret) async {
+    _instance._totpSecret = secret;
+    if (secret == null) {
+      await _secureStorage.delete(key: 'neptun_totp_secret');
+    } else {
+      await _secureStorage.write(key: 'neptun_totp_secret', value: secret);
+    }
+  }
+
   static Future<String?> getDeviceCookie(String username) async {
     return await _secureStorage.read(key: 'devicecookie_${username.toUpperCase()}');
   }
-
   static Future<void> setDeviceCookie(String username, String? cookieValue) async {
     if (cookieValue == null) {
       await _secureStorage.delete(key: 'devicecookie_${username.toUpperCase()}');
@@ -373,6 +423,9 @@ class DataCache{
     _instance._password = null;
     _instance._accessToken = null;
     _instance._refreshToken = null;
+    _instance._sessionCookie = null;
+    _instance._icsExportUrl = null;
+    _instance._totpSecret = null;
     await _secureStorage.deleteAll();
   }
 

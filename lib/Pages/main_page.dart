@@ -415,7 +415,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       });
       return;
     }
-    correctedVal = clampDouble(newVal.toDouble(), -calcPassedWeekOffsetless().toDouble(), 51 - calcPassedWeekOffsetless().toDouble()).toInt();
+    correctedVal = clampDouble(newVal.toDouble(), -51, 51).toInt();
     settingsUserWeekOffset.text = correctedVal.toString();
     settingsUserWeekOffset.text = correctedVal.toString();
     prevSettingsUserWeekOffset = settingsUserWeekOffset.text;
@@ -428,7 +428,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     _instance!.changedSettingsUserWeekOffset = true;
     final oldVal = storage.DataCache.getUserWeekOffset()!;
     var correctedVal = oldVal + val;
-    correctedVal = clampDouble(correctedVal.toDouble(), -_instance!.calcPassedWeekOffsetless().toDouble(), 51 - _instance!.calcPassedWeekOffsetless().toDouble()).toInt();
+    correctedVal = clampDouble(correctedVal.toDouble(), -51, 51).toInt();
     _instance!.settingsUserWeekOffset.text = correctedVal.toString();
     _instance!.prevSettingsUserWeekOffset = _instance!.settingsUserWeekOffset.text;
     Future.delayed(Duration.zero, ()async{
@@ -1422,15 +1422,27 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   Future<void> stepCalendarBack() async{
+    if(!canStepCalendarBack){
+      return;
+    }
     currentWeekOffset--;
     AppHaptics.lightImpact();
     await onCalendarRefresh(true);
   }
   Future<void> stepCalendarForward() async{
+    if(!canStepCalendarForward){
+      return;
+    }
     currentWeekOffset++;
     AppHaptics.lightImpact();
     await onCalendarRefresh(true);
   }
+
+  // currentWeekOffset is 1 for the current week, so this allows a year either way.
+  static const int minWeekOffset = -51;
+  static const int maxWeekOffset = 53;
+  bool get canStepCalendarBack => currentWeekOffset > minWeekOffset;
+  bool get canStepCalendarForward => currentWeekOffset < maxWeekOffset;
 
   Future<List<api.CalendarEntry>> fetchCalendarToList(int offset) async{
     //final userOffset = storage.DataCache.getUserWeekOffset()!;
@@ -1442,23 +1454,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   Future<void> fetchCalendar() async{
     if(storage.DataCache.getHasICSFile() ?? false){
-      final DateTime now = DateTime.now();
-      DateTime previousMonday = now.subtract(Duration(days: now.weekday));
-      if (previousMonday.weekday == 7) {
-        previousMonday = previousMonday.subtract(const Duration(days: 7));
-      }
-      previousMonday = DateTime(previousMonday.year, previousMonday.month, previousMonday.day, 0, 0);
-
-      DateTime nextSunday = previousMonday.add(const Duration(days: 6, hours: 23, minutes: 59));
-      if (nextSunday.weekday == 7) {
-        nextSunday = nextSunday.subtract(const Duration(days: 7));
-      }
-
-      DateTime startOfTargetWeek = previousMonday.add(Duration(days: currentWeekOffset * 7));
-      DateTime endOfTargetWeek = nextSunday.add(Duration(days: currentWeekOffset * 7));
-
-      final epochStart = startOfTargetWeek.millisecondsSinceEpoch;
-      final epochEnd = endOfTargetWeek.millisecondsSinceEpoch;
+      final epochStart = api.CalendarRequest.weekStartFor(currentWeekOffset).millisecondsSinceEpoch;
+      final epochEnd = api.CalendarRequest.weekEndFor(currentWeekOffset).millisecondsSinceEpoch;
 
       calendarEntries.clear();
       calendarEntries = ICSCalendar.getCalendarInterval(epochStart, epochEnd);
@@ -1818,21 +1815,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     final timepassSinceSepOne = Duration(milliseconds: (yearlessNow.millisecondsSinceEpoch - sepOne.millisecondsSinceEpoch));
     final weeksPassed = timepassSinceSepOne.inDays / 7;
     final userOffset = storage.DataCache.getUserWeekOffset()!;
-    return ((weeksPassed.floor() % 52) + (currentWeekOffset + userOffset));// - isWeekend;// + isWeekend;
+    return wrapStudyWeek((weeksPassed.floor() % 52) + (currentWeekOffset + userOffset));
   }
+
+  // Study weeks cycle 1..52, so paging past the end of the year rolls back to week 1
+  // instead of running off the scale.
+  static int wrapStudyWeek(int week) => ((week - 1) % 52 + 52) % 52 + 1;
   
-  int calcPassedWeekOffsetless(){
-    final epochsemester = storage.DataCache.getFirstWeekEpoch()!;
-    final now = DateTime.now();
-    final determiner = epochsemester > 0 ? DateTime.fromMillisecondsSinceEpoch(epochsemester) : getClosestMondayTo(DateTime(now.year - (now.millisecondsSinceEpoch > DateTime(now.year, 9, 1).millisecondsSinceEpoch ? 0 : 1), 9, 1));
-    final yearlessNow = DateTime(1, now.month, now.day);
-    final sepOne = DateTime(yearlessNow.year - 1, determiner.month, determiner.day); // first week
-
-    final timepassSinceSepOne = Duration(milliseconds: (yearlessNow.millisecondsSinceEpoch - sepOne.millisecondsSinceEpoch));
-    final weeksPassed = timepassSinceSepOne.inDays / 7;
-
-    return ((weeksPassed.floor() % 52));
-  }
 
   @override
   void dispose() {
@@ -2058,6 +2047,8 @@ class CalendarPageWidget extends StatelessWidget{
                   canDoPaging: homePage.canDoCalendarPaging,
                   homePage: homePage,
                   isLoading: homePage.isLoadingCalendar,
+                  weekStart: api.CalendarRequest.weekStartFor(homePage.currentWeekOffset),
+                  weekEnd: api.CalendarRequest.weekEndFor(homePage.currentWeekOffset),
                 ),
               ),
               Expanded(

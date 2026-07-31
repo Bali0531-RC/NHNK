@@ -13,6 +13,7 @@ import 'package:neptun2/storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../API/api_coms.dart';
 import '../API/api_coms.dart' as api;
+import '../API/totp.dart';
 import '../MailElements/mail_element_widget.dart';
 import '../Pages/startup_page.dart';
 import '../TimetableElements/timetable_element_widget.dart';
@@ -1970,6 +1971,51 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             if (val.length == 6) {
               PopupWidgetHandler._instance!.callback(val); // Amint beírta a 6. számot, visszaküldi a loginnak!
             }
+          },
+        ));
+        list.add(const SizedBox(height: 20));
+        list.add(Divider(color: AppColors.getTheme().textColor.withValues(alpha: 0.1)));
+        list.add(const SizedBox(height: 10));
+        list.add(Text(
+          DataCache.getTotpSecret()?.isNotEmpty ?? false
+              ? "A titkos kulcs el van mentve, az app magától jelentkezik be."
+              : "Nem akarsz többet kódot begépelni? Mentsd el a 2FA titkos kulcsot (az a hosszú kód vagy QR, amit a hitelesítő alkalmazás beállításakor kaptál).",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 12),
+        ));
+        list.add(const SizedBox(height: 4));
+        list.add(Text(
+          "Figyelem: a kulcs a készüléken tárolva a kétlépcsős védelmet egylépcsőssé teszi.",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.getTheme().errorRed.withValues(alpha: 0.8), fontSize: 11),
+        ));
+        list.add(const SizedBox(height: 10));
+        list.add(TextField(
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: DataCache.getTotpSecret()?.isNotEmpty ?? false ? "Elmentve - ide írj újat a cseréhez" : "2FA titkos kulcs (nem kötelező)",
+            hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.35), fontSize: 12),
+            filled: true,
+            fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          ),
+          onChanged: (val) {
+            final secret = Totp.extractSecret(val);
+            if (secret == null) {
+              return;
+            }
+            Future.delayed(Duration.zero, () async {
+              await DataCache.setTotpSecret(secret);
+            });
+            final generated = Totp.generate(secret);
+            Fluttertoast.showToast(
+              msg: generated == null ? "Kulcs elmentve" : "Kulcs elmentve, aktuális kód: $generated",
+              toastLength: Toast.LENGTH_LONG,
+              gravity: ToastGravity.SNACKBAR,
+              backgroundColor: AppColors.getTheme().rootBackground,
+              textColor: AppColors.getTheme().textColor,
+            );
           },
         ));
         return list;

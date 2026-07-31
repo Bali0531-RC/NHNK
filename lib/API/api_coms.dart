@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:neptun2/API/ics_calendar.dart';
+import 'package:neptun2/API/totp.dart';
 import 'package:neptun2/Misc/clickable_text_span.dart';
 import 'package:neptun2/colors.dart';
 import 'package:neptun2/language.dart';
@@ -103,13 +104,12 @@ import '../storage.dart';
         storage.DataCache.setDeviceCookie(username, cookieValue);
       }
 
-      // Extract refresh token: <GUID>=<JWT_REFRESH_TOKEN>
-      // The key is a 36-char GUID (optional check), value starts with eyJ
-      final refreshTokenRegExp = RegExp(r'[^=;\s,]+=(eyJ[a-zA-Z0-9\-_\.]+)');
+      // Session cookie: <GUID>=<JWT>. GetNewTokens needs the whole pair, so the name is kept too.
+      final refreshTokenRegExp = RegExp(r'([^=;\s,]+)=(eyJ[a-zA-Z0-9\-_\.]+)');
       final refreshTokenMatch = refreshTokenRegExp.firstMatch(setCookie);
       if (refreshTokenMatch != null) {
-        final tokenValue = refreshTokenMatch.group(1);
-        storage.DataCache.setRefreshToken(tokenValue);
+        storage.DataCache.setRefreshToken(refreshTokenMatch.group(2));
+        storage.DataCache.setSessionCookie(refreshTokenMatch.group(0));
       }
     }
 
@@ -117,8 +117,11 @@ import '../storage.dart';
 
     static Future<bool> tryTokenRefresh() async {
       try {
-        final refreshToken = storage.DataCache.getRefreshToken();
-        if (refreshToken == null || refreshToken.isEmpty) {
+        // GetNewTokens authenticates with the *access* token plus the session cookie;
+        // either one alone is rejected, and no 2FA code is involved.
+        final accessToken = await storage.DataCache.getAccessToken();
+        final sessionCookie = storage.DataCache.getSessionCookie();
+        if (accessToken == null || accessToken.isEmpty || sessionCookie == null || sessionCookie.isEmpty) {
           return false;
         }
 
@@ -127,17 +130,27 @@ import '../storage.dart';
           return false;
         }
 
+        String cookieHeader = sessionCookie;
+        final username = storage.DataCache.getUsername();
+        if (username != null && username.isNotEmpty) {
+          final deviceCookie = await storage.DataCache.getDeviceCookie(username);
+          if (deviceCookie != null && deviceCookie.isNotEmpty) {
+            final b64 = conv.base64.encode(conv.utf8.encode(username.toUpperCase()));
+            cookieHeader = '$cookieHeader; devicecookie-$b64=$deviceCookie';
+          }
+        }
+
         final refreshUrl = Uri.parse("$baseUrl/api/Account/GetNewTokens");
-        final response = await postRequestRaw(refreshUrl, "{}", bearerToken: refreshToken);
+        final response = await postRequestRaw(refreshUrl, "{}", bearerToken: accessToken, cookie: cookieHeader);
 
         if (response.statusCode == 200) {
           final bodyJson = conv.jsonDecode(response.body);
-          if (bodyJson["data"] != null && bodyJson["data"]["accessToken"] != null) {
-            final newAccessToken = bodyJson["data"]["accessToken"];
+          // The token sits at the root here, unlike Account/Authenticate which nests it under "data".
+          final newAccessToken = bodyJson["accessToken"] ?? bodyJson["data"]?["accessToken"];
+          if (newAccessToken != null) {
             await storage.DataCache.setAccessToken(newAccessToken);
             CalendarRequest.invalidateTrainingId();
-            
-            final username = storage.DataCache.getUsername();
+
             if (username != null) {
               _extractAndSaveCookiesAndTokens(response, username);
             }
@@ -334,7 +347,19 @@ import '../storage.dart';
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
           await storage.DataCache.setInstituteUrl(baseUrl);
-          await storage.DataCache.setAccessToken(response["data"]["twoFactorLoginToken"]);
+
+          // With a stored secret the app can answer the challenge itself, so an expired
+          // session does not force the user to retype a code.
+          final secret = storage.DataCache.getTotpSecret();
+          if (secret != null && secret.isNotEmpty) {
+            final code = Totp.generate(secret);
+            if (code != null && await submitTwoFactorCode(username, password, code)) {
+              return 1;
+            }
+          }
+
+          // Deliberately leaves the stored token alone: twoFactorLoginToken does not exist on
+          // this API, so writing it here wiped a session that was still usable.
           return 2; // 2FA KELL
         }
 
@@ -492,6 +517,109 @@ class CalendarRequest {
     return null;
   }
 
+  static List<CalendarEntry>? _icsFallbackCache;
+  static int _icsFallbackFetchedMs = 0;
+
+  /// Some institutions leave GetCalendarEvents empty even though the timetable exists;
+  /// the personal iCal export is populated in that case, so it is used as a fallback.
+  static Future<List<CalendarEntry>?> _fetchIcsFallback() async {
+    const int cacheTtlMs = 6 * 60 * 60 * 1000;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    if (_icsFallbackCache != null && now - _icsFallbackFetchedMs < cacheTtlMs) {
+      return _icsFallbackCache;
+    }
+
+    try {
+      // The export link carries its own token, so it keeps working with no session at all.
+      String? icsUrl = storage.DataCache.getIcsExportUrl();
+
+      if (icsUrl == null || icsUrl.isEmpty) {
+        final token = await storage.DataCache.getAccessToken();
+        final String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        if (token == null || token.isEmpty || baseUrl.isEmpty) return null;
+
+        final linkUrl = Uri.parse("$baseUrl/api/Calendar/GetLinksForCalendarExport");
+        final decoded = conv.json.decode(await _APIRequest.getRequest(linkUrl, bearerToken: token));
+        icsUrl = decoded['data']?['urlForWebCalendars'];
+        if (icsUrl == null || icsUrl.isEmpty) return null;
+        await storage.DataCache.setIcsExportUrl(icsUrl);
+      }
+
+      final resp = await http.get(Uri.parse(icsUrl));
+      if (resp.statusCode != 200) {
+        // A regenerated link invalidates the old one; drop it so the next call re-fetches.
+        await storage.DataCache.setIcsExportUrl(null);
+        return null;
+      }
+
+      final entries = parseIcsEntries(conv.utf8.decode(resp.bodyBytes));
+      _icsFallbackCache = entries;
+      _icsFallbackFetchedMs = now;
+      return entries;
+    } catch (e) {
+      debug.log("iCal tartal\u00e9k lek\u00e9r\u00e9s hiba: $e");
+    }
+    return null;
+  }
+
+  // "Programoz\u00e1s I. ( - HNV_01) - Heckl Istv\u00e1n - Tan\u00f3ra"
+  static final RegExp _icsSummary = RegExp(r'^(.*?)\s*\(\s*([^()]*?)\s*\)(?:\s*-\s*([^-]*?))?(?:\s*-\s*([^-]*))?$');
+
+  static List<CalendarEntry> parseIcsEntries(String ics) {
+    final List<CalendarEntry> out = [];
+    String? start, end, location, summary;
+
+    for (var raw in ics.split(RegExp(r'\r?\n'))) {
+      final line = raw.trim();
+      if (line == 'BEGIN:VEVENT') {
+        start = end = location = summary = null;
+      } else if (line == 'END:VEVENT') {
+        if (start == null || end == null) continue;
+        final startDt = DateTime.tryParse(start);
+        final endDt = DateTime.tryParse(end);
+        if (startDt == null || endDt == null) continue;
+
+        String title = summary ?? 'Ismeretlen';
+        String teacher = 'Nincs megadva';
+        String code = '-';
+        int type = 0;
+
+        final m = _icsSummary.firstMatch(title);
+        if (m != null) {
+          title = (m.group(1) ?? title).trim();
+          teacher = (m.group(3) ?? 'Nincs megadva').trim();
+          final kind = (m.group(4) ?? '').toLowerCase();
+          if (kind.contains('vizsga')) type = 1;
+
+          // The bracket holds "<subjectCode> - <courseCode>", either of which may be blank.
+          final parts = (m.group(2) ?? '').split('-').map((p) => p.trim()).where((p) => p.isNotEmpty);
+          code = parts.isEmpty ? '-' : parts.join(' - ');
+        }
+
+        out.add(CalendarEntry.fromModern(
+          startEpoch: startDt.millisecondsSinceEpoch,
+          endEpoch: endDt.millisecondsSinceEpoch,
+          location: (location == null || location.isEmpty) ? 'Nincs megadva' : location,
+          title: title.isEmpty ? 'Ismeretlen' : title,
+          eventType: type,
+          subjectCode: code.isEmpty ? '-' : code,
+          teacher: teacher.isEmpty ? 'Nincs megadva' : teacher,
+          classInstanceId: '',
+          taskId: '',
+        ));
+      } else if (line.startsWith('DTSTART')) {
+        start = line.substring(line.indexOf(':') + 1);
+      } else if (line.startsWith('DTEND')) {
+        end = line.substring(line.indexOf(':') + 1);
+      } else if (line.startsWith('LOCATION:')) {
+        location = line.substring(9).trim();
+      } else if (line.startsWith('SUMMARY:')) {
+        summary = line.substring(8).trim();
+      }
+    }
+    return out;
+  }
+
   static List<CalendarEntry> getCalendarEntriesFromJSON(String jsonString) {
     if (jsonString == '{}') return [];
     final decoded = conv.json.decode(jsonString);
@@ -538,15 +666,39 @@ class CalendarRequest {
     }
 
     if (storage.DataCache.getIsModernApi()) {
+      final oldPayload = conv.json.decode(calendarJson);
+      final startDateRaw = (oldPayload['startDate'] ?? oldPayload['StartDate']).toString();
+      final endDateRaw = (oldPayload['endDate'] ?? oldPayload['EndDate']).toString();
+
+      final numRegex = RegExp(r'\d+');
+      final startEpoch = int.parse(numRegex.firstMatch(startDateRaw)!.group(0)!);
+      final endEpoch = int.parse(numRegex.firstMatch(endDateRaw)!.group(0)!);
+
+      // Used whenever the JSON endpoint yields nothing, including when the session is gone.
+      Future<String> fromIcsOnly() async {
+        final fallback = await _fetchIcsFallback();
+        final List<Map<String, dynamic>> list = [];
+        if (fallback != null) {
+          for (var e in fallback) {
+            if (e.startEpoch < startEpoch || e.startEpoch > endEpoch) continue;
+            list.add({
+              'start_ms': e.startEpoch,
+              'end_ms': e.endEpoch,
+              'location': e.location,
+              'title': e.title,
+              'type': e.eventType,
+              'subjectCode': e.subjectCode,
+              'teacher': e.teacher,
+              'classInstanceId': '',
+              'taskId': '',
+            });
+          }
+          list.sort((a, b) => (a['start_ms'] as int).compareTo(b['start_ms'] as int));
+        }
+        return conv.jsonEncode({"calendarData": list});
+      }
+
       try {
-        final oldPayload = conv.json.decode(calendarJson);
-        final startDateRaw = (oldPayload['startDate'] ?? oldPayload['StartDate']).toString();
-        final endDateRaw = (oldPayload['endDate'] ?? oldPayload['EndDate']).toString();
-
-        final numRegex = RegExp(r'\d+');
-        final startEpoch = int.parse(numRegex.firstMatch(startDateRaw)!.group(0)!);
-        final endEpoch = int.parse(numRegex.firstMatch(endDateRaw)!.group(0)!);
-
         final startIso = DateTime.fromMillisecondsSinceEpoch(startEpoch).toIso8601String();
         final endIso = DateTime.fromMillisecondsSinceEpoch(endEpoch).toIso8601String();
 
@@ -597,13 +749,13 @@ class CalendarRequest {
             final username = storage.DataCache.getUsername();
             final password = storage.DataCache.getPassword();
             if (username == null || username.isEmpty || password == null || password.isEmpty) {
-              return '{"calendarData": []}';
+              return await fromIcsOnly();
             }
             await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
           }
 
           final newTrainingId = await getStudentTrainingId(forceRefresh: true);
-          if (newTrainingId == null) return '{"calendarData": []}';
+          if (newTrainingId == null) return await fromIcsOnly();
 
           final newToken = await storage.DataCache.getAccessToken();
           final retryUrl = Uri.parse(buildEventsUrl(newTrainingId));
@@ -635,11 +787,20 @@ class CalendarRequest {
             });
           }
         }
+
+        if (mappedList.isEmpty) {
+          return await fromIcsOnly();
+        }
+
         return conv.jsonEncode({"calendarData": mappedList});
 
       } catch (e) {
         debug.log("Naptár lekérési hiba: $e");
-        return '{"calendarData": []}';
+        try {
+          return await fromIcsOnly();
+        } catch (_) {
+          return '{"calendarData": []}';
+        }
       }
     } else {
 
@@ -793,19 +954,26 @@ class CalendarRequest {
     }
   }
 
+    // weekOffset 1 means the current week, matching HomePageState.currentWeekOffset.
+    // Pure calendar arithmetic: Duration-based day maths drifts across DST boundaries.
+    static DateTime weekStartFor(int weekOffset){
+      final DateTime now = DateTime.now();
+      final DateTime thisMonday = DateTime(now.year, now.month, now.day - (now.weekday - DateTime.monday));
+      return DateTime(thisMonday.year, thisMonday.month, thisMonday.day + ((weekOffset - 1) * 7));
+    }
+
+    static DateTime weekEndFor(int weekOffset){
+      final DateTime start = weekStartFor(weekOffset);
+      return DateTime(start.year, start.month, start.day + 6, 23, 59, 59);
+    }
+
     static String getCalendarOneWeekJSON(String username, String password, int weekOffset){
       if(storage.DataCache.getIsDemoAccount()!){
         return '';
       }
-      final DateTime now = DateTime.now();
-      // Pure calendar arithmetic: Duration-based day maths drifts across DST boundaries.
-      final DateTime thisMonday = DateTime(now.year, now.month, now.day - (now.weekday - DateTime.monday));
 
-      final DateTime startOfTargetWeek = DateTime(thisMonday.year, thisMonday.month, thisMonday.day + (weekOffset * 7));
-      final DateTime endOfTargetWeek = DateTime(startOfTargetWeek.year, startOfTargetWeek.month, startOfTargetWeek.day + 6, 23, 59, 59);
-
-      final epochStart = startOfTargetWeek.millisecondsSinceEpoch;
-      final epochEnd = endOfTargetWeek.millisecondsSinceEpoch;
+      final epochStart = weekStartFor(weekOffset).millisecondsSinceEpoch;
+      final epochEnd = weekEndFor(weekOffset).millisecondsSinceEpoch;
 
       return
         '{'
