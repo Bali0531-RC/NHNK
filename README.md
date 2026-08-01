@@ -6,12 +6,12 @@
 [![Legfrissebb verzió](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
 
 > [!IMPORTANT]
-> **Ez egy független, nem hivatalos alkalmazás.** Nem áll kapcsolatban az SDA Informatika Zrt.-vel
-> (a Neptun rendszer fejlesztőjével), sem bármely felsőoktatási intézménnyel, és azok nem támogatják
-> vagy hagyták jóvá. A „Neptun" név és védjegy a jogosultja tulajdona, itt kizárólag leíró jelleggel
-> szerepel. A belépési adatok közvetlenül az intézmény Neptun-kiszolgálójára mennek; az NHNK nem
-> üzemeltet saját szervert és nem gyűjt felhasználói adatokat. Hivatalos adatnak minden esetben a
-> webes Neptun felületén látható információ számít.
+> **Ez egy független, nem hivatalos alkalmazás.** Nem áll kapcsolatban a Campus Codeworks Zrt.-vel
+> (korábban SDA Informatika Zrt., a Neptun rendszer fejlesztője), sem bármely felsőoktatási
+> intézménnyel, és azok nem támogatják vagy hagyták jóvá. A „Neptun" név és védjegy a jogosultja
+> tulajdona, itt kizárólag leíró jelleggel szerepel. A belépési adatok közvetlenül az intézmény
+> Neptun-kiszolgálójára mennek; az NHNK nem üzemeltet saját szervert és nem gyűjt felhasználói
+> adatokat. Hivatalos adatnak minden esetben a webes Neptun felületén látható információ számít.
 
 Weboldal: **https://nhnk.bali0531.hu**
 

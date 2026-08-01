@@ -188,11 +188,12 @@ class _AboutPageState extends State<AboutPage> {
           _disclaimerPoint(
             theme,
             _t(
-              'Az NHNK egy független, nem hivatalos alkalmazás. Nem áll kapcsolatban az SDA Informatika Zrt.-vel '
-                  '(a Neptun rendszer fejlesztőjével), és egyetlen felsőoktatási intézménnyel sem, illetve azok nem '
-                  'támogatják és nem hagyták jóvá.',
+              'Az NHNK egy független, nem hivatalos alkalmazás. Nem áll kapcsolatban a Campus Codeworks Zrt.-vel '
+                  '(korábban SDA Informatika Zrt., a Neptun rendszer fejlesztője), és egyetlen felsőoktatási '
+                  'intézménnyel sem, illetve azok nem támogatják és nem hagyták jóvá.',
               'NHNK is an independent, unofficial application. It is not affiliated with, endorsed by, or approved by '
-                  'SDA Informatika Zrt. (the developer of the Neptun system) or any higher education institution.',
+                  'Campus Codeworks Zrt. (formerly SDA Informatika Zrt., the developer of the Neptun system) or any '
+                  'higher education institution.',
             ),
           ),
           _disclaimerPoint(
