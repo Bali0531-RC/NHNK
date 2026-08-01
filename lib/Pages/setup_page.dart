@@ -14,6 +14,7 @@ import 'package:nhnk/language.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/custom_snackbar.dart';
+import '../Misc/demo_notice.dart';
 import '../Misc/emojirich_text.dart';
 import '../Misc/auto_updater.dart';
 import '../storage.dart' as storage;
@@ -240,6 +241,75 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                                 const SizedBox(height: 20),
                                 Text(
                                   AppStrings.getLanguagePack().rootpage_setupPage_UrlLoginDescription,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            AppHaptics.lightImpact();
+                            await api.InstitutesRequest.validateLoginCredentialsUrl('', 'DEMO', 'DEMO');
+                            storage.DataCache.setUsername('DEMO');
+                            storage.DataCache.setPassword('DEMO');
+                            storage.DataCache.setInstituteUrl('');
+                            storage.DataCache.setHasLogin(1);
+                            if(!context.mounted){
+                              return;
+                            }
+                            Navigator.popUntil(context, (route) => route.willHandlePopInternally);
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => const main_page.HomePage()));
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            margin: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                                color: AppColors.getTheme().rootBackground,
+                                borderRadius: const BorderRadius.all(Radius.circular(30)),
+                                border: Border.all(
+                                    color: AppColors.getTheme().textColor.withValues(alpha: .3),
+                                    width: 1
+                                )
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    Icon(
+                                      Icons.play_circle_outline_rounded,
+                                      color: AppColors.getTheme().textColor,
+                                      size: 40,
+                                    ),
+                                    Flexible(
+                                      child: Text(
+                                        demoModeText('Demó mód', 'Demo mode'),
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: AppColors.getTheme().textColor,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  demoModeText(
+                                    'Nézd meg az appot bejelentkezés nélkül. Ez egy elkülönített demó, kitalált mintaadatokkal. Nem kapcsolódik a Neptunhoz, és nem küld sehova adatot.',
+                                    'Explore the app without logging in. This is a sandboxed demo with fictional sample data. It does not connect to Neptun and sends nothing anywhere.',
+                                  ),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                       color: AppColors.getTheme().textColor.withValues(alpha: .6),

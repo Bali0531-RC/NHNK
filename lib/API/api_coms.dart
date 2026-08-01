@@ -624,7 +624,8 @@ class CalendarRequest {
     if (jsonString == '{}') return [];
     final decoded = conv.json.decode(jsonString);
     List<CalendarEntry> list = [];
-    if (storage.DataCache.getIsModernApi()) {
+    // The demo feed is emitted in the modern shape so it skips the legacy DST correction.
+    if (storage.DataCache.getIsModernApi() || (storage.DataCache.getIsDemoAccount() ?? false)) {
       if (decoded['calendarData'] != null) {
         for (var item in decoded['calendarData']) {
           list.add(CalendarEntry.fromModern(
@@ -661,7 +662,10 @@ class CalendarRequest {
   }
 
   static Future<String> makeCalendarRequest(String calendarJson) async {
-    if (storage.DataCache.getIsDemoAccount()! || storage.DataCache.getHasICSFile()!) {
+    if (storage.DataCache.getIsDemoAccount()!) {
+      return _demoCalendarJson(calendarJson);
+    }
+    if (storage.DataCache.getHasICSFile()!) {
       return '{}';
     }
 
@@ -967,9 +971,48 @@ class CalendarRequest {
       return DateTime(start.year, start.month, start.day + 6, 23, 59, 59);
     }
 
+    // Sandboxed demo timetable. Repeats the same teaching week around whichever week the
+    // user paged to, so the calendar stays populated without touching the network.
+    static String _demoCalendarJson(String requestJson){
+      DateTime monday;
+      try{
+        final decoded = conv.json.decode(requestJson);
+        monday = DateTime.fromMillisecondsSinceEpoch(decoded['demoWeekStart']);
+      }
+      catch(_){
+        monday = weekStartFor(1);
+      }
+
+      Map<String, dynamic> entry(int day, int fromHour, int fromMin, int toHour, int toMin,
+          String title, String location, String teacher, String code, int type){
+        return {
+          'start_ms': DateTime(monday.year, monday.month, monday.day + day, fromHour, fromMin).millisecondsSinceEpoch,
+          'end_ms': DateTime(monday.year, monday.month, monday.day + day, toHour, toMin).millisecondsSinceEpoch,
+          'location': location,
+          'title': title,
+          'type': type,
+          'subjectCode': code,
+          'teacher': teacher,
+          'classInstanceId': null,
+          'taskId': null,
+        };
+      }
+
+      return conv.json.encode({'calendarData': [
+        entry(0, 8, 0, 9, 30, 'Analízis I. (előadás)', 'E-101', 'Dr. Kovács Anna', 'DEMO-MAT101', 0),
+        entry(0, 10, 0, 11, 30, 'Programozás alapjai (gyakorlat)', 'L-204', 'Nagy Péter', 'DEMO-INF102', 0),
+        entry(1, 12, 0, 13, 30, 'Diszkrét matematika (előadás)', 'E-102', 'Dr. Szabó Béla', 'DEMO-MAT110', 0),
+        entry(2, 8, 0, 9, 30, 'Programozás alapjai (előadás)', 'E-101', 'Dr. Tóth Gábor', 'DEMO-INF102', 0),
+        entry(2, 14, 0, 15, 30, 'Szaknyelvi kommunikáció', 'N-12', 'Kiss Judit', 'DEMO-ANG201', 0),
+        entry(3, 10, 0, 11, 30, 'Számítógép-architektúrák', 'E-103', 'Dr. Varga Zsolt', 'DEMO-INF120', 0),
+        entry(4, 9, 0, 11, 0, 'Analízis I. vizsga', 'A-201', 'Dr. Kovács Anna', 'DEMO-MAT101', 1),
+      ]});
+    }
+
     static String getCalendarOneWeekJSON(String username, String password, int weekOffset){
       if(storage.DataCache.getIsDemoAccount()!){
-        return '';
+        // Only the week bounds matter offline; _demoCalendarJson builds the entries from them.
+        return '{"demoWeekStart":${weekStartFor(weekOffset).millisecondsSinceEpoch}}';
       }
 
       final epochStart = weekStartFor(weekOffset).millisecondsSinceEpoch;

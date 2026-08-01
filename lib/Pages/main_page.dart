@@ -11,6 +11,7 @@ import 'package:in_app_update/in_app_update.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 import 'package:nhnk/API/ics_calendar.dart';
 import 'package:nhnk/MailElements/mail_element_widget.dart';
+import 'package:nhnk/Misc/demo_notice.dart';
 import 'package:nhnk/colors.dart';
 import 'package:nhnk/language.dart';
 import 'package:nhnk/notifications.dart';
@@ -1887,7 +1888,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
             loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')
         ),
       body: SafeArea(
-        child: Stack(
+        child: Column(
+        children: [
+          if (storage.DataCache.getIsDemoAccount() ?? false) const DemoModeBanner(),
+          Expanded(
+            child: Stack(
         children: [
           Visibility(
               visible: currentView == 0,
@@ -1982,6 +1987,9 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
                 );
               },
             ),
+          ),
+        ],
+      ),
           ),
         ],
       ),
