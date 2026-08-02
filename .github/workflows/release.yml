@@ -151,4 +151,10 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "NHNK $GITHUB_REF_NAME" --generate-notes
+        # --generate-notes appends the commit summary below the install instructions.
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "NHNK $GITHUB_REF_NAME" \
+            --notes-file .github/release-body.md \
+            --generate-notes

@@ -19,9 +19,22 @@ Weboldal: **https://nhnk.bali0531.hu**
 
 Legfrissebb kiadás: **https://github.com/Bali0531-RC/NHNK/releases/latest**
 
+### Android
+
 A legtöbb telefonra az `arm64-v8a` APK kell. Automatikus frissítéshez ajánlott az
 [Obtainium](https://github.com/ImranR98/Obtainium): add meg neki ezt a repót, és a
 későbbi kiadások maguktól települnek.
+
+### iPhone
+
+A kiadásokban van `unsigned.ipa` is, de **aláírás nélkül**: az aláíráshoz fizetős Apple
+Developer fiók kellene, ezért magadnak kell aláírnod a saját Apple ID-ddal, például
+[AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy
+[Sideloadly](https://sideloadly.io/) segítségével. iOS 14 vagy újabb kell hozzá.
+
+Ingyenes Apple ID-val az app 7 naponta lejár és újra alá kell írni — ez az Apple
+korlátozása. Aki ezt nem vállalja, annak az órarend a Neptun naptár-exportjából
+feliratkozásként is hozzáadható az Apple Naptárhoz.
 
 ## Hibabejelentés
 
