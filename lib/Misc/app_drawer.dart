@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,6 +11,7 @@ import '../language.dart';
 import '../notifications.dart';
 import '../Pages/settings_page.dart';
 import '../Pages/about_page.dart';
+import 'package:nhnk/platform_support.dart';
 
 class AppDrawer extends StatelessWidget {
   final String loggedInUsername;
@@ -87,7 +87,7 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
-                if(Platform.isAndroid){
+                if(AppPlatform.isMobile){
                   launchUrl(Uri.parse('https://nhnk.bali0531.hu/tamogatas')).whenComplete(() {
                     Fluttertoast.showToast(msg: '❤️', toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
                   });
@@ -100,7 +100,7 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
-                if(Platform.isAndroid){
+                if(AppPlatform.isMobile){
                   launchUrl(Uri.parse('https://github.com/Bali0531-RC/NHNK/issues/new/choose'));
                 }
               },
@@ -133,7 +133,7 @@ class AppDrawer extends StatelessWidget {
                   Navigator.popUntil(context, (route) => route.willHandlePopInternally);
                   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const root_page.Splitter()));
                 });
-                if(Platform.isAndroid){
+                if(AppPlatform.isMobile){
                   Fluttertoast.showToast(msg: AppStrings.getLanguagePack().topmenu_buttons_LogoutSuccessToast, toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
                 }
               },

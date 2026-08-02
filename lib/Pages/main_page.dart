@@ -31,6 +31,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
+import 'package:nhnk/platform_support.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -187,7 +188,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       await LanguageManager.refreshAllDownloadedLangs();
     });
 
-    if(Platform.isAndroid){
+    if(AppPlatform.isMobile){
       Future.delayed(Duration.zero, ()async{
         tz.initializeTimeZones();
         final timeZoneInfo = await FlutterTimezone.getLocalTimezone();

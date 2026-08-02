@@ -18,6 +18,7 @@ import '../MailElements/mail_element_widget.dart';
 import '../Pages/startup_page.dart';
 import '../TimetableElements/timetable_element_widget.dart';
 import 'emojirich_text.dart';
+import 'package:nhnk/platform_support.dart';
 
 typedef Callback = void Function(dynamic);
 
@@ -1071,7 +1072,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                       if(!AppColors.hasThemeDownloaded(value)){
                         Future.delayed(Duration.zero, ()async{
                           if(!DataCache.getHasNetwork()){
-                            if(Platform.isAndroid){
+                            if(AppPlatform.isMobile){
                               Fluttertoast.showToast(
                                 msg: AppStrings.getLanguagePack().popup_case1_themeSwap_DownloadingThemeFail,
                                 toastLength: Toast.LENGTH_SHORT,
@@ -1088,7 +1089,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                             if(value == null){
                               return;
                             }
-                            if(Platform.isAndroid){
+                            if(AppPlatform.isMobile){
                               Fluttertoast.showToast(
                                   msg: AppStrings.getLanguagePack().popup_case1_themeSwap_DownloadingThemeFail,
                                   toastLength: Toast.LENGTH_SHORT,

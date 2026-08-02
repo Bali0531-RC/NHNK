@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -7,6 +6,7 @@ import 'package:nhnk/language.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../colors.dart';
+import 'package:nhnk/platform_support.dart';
 
 class ClickableTextSpan extends StatelessWidget{
   final VoidCallback callback;
@@ -29,7 +29,7 @@ class ClickableTextSpan extends StatelessWidget{
       onLongPress: ()async{
         AppHaptics.attentionLightImpact();
         await Clipboard.setData(ClipboardData(text: text));
-        if(!Platform.isAndroid){
+        if(!AppPlatform.isMobile){
           return;
         }
         Fluttertoast.showToast(
@@ -54,7 +54,7 @@ class ClickableTextSpan extends StatelessWidget{
 
   static VoidCallback getNewOpenLinkCallback(String text){
     return ()async{
-      if(!Platform.isAndroid){
+      if(!AppPlatform.isMobile){
         return;
       }
       final url = Uri.parse(text);

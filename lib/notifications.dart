@@ -1,14 +1,14 @@
-import 'dart:io';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:nhnk/platform_support.dart';
 
 class AppNotifications{
   static final FlutterLocalNotificationsPlugin _localnotifs = FlutterLocalNotificationsPlugin();
   static Future<void> initialize()async{
     Counter();
-    if(Platform.isAndroid){
+    if(AppPlatform.isMobile){
       tz.initializeTimeZones();
       final timeZoneName = await FlutterTimezone.getLocalTimezone();
       final String timeZone = timeZoneName.identifier;
@@ -78,7 +78,7 @@ class AppNotifications{
     );
     final counter = Counter.getCount();
     _scheduledNotifLinks.add(NotificationLink(id, counter));
-    if(Platform.isAndroid){
+    if(AppPlatform.isMobile){
       await _localnotifs.zonedSchedule(
         id: counter,
         title: title,

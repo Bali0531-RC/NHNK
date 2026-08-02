@@ -9,8 +9,45 @@ permissions:
   contents: write
 
 jobs:
+  ios:
+    runs-on: macos-latest
+    # Unsigned on purpose: signing needs a paid Apple Developer account, so users
+    # sideload and sign with their own Apple ID. Never blocks the Android release.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: flutter-actions/setup-flutter@v3
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign --dart-define=NHNK_DISTRIBUTION=github
+
+      - name: Package as unsigned ipa
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist/Payload
+          cp -R build/ios/iphoneos/Runner.app dist/Payload/
+          (cd dist && zip -qry "NHNK-${VERSION}-unsigned.ipa" Payload && rm -rf Payload)
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: dist/*.ipa
+          if-no-files-found: error
+
   release:
     runs-on: ubuntu-latest
+    needs: [ios]
+    # workflow_dispatch is for exercising the iOS job; only a tag should publish.
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
       - uses: actions/checkout@v4
@@ -86,6 +123,13 @@ jobs:
             exit 1
           fi
 
+      - name: Fetch the unsigned ipa
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ios-unsigned-ipa
+          path: ios-artifact
+
       - name: Stage assets
         id: stage
         run: |
@@ -97,7 +141,11 @@ jobs:
           done
           cp "$APK_DIR/app-github-release.apk" "dist/NHNK-${VERSION}-universal.apk"
           cp build/app/outputs/bundle/playstoreRelease/*.aab "dist/NHNK-${VERSION}-playstore.aab"
-          (cd dist && sha256sum *.apk *.aab > SHA256SUMS.txt)
+          # The ipa is optional: the iOS job is allowed to fail without holding up Android.
+          cp ios-artifact/*.ipa dist/ 2>/dev/null || echo "no ipa produced, continuing"
+          # Listing explicitly: a bare glob would include the checksum file the shell
+          # has already created by the time sha256sum runs.
+          (cd dist && sha256sum $(ls | grep -E '\.(apk|aab|ipa)$') > SHA256SUMS.txt)
           ls -lh dist
 
       - name: Publish release

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -21,6 +20,7 @@ import '../storage.dart' as storage;
 import '../storage.dart';
 import 'main_page.dart' as main_page;
 import '../Misc/popup.dart';
+import 'package:nhnk/platform_support.dart';
 
 class SetupPageLoginTypeSelection extends StatefulWidget{
   const SetupPageLoginTypeSelection({super.key});
@@ -355,7 +355,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                               ),
                               child: IconButton(
                                 onPressed: (){
-                                  if(!Platform.isAndroid){
+                                  if(!AppPlatform.isMobile){
                                     return;
                                   }
 

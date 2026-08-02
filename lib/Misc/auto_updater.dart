@@ -17,8 +17,10 @@ class AppUpdater {
   static const String repoOwner = "Bali0531-RC";
   static const String repoName = "NHNK";
 
-  /// Google Play bans APKs that update themselves, so the playstore flavor ships without this.
-  static const bool isSupported =
+  /// Google Play bans APKs that update themselves, so the playstore flavor ships
+  /// without this. iOS has no way to install one at all.
+  static bool get isSupported =>
+      Platform.isAndroid &&
       String.fromEnvironment('NHNK_DISTRIBUTION', defaultValue: 'github') != 'playstore';
 
   /// Fő belépési pont. Ezt hívd meg a main_page initState-jében!

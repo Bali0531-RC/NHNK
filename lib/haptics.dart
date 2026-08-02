@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:nhnk/storage.dart';
 import 'package:vibration/vibration.dart';
+import 'package:nhnk/platform_support.dart';
 
 class AppHaptics{
   static bool _vibrationStateCached = true;
@@ -17,7 +17,7 @@ class AppHaptics{
   }
 
   static Future<bool> _canAppVibrate()async{
-    if(!Platform.isAndroid){
+    if(!AppPlatform.isMobile){
       return false;
     }
     final canVibrate = await Vibration.hasVibrator();
