@@ -52,10 +52,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool _confettiCanBePlayed = false;
   bool _confettiRefreshRetrigger = true;
 
-  double _fbPosX = 0;
-  double _fbPosY = 0;
-  bool _fbNeedAnimate = false;
-
   static HomePageState? _instance;
   HomePageState(){
     _instance = this;
@@ -237,14 +233,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
     });
 
-    _fbController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
-    _fbTween = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _fbController, curve: Curves.decelerate),
-    );
-
     blurController = AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 350),
@@ -362,14 +350,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setupCalendarGreetText();
     setupCalendarController(true, true);
 
-    Future.delayed(const Duration(seconds: 1), (){
-      final size = MediaQuery.of(context).size;
-
-      setState(() {
-        _fbPosX = size.width - 90;
-        _fbPosY = size.height - 140;
-      });
-    });
     AppColors.clearThemeChangeCallbacks();
     AppColors.subThemeChangeCallback((){
       if(!mounted){
@@ -1439,6 +1419,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     AppHaptics.lightImpact();
     await onCalendarRefresh(true);
   }
+  Future<void> jumpToCurrentWeek() async{
+    if(currentWeekOffset == 1){
+      return;
+    }
+    currentWeekOffset = 1;
+    await onCalendarRefresh(false);
+  }
 
   // currentWeekOffset is 1 for the current week, so this allows a year either way.
   static const int minWeekOffset = -51;
@@ -1683,8 +1670,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool _calendarDebounce = false;
   bool isLoadingCalendar = true;
 
-  bool keepHomeButtonHidden = true;
-
   bool _noRefreshCalendar = false;
 
   Future<void> onCalendarRefresh(bool isPaging) async{
@@ -1696,7 +1681,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     if(!storage.DataCache.getHasNetwork() || _calendarDebounce || _noRefreshCalendar){
       return;
     }
-    keepHomeButtonHidden = true;
     if(_calendarTimer != null){
       _calendarTimer!.cancel();
     }
@@ -1707,7 +1691,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       setState(() {
         canDoCalendarPaging = false;
         isLoadingCalendar = true;
-        keepHomeButtonHidden = false;
       });
       await storage.DataCache.setHasCachedCalendar(0);
       //await storage.DataCache.setHasCachedFirstWeekEpoch(0);
@@ -1845,7 +1828,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     periodEntries.clear();
     mailList.clear();
     mailEntries.clear();
-    _fbController.dispose();
     currentMailPageController.dispose();
     blurController.dispose();
   }
@@ -1877,9 +1859,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       currentView = to;
     });
   }
-
-  late AnimationController _fbController;
-  late Animation<double> _fbTween;
 
   @override
   Widget build(BuildContext context) {
@@ -1914,64 +1893,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           Visibility(
             visible: currentView == 4,
             child: MailsPageWidget(homePage: this),
-          ),
-          Visibility(
-            visible: currentView == 0 && currentWeekOffset != 1 && canDoCalendarPaging && !keepHomeButtonHidden,
-            child: GestureDetector(
-              onPanEnd: (_){
-                setState(() {
-                  _fbNeedAnimate = true;
-                });
-                _fbController.forward(from: 0).whenComplete(() {
-                  final size = MediaQuery.of(context).size;
-
-                  setState(() {
-                    _fbPosX = size.width - 90;
-                    _fbPosY = size.height - 140;
-                  });
-                });
-              },
-              onPanStart: (_){
-                setState(() {
-                  _fbNeedAnimate = false;
-                });
-              },
-              onPanUpdate: (details){
-                final size = MediaQuery.of(context).size;
-
-                setState(() {
-                  _fbPosX += details.delta.dx;
-                  _fbPosY += details.delta.dy;
-
-                  _fbPosX = _fbPosX < 20 ? 20 : (_fbPosX > size.width - 80 ? size.width - 80 : _fbPosX);
-                  _fbPosY = _fbPosY < 120 ? 120 : (_fbPosY > size.height - 140 ? size.height - 140 : _fbPosY);
-                });
-              },
-              child: AnimatedBuilder(
-                animation: _fbController,
-                builder: (context, child) {
-                  return Padding(
-                    padding: EdgeInsets.only(left: _fbNeedAnimate ? (lerpDouble(_fbPosX, MediaQuery.of(context).size.width - 90, _fbTween.value))! : _fbPosX, top: _fbNeedAnimate ? ((lerpDouble(_fbPosY, MediaQuery.of(context).size.height - 140, _fbTween.value))!) : _fbPosY),
-                    child: IconButton(
-                      onPressed: (() async {
-                        AppHaptics.lightImpact();
-                        keepHomeButtonHidden = true;
-                        currentWeekOffset = 1;
-                        await onCalendarRefresh(false);
-                      }),
-                      icon: Icon(
-                        Icons.home_outlined,
-                        color: AppColors.getTheme().onPrimary,
-                      ),
-                      style: ButtonStyle(
-                        padding: WidgetStateProperty.all(const EdgeInsets.all(15)),
-                        backgroundColor: WidgetStateProperty.all(AppColors.getTheme().primary)
-                      ),
-                    ),
-                  );
-                }
-              ),
-            ),
           ),
           Visibility(
             visible: _showBlur,
@@ -2053,6 +1974,7 @@ class CalendarPageWidget extends StatelessWidget{
                   to: homePage.calendarEntries.isEmpty ? DateTime.now() : DateTime.fromMillisecondsSinceEpoch(homePage.calendarEntries[homePage.calendarEntries.length - 1].endEpoch),
                   onBackPressed: homePage.stepCalendarBack,
                   onForwardPressed: homePage.stepCalendarForward,
+                  onHomePressed: homePage.jumpToCurrentWeek,
                   canDoPaging: homePage.canDoCalendarPaging,
                   homePage: homePage,
                   isLoading: homePage.isLoadingCalendar,

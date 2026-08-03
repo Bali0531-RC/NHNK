@@ -6,6 +6,7 @@ import '../Misc/emojirich_text.dart';
 import '../Misc/popup.dart';
 import '../Pages/main_page.dart';
 import '../colors.dart';
+import '../haptics.dart';
 
 typedef Callback = Future<void> Function();
 
@@ -334,7 +335,7 @@ class FreedayElementWidget extends StatelessWidget{
 class WeekoffseterElementWidget extends StatelessWidget{
   final HomePageState homePage;
 
-  WeekoffseterElementWidget({super.key, required this.week, required this.from, required this.to, required this.onBackPressed, required this.onForwardPressed, required this.canDoPaging, required this.homePage, required this.isLoading, required this.weekStart, required this.weekEnd}){
+  WeekoffseterElementWidget({super.key, required this.week, required this.from, required this.to, required this.onBackPressed, required this.onForwardPressed, required this.onHomePressed, required this.canDoPaging, required this.homePage, required this.isLoading, required this.weekStart, required this.weekEnd}){
     final startMonth = from != null ? api.Generic.monthToText(from!.month) : "_";
     final startDay = from != null ? from!.day : "";
 
@@ -371,8 +372,12 @@ class WeekoffseterElementWidget extends StatelessWidget{
 
   final Callback onBackPressed;
   final Callback onForwardPressed;
+  final Callback onHomePressed;
   final DateTime weekStart;
   final DateTime weekEnd;
+
+  /// Offset 1 is the current week, so anywhere else can jump back to it.
+  bool get canReturnHome => canDoPaging && homePage.currentWeekOffset != 1;
 
   late final String displayString;
   late final String displayString2;
@@ -439,13 +444,40 @@ class WeekoffseterElementWidget extends StatelessWidget{
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     Expanded(
-                      child: Text(
-                        displayString,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.getTheme().textColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16.0,
+                      child: InkWell(
+                        onTap: !canReturnHome ? null : (){
+                          AppHaptics.lightImpact();
+                          onHomePressed();
+                        },
+                        borderRadius: BorderRadius.circular(15),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if(canReturnHome) ...[
+                                Icon(
+                                  Icons.home_rounded,
+                                  size: 15.0,
+                                  color: AppColors.getTheme().textColor.withValues(alpha: .55),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  displayString,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.getTheme().textColor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16.0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
