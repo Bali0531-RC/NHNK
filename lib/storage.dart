@@ -60,6 +60,7 @@ class DataCache{
     _username = '';
     _password = '';
     _instituteUrl = '';
+    _instituteFallbackUrls = [];
     _accessToken = '';
     _refreshToken = '';
     _sessionCookie = '';
@@ -96,6 +97,7 @@ class DataCache{
   late String? _username = '';
   late String? _password = '';
   late String? _instituteUrl = '';
+  List<String> _instituteFallbackUrls = [];
   late String? _accessToken = ''; //new systems token query
   late String? _refreshToken = '';
   late String? _sessionCookie = '';
@@ -143,6 +145,9 @@ class DataCache{
   late bool? _persistentSetting_familyFriendlyLoadingComments = false;
   late bool? _persistentSetting_showExamNotifications = true;
   late bool? _persistentSetting_showClassNotifications = true;
+  late bool? _persistentSetting_showGradeNotifications = true;
+  /// Minutes between background grade checks; 0 disables it.
+  late int _persistentSetting_backgroundGradeCheckMinutes = 60;
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
   late int? _persistentSetting_weekOffset = 0;
@@ -169,6 +174,7 @@ class DataCache{
 
     _username = await getString('Username');
     _instituteUrl = await getString('URL');
+    _instituteFallbackUrls = await getStringList('URL_Fallbacks') ?? [];
 
     _password = await _secureStorage.read(key: 'neptun_password');
 
@@ -255,6 +261,14 @@ class DataCache{
       _persistentSetting_showClassNotifications = true;  // this is the default value, not false
     }
 
+    tmp = await getInt('SETTING_IsNeedGradeNotifications');
+    _persistentSetting_showGradeNotifications = tmp != null && tmp != 0;
+    if(tmp == null){
+      _persistentSetting_showGradeNotifications = true;
+    }
+
+    _persistentSetting_backgroundGradeCheckMinutes = await getInt('SETTING_BackgroundGradeCheckMinutes') ?? 60;
+
     tmp = await getInt('SETTING_IsNeedPaymentsNotifications');
     _persistentSetting_showPaymentsNotifications = tmp != null && tmp != 0;
     if(tmp == null){
@@ -334,6 +348,14 @@ class DataCache{
   static Future<void> setInstituteUrl(String? value) async{
     _instance._instituteUrl = value;
     await saveString('URL', value.toString());
+  }
+
+  /// Alternate hosts for the same institute, used when the primary stops responding.
+  static List<String> getInstituteFallbackUrls(){return _instance._instituteFallbackUrls;}
+
+  static Future<void> setInstituteFallbackUrls(List<String>? value) async{
+    _instance._instituteFallbackUrls = value ?? [];
+    await saveStringList('URL_Fallbacks', _instance._instituteFallbackUrls);
   }
 
 
@@ -501,6 +523,18 @@ class DataCache{
   static Future<void> setNeedClassNotifications(int? value) async{
     _instance._persistentSetting_showClassNotifications = value != null && value != 0;
     await saveInt('SETTING_IsNeedClassNotifications', value ?? 1);
+  }
+
+  static bool? getNeedGradeNotifications(){return _instance._persistentSetting_showGradeNotifications;}
+  static Future<void> setNeedGradeNotifications(int? value) async{
+    _instance._persistentSetting_showGradeNotifications = value != null && value != 0;
+    await saveInt('SETTING_IsNeedGradeNotifications', value ?? 1);
+  }
+
+  static int getBackgroundGradeCheckMinutes(){return _instance._persistentSetting_backgroundGradeCheckMinutes;}
+  static Future<void> setBackgroundGradeCheckMinutes(int value) async{
+    _instance._persistentSetting_backgroundGradeCheckMinutes = value;
+    await saveInt('SETTING_BackgroundGradeCheckMinutes', value);
   }
 
   static bool? getNeedPaymentsNotifications(){return _instance._persistentSetting_showPaymentsNotifications;}

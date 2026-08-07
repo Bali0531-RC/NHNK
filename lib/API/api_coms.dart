@@ -25,10 +25,128 @@ import '../storage.dart';
     static const String MESSAGES_URL = "/api/GetMessages";
     static const String MESSAGE_SET_READ = "/api/SetReadedMessage";
   }
+
+  /// Some institutes run several interchangeable Neptun nodes -- Pannon answers on
+  /// neptun-ws01 and neptun-ws03, and a dead node tends to hang rather than refuse,
+  /// so a stalled request is the signal to move to another host.
+  class InstituteFailover{
+    static bool _switching = false;
+
+    static String? originOf(String? url){
+      if(url == null || url.isEmpty) return null;
+      final parsed = Uri.tryParse(url);
+      if(parsed == null || !parsed.hasAuthority) return null;
+      return '${parsed.scheme}://${parsed.authority}';
+    }
+
+    /// Keeps whatever path the stored URL picked up during login -- the old API appends
+    /// /MobileService.svc -- and only moves it onto a different host.
+    static String? swapOrigin(String url, String newOrigin){
+      final parsed = Uri.tryParse(url);
+      if(parsed == null || !parsed.hasAuthority) return null;
+      final idx = url.indexOf(parsed.authority);
+      if(idx < 0) return null;
+      return '$newOrigin${url.substring(idx + parsed.authority.length)}';
+    }
+
+    /// Points a request that was built against the old host at the current one.
+    static Uri? rebuild(Uri original){
+      final origin = originOf(storage.DataCache.getInstituteUrl());
+      if(origin == null) return null;
+      final swapped = swapOrigin(original.toString(), origin);
+      return swapped == null ? null : Uri.tryParse(swapped);
+    }
+
+    static Future<bool> _isAlive(String baseUrl) async{
+      try{
+        // Short on purpose: the whole point is not to sit through another stalled connect.
+        final resp = await http.get(Uri.parse('$baseUrl/api/Account/Authenticate'))
+            .timeout(const Duration(seconds: 6));
+        // A live node rejects the GET with JSON; a web front-end on the same name
+        // answers with a page, and logging into that would never work.
+        final body = resp.body.trimLeft();
+        if(body.startsWith('<!DOCTYPE') || body.startsWith('<html')) return false;
+        return true;
+      }
+      catch(_){
+        return false;
+      }
+    }
+
+    static Future<List<String>> _lookupPool(String? currentOrigin) async{
+      if(currentOrigin == null) return [];
+      try{
+        final json = await InstitutesRequest.fetchInstitudesJSON();
+        if(json == null) return [];
+        for(final institute in InstitutesRequest.getDataFromInstitudesJSON(json)){
+          if(institute.Fallbacks.isEmpty) continue;
+          final pool = [institute.URL, ...institute.Fallbacks];
+          if(pool.any((u) => originOf(u) == currentOrigin)){
+            return pool;
+          }
+        }
+      }
+      catch(_){ }
+      return [];
+    }
+
+    /// Tokens and cookies are issued per host, so the saved credentials have to be
+    /// replayed against the new one before anything else will work.
+    static Future<bool> trySwitch() async{
+      // Also stops the login inside a switch from recursing back into here.
+      if(_switching) return false;
+
+      final current = storage.DataCache.getInstituteUrl();
+      final username = storage.DataCache.getUsername();
+      final password = storage.DataCache.getPassword();
+
+      if(current == null || current.isEmpty) return false;
+      if(username == null || username.isEmpty || password == null || password.isEmpty) return false;
+      if(storage.DataCache.getIsDemoAccount() ?? false) return false;
+
+      final currentOrigin = originOf(current);
+      var pool = storage.DataCache.getInstituteFallbackUrls();
+      if(pool.isEmpty){
+        pool = await _lookupPool(currentOrigin);
+        if(pool.isNotEmpty){
+          await storage.DataCache.setInstituteFallbackUrls(pool);
+        }
+      }
+      if(pool.isEmpty) return false;
+
+      _switching = true;
+      try{
+        for(final candidate in pool){
+          final candidateOrigin = originOf(candidate);
+          if(candidateOrigin == null || candidateOrigin == currentOrigin) continue;
+          if(!await _isAlive(candidate)) continue;
+
+          final target = swapOrigin(current, candidateOrigin);
+          if(target == null) continue;
+
+          // Leaves the existing session untouched unless the new host accepts the
+          // credentials, so a failed attempt cannot log the user out.
+          final result = await InstitutesRequest.validateLoginCredentialsUrl(target, username, password);
+          if(result == 1){
+            debug.log('Institute endpoint switched to $candidateOrigin');
+            CalendarRequest.invalidateTrainingId();
+            return true;
+          }
+        }
+      }
+      catch(e){
+        debug.log('Endpoint switch failed: $e');
+      }
+      finally{
+        _switching = false;
+      }
+      return false;
+    }
+  }
   
   class _APIRequest{
     // POST-REQUEST for old API and modern login
-    static Future<String> postRequest(Uri url, String requestBody,{String? bearerToken}) async{
+    static Future<String> postRequest(Uri url, String requestBody,{String? bearerToken, bool isRetry = false}) async{
       HttpOverrides.global = NeptunCerts.getCerts();
   
       final client = http.Client();
@@ -57,6 +175,15 @@ import '../storage.dart';
       }
       catch(error){
         client.close();
+        if(!isRetry && await InstituteFailover.trySwitch()){
+          final rebuilt = InstituteFailover.rebuild(url);
+          if(rebuilt != null){
+            final refreshed = bearerToken == null || bearerToken.isEmpty
+                ? bearerToken
+                : await storage.DataCache.getAccessToken();
+            return postRequest(rebuilt, requestBody, bearerToken: refreshed, isRetry: true);
+          }
+        }
         return '{"ErrorMessage": "Hálózati hiba: $error"}';
       }
 
@@ -66,7 +193,7 @@ import '../storage.dart';
       return response ?? '{}';
     }
 
-    static Future<http.Response> postRequestRaw(Uri url, String requestBody,{String? bearerToken, String? cookie}) async {
+    static Future<http.Response> postRequestRaw(Uri url, String requestBody,{String? bearerToken, String? cookie, bool isRetry = false}) async {
       HttpOverrides.global = NeptunCerts.getCerts();
   
       final client = http.Client();
@@ -88,6 +215,20 @@ import '../storage.dart';
         return response;
       } catch (e) {
         client.close();
+        if(!isRetry && await InstituteFailover.trySwitch()){
+          final rebuilt = InstituteFailover.rebuild(url);
+          final refreshedToken = storage.DataCache.getAccessToken();
+          final refreshedCookie = storage.DataCache.getSessionCookie();
+          if(rebuilt != null){
+            return postRequestRaw(
+              rebuilt,
+              requestBody,
+              bearerToken: refreshedToken ?? bearerToken,
+              cookie: refreshedCookie ?? cookie,
+              isRetry: true,
+            );
+          }
+        }
         rethrow;
       }
     }
@@ -214,6 +355,13 @@ import '../storage.dart';
         return response.body;
       } catch (e) {
         client.close();
+        if(!isRetry && await InstituteFailover.trySwitch()){
+          final rebuilt = InstituteFailover.rebuild(url);
+          final refreshed = await storage.DataCache.getAccessToken();
+          if(rebuilt != null && refreshed != null){
+            return await getRequest(rebuilt, bearerToken: refreshed, isRetry: true);
+          }
+        }
         return '{"ErrorMessage": "$e"}';
       }
     }
@@ -271,7 +419,7 @@ import '../storage.dart';
 
     static Future<List<dynamic>?> getRawJsonWithNameUrlPairs() async{
       final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/universityNameUrlPairs.json');
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 8));
 
       if (response.statusCode != 200) {
         return null;
@@ -287,13 +435,22 @@ import '../storage.dart';
         var item2 = item as Map<String, dynamic>;
         String name = item2['Name'];
         String url = item2['Url'] ?? "NULL";
+        // Optional, and older releases parsing this same file simply ignore it.
+        final rawFallbacks = item2['Fallbacks'];
+        final fallbacks = rawFallbacks is List
+            ? rawFallbacks.whereType<String>().where((e) => e.trim().isNotEmpty).toList()
+            : <String>[];
         if(url != "NULL" && name != "DEMO") { //remove obsolete or non existent entries
-          newList.add(Institute(name, url));
+          newList.add(Institute(name, url, fallbacks));
         }
       }
       return newList;
     }
     static Future<int> validateLoginCredentials(Institute institute, String username, String password) async{
+      // Stores the primary too, so a switch away from it can later switch back.
+      await storage.DataCache.setInstituteFallbackUrls(
+        institute.Fallbacks.isEmpty ? [] : [institute.URL, ...institute.Fallbacks],
+      );
       return validateLoginCredentialsUrl(institute.URL, username, password);
     }
     //
@@ -519,6 +676,10 @@ class CalendarRequest {
 
   static List<CalendarEntry>? _icsFallbackCache;
   static int _icsFallbackFetchedMs = 0;
+
+  /// Whole-semester timetable from the personal iCal export, rather than the one
+  /// week the calendar view holds.
+  static Future<List<CalendarEntry>?> fetchFullTimetable() => _fetchIcsFallback();
 
   /// Some institutions leave GetCalendarEvents empty even though the timetable exists;
   /// the personal iCal export is populated in that case, so it is used as a fallback.
@@ -1592,10 +1753,12 @@ class MailRequest{
   class Institute{
     late final String Name;
     late final String URL;
+    late final List<String> Fallbacks;
   
-    Institute(String name, String url){
+    Institute(String name, String url, [List<String>? fallbacks]){
       Name = name;
       URL = url;
+      Fallbacks = fallbacks ?? const [];
     }
   
     getUrl() => Uri.parse(URL);

@@ -132,6 +132,20 @@ class AppStrings{
       markbookPage_AverageDisplay: 'Átlagod: %0 %1',
       markbookPage_AverageScholarshipDisplay: 'Ösztöndíj indexed: %0 %1',
       markbookPage_NoGrades: 'nincs jegyed',
+      settings_GradeNotifications: 'Értesítés új jegyről',
+      settings_ExportCalendar: 'Órarend exportálása',
+      settings_BackgroundGradeCheck: 'Ellenőrzés a háttérben',
+      settings_BackgroundCheckOff: 'Kikapcsolva',
+      settings_BackgroundCheckMinutes: '%0 percenként',
+      settings_BackgroundCheckHours: '%0 óránként',
+      settings_BackgroundGradeCheckDescription: 'Napi néhány alkalommal ránéz a jegyeidre akkor is, ha nincs megnyitva az app. Csak wifin/mobilneten fut, és alacsony töltöttségnél kihagyja.',
+      settings_ExportCalendarDescription: 'Elmenti az órarendedet .ics fájlba, amit a telefonod naptára be tud olvasni.',
+      settings_ExportCalendarDone: 'Export kész, megnyitás a naptáraddal...',
+      settings_ExportCalendarFailed: 'Nem sikerült exportálni az órarendet.',
+      settings_GradeNotificationsDescription: 'Szól, ha frissítéskor új jegyet találunk a leckényvedben, így nem kell folyton kézzel ellenőrizned.',
+      notification_NewGrade_Title: 'Új jegyed érkezett!',
+      notification_NewGrade_One: '%0: %1',
+      notification_NewGrade_Many: '%0 tárgyból kaptál új jegyet.',
       markbookPage_Empty: 'Nincs Tantárgyad',
       markbookPage_CompletedLine: 'Elvégezve',
       paymentPage_Empty: 'Nem Tartozol',
@@ -317,6 +331,20 @@ class AppStrings{
       markbookPage_AverageDisplay: 'Average: %0 %1',
       markbookPage_AverageScholarshipDisplay: 'Scholarship index: %0 %1',
       markbookPage_NoGrades: 'You have no grades',
+      settings_GradeNotifications: 'New grade notifications',
+      settings_ExportCalendar: 'Export timetable',
+      settings_BackgroundGradeCheck: 'Check in the background',
+      settings_BackgroundCheckOff: 'Off',
+      settings_BackgroundCheckMinutes: 'every %0 minutes',
+      settings_BackgroundCheckHours: 'every %0 hours',
+      settings_BackgroundGradeCheckDescription: 'Looks for new grades a few times a day even when the app is closed. Only runs while connected, and skips when the battery is low.',
+      settings_ExportCalendarDescription: 'Saves your timetable as an .ics file that your phone calendar can import.',
+      settings_ExportCalendarDone: 'Export ready, opening with your calendar...',
+      settings_ExportCalendarFailed: 'Could not export the timetable.',
+      settings_GradeNotificationsDescription: 'Tells you when a refresh finds a new grade in your markbook, so you do not have to keep checking manually.',
+      notification_NewGrade_Title: 'You have a new grade!',
+      notification_NewGrade_One: '%0: %1',
+      notification_NewGrade_Many: 'You received new grades in %0 subjects.',
       markbookPage_Empty: 'You don\'t have any subjects',
       markbookPage_CompletedLine: 'Completed',
       paymentPage_Empty: 'All paid',
@@ -658,6 +686,20 @@ class LanguagePack{
   final String markbookPage_AverageDisplay;
   final String markbookPage_AverageScholarshipDisplay;
   final String markbookPage_NoGrades;
+  final String settings_GradeNotifications;
+  final String settings_ExportCalendar;
+  final String settings_BackgroundGradeCheck;
+  final String settings_BackgroundCheckOff;
+  final String settings_BackgroundCheckMinutes;
+  final String settings_BackgroundCheckHours;
+  final String settings_BackgroundGradeCheckDescription;
+  final String settings_ExportCalendarDescription;
+  final String settings_ExportCalendarDone;
+  final String settings_ExportCalendarFailed;
+  final String settings_GradeNotificationsDescription;
+  final String notification_NewGrade_Title;
+  final String notification_NewGrade_One;
+  final String notification_NewGrade_Many;
   final String markbookPage_Empty;
   final String markbookPage_CompletedLine;
 
@@ -847,6 +889,20 @@ class LanguagePack{
     required this.markbookPage_AverageDisplay,
     required this.markbookPage_AverageScholarshipDisplay,
     required this.markbookPage_NoGrades,
+    required this.settings_GradeNotifications,
+    required this.settings_ExportCalendar,
+    required this.settings_BackgroundGradeCheck,
+    required this.settings_BackgroundCheckOff,
+    required this.settings_BackgroundCheckMinutes,
+    required this.settings_BackgroundCheckHours,
+    required this.settings_BackgroundGradeCheckDescription,
+    required this.settings_ExportCalendarDescription,
+    required this.settings_ExportCalendarDone,
+    required this.settings_ExportCalendarFailed,
+    required this.settings_GradeNotificationsDescription,
+    required this.notification_NewGrade_Title,
+    required this.notification_NewGrade_One,
+    required this.notification_NewGrade_Many,
     required this.markbookPage_Empty,
     required this.markbookPage_CompletedLine,
     required this.paymentPage_Empty,
@@ -1044,6 +1100,20 @@ class LanguagePack{
         markbookPage_AverageDisplay:lang['markbookPage_AverageDisplay'],
         markbookPage_AverageScholarshipDisplay:lang['markbookPage_AverageScholarshipDisplay'],
         markbookPage_NoGrades:lang['markbookPage_NoGrades'],
+        settings_GradeNotifications:lang['settings_GradeNotifications'] ?? 'Értesítés új jegyről',
+        settings_ExportCalendar:lang['settings_ExportCalendar'] ?? 'Órarend exportálása',
+        settings_BackgroundGradeCheck:lang['settings_BackgroundGradeCheck'] ?? 'Ellenőrzés a háttérben',
+        settings_BackgroundCheckOff:lang['settings_BackgroundCheckOff'] ?? 'Kikapcsolva',
+        settings_BackgroundCheckMinutes:lang['settings_BackgroundCheckMinutes'] ?? '%0 percenként',
+        settings_BackgroundCheckHours:lang['settings_BackgroundCheckHours'] ?? '%0 óránként',
+        settings_BackgroundGradeCheckDescription:lang['settings_BackgroundGradeCheckDescription'] ?? 'Akkor is ránéz a jegyeidre, ha nincs megnyitva az app.',
+        settings_ExportCalendarDescription:lang['settings_ExportCalendarDescription'] ?? 'Elmenti az órarendedet .ics fájlba.',
+        settings_ExportCalendarDone:lang['settings_ExportCalendarDone'] ?? 'Export kész...',
+        settings_ExportCalendarFailed:lang['settings_ExportCalendarFailed'] ?? 'Nem sikerült exportálni az órarendet.',
+        settings_GradeNotificationsDescription:lang['settings_GradeNotificationsDescription'] ?? 'Szól, ha frissítéskor új jegyet találunk a leckényvedben.',
+        notification_NewGrade_Title:lang['notification_NewGrade_Title'] ?? 'Új jegyed érkezett!',
+        notification_NewGrade_One:lang['notification_NewGrade_One'] ?? '%0: %1',
+        notification_NewGrade_Many:lang['notification_NewGrade_Many'] ?? '%0 tárgyból kaptál új jegyet.',
         markbookPage_Empty:lang['markbookPage_Empty'],
         markbookPage_CompletedLine:lang['markbookPage_CompletedLine'],
         paymentPage_Empty:lang['paymentPage_Empty'],
@@ -1244,6 +1314,20 @@ class LanguagePack{
       'markbookPage_AverageDisplay':lang.markbookPage_AverageDisplay,
       'markbookPage_AverageScholarshipDisplay':lang.markbookPage_AverageScholarshipDisplay,
       'markbookPage_NoGrades':lang.markbookPage_NoGrades,
+      'settings_GradeNotifications':lang.settings_GradeNotifications,
+      'settings_ExportCalendar':lang.settings_ExportCalendar,
+      'settings_BackgroundGradeCheck':lang.settings_BackgroundGradeCheck,
+      'settings_BackgroundCheckOff':lang.settings_BackgroundCheckOff,
+      'settings_BackgroundCheckMinutes':lang.settings_BackgroundCheckMinutes,
+      'settings_BackgroundCheckHours':lang.settings_BackgroundCheckHours,
+      'settings_BackgroundGradeCheckDescription':lang.settings_BackgroundGradeCheckDescription,
+      'settings_ExportCalendarDescription':lang.settings_ExportCalendarDescription,
+      'settings_ExportCalendarDone':lang.settings_ExportCalendarDone,
+      'settings_ExportCalendarFailed':lang.settings_ExportCalendarFailed,
+      'settings_GradeNotificationsDescription':lang.settings_GradeNotificationsDescription,
+      'notification_NewGrade_Title':lang.notification_NewGrade_Title,
+      'notification_NewGrade_One':lang.notification_NewGrade_One,
+      'notification_NewGrade_Many':lang.notification_NewGrade_Many,
       'markbookPage_Empty':lang.markbookPage_Empty,
       'markbookPage_CompletedLine':lang.markbookPage_CompletedLine,
       'paymentPage_Empty':lang.paymentPage_Empty,

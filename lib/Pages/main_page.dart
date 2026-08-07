@@ -19,6 +19,8 @@ import 'package:nhnk/Misc/emojirich_text.dart';
 import 'package:nhnk/PaymentsElements/payment_element_widget.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/auto_updater.dart';
+import '../background_worker.dart';
+import '../grade_alerts.dart';
 import '../haptics.dart';
 import '../storage.dart' as storage;
 import '../TimetableElements/timetable_element_widget.dart' as t_table;
@@ -288,6 +290,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     });
 
     AppNotifications.initialize();
+    BackgroundWorker.sync();
     Future.delayed(Duration.zero, ()async{
       if(((await storage.getInt('NextFirstWeekCacheTime')) ?? 0) < DateTime.now().millisecondsSinceEpoch){
         storage.DataCache.setHasCachedFirstWeekEpoch(0);
@@ -1530,16 +1533,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       markbookEntries = [];
       return;
     }
+
+    // Read the previous grades before the cache below overwrites them.
+    final previousGrades = await GradeAlerts.readCachedGrades();
+
     markbookEntries = request;
-
-    storage.saveInt('CachedMarkbookLength', markbookEntries.length);
-    //cache calendar
-    for (int i = 0; i < markbookEntries.length; i++) {
-      storage.saveString('CachedMarkbook_$i', markbookEntries[i].toString());
-    }
-    storage.saveString('MarkbookCacheTime', DateTime.now().toString());
-
-    storage.DataCache.setHasCachedMarkbook(1);
+    await GradeAlerts.writeCache(markbookEntries);
+    await GradeAlerts.notify(GradeAlerts.findNewGrades(previousGrades, markbookEntries));
   }
 
   Future<void> fetchPayments() async{

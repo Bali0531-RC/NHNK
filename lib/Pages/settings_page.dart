@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:nhnk/Pages/main_page.dart';
+import 'package:open_filex/open_filex.dart';
 import '../API/api_coms.dart';
 import '../API/totp.dart';
+import '../background_worker.dart';
 import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
+import '../local_file_actions.dart';
 import '../storage.dart';
 import '../Misc/emojirich_text.dart';
 import '../Pages/startup_page.dart';
@@ -40,6 +44,36 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[lIdx];
     }
+  }
+
+  int _backgroundIntervalIndex(){
+    final idx = BackgroundWorker.intervalSteps.indexOf(DataCache.getBackgroundGradeCheckMinutes());
+    return idx < 0 ? BackgroundWorker.intervalSteps.indexOf(60) : idx;
+  }
+
+  String _backgroundIntervalLabel(int minutes){
+    final lang = AppStrings.getLanguagePack();
+    if(minutes <= 0) return lang.settings_BackgroundCheckOff;
+    if(minutes < 60) return AppStrings.getStringWithParams(lang.settings_BackgroundCheckMinutes, [minutes]);
+    return AppStrings.getStringWithParams(lang.settings_BackgroundCheckHours, [minutes ~/ 60]);
+  }
+
+  Future<void> _exportCalendar() async{
+    final lang = AppStrings.getLanguagePack();
+    List<dynamic>? entries;
+    try{
+      entries = await CalendarRequest.fetchFullTimetable();
+    }
+    catch(_){ }
+
+    final path = entries == null ? null : await IcsExportHelper.writeExport(entries);
+    if(path == null){
+      Fluttertoast.showToast(msg: lang.settings_ExportCalendarFailed);
+      return;
+    }
+
+    Fluttertoast.showToast(msg: lang.settings_ExportCalendarDone);
+    await OpenFilex.open(path);
   }
 
   void _showTotpSecretDialog() {
@@ -338,6 +372,55 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           SwitchListTile(
+            title: Text(AppStrings.getLanguagePack().settings_GradeNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(AppStrings.getLanguagePack().settings_GradeNotificationsDescription, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12)),
+            activeThumbColor: AppColors.getTheme().secondary,
+            value: DataCache.getNeedGradeNotifications()!,
+            onChanged: (b) {
+              AppHaptics.lightImpact();
+              DataCache.setNeedGradeNotifications(b ? 1 : 0);
+              BackgroundWorker.sync();
+              setState(() {});
+            },
+          ),
+          if(BackgroundWorker.isSupported)
+            ListTile(
+              enabled: DataCache.getNeedGradeNotifications()!,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: Text(AppStrings.getLanguagePack().settings_BackgroundGradeCheck, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600))),
+                  Text(
+                    _backgroundIntervalLabel(DataCache.getBackgroundGradeCheckMinutes()),
+                    style: TextStyle(color: AppColors.getTheme().secondary, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppStrings.getLanguagePack().settings_BackgroundGradeCheckDescription, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12)),
+                  Slider(
+                    value: _backgroundIntervalIndex().toDouble(),
+                    min: 0,
+                    max: (BackgroundWorker.intervalSteps.length - 1).toDouble(),
+                    divisions: BackgroundWorker.intervalSteps.length - 1,
+                    activeColor: AppColors.getTheme().secondary,
+                    label: _backgroundIntervalLabel(BackgroundWorker.intervalSteps[_backgroundIntervalIndex()]),
+                    onChanged: !DataCache.getNeedGradeNotifications()! ? null : (v) {
+                      setState(() {
+                        DataCache.setBackgroundGradeCheckMinutes(BackgroundWorker.intervalSteps[v.round()]);
+                      });
+                    },
+                    onChangeEnd: (_) {
+                      AppHaptics.lightImpact();
+                      BackgroundWorker.sync();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
             value: DataCache.getNeedPaymentsNotifications()!,
@@ -407,9 +490,21 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
+          ListTile(
+            title: Text(AppStrings.getLanguagePack().settings_ExportCalendar, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              AppStrings.getLanguagePack().settings_ExportCalendarDescription,
+              style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.5), fontSize: 12),
+            ),
+            trailing: Icon(Icons.event_available_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.6)),
+            onTap: () {
+              AppHaptics.lightImpact();
+              _exportCalendar();
+            },
+          ),
+
           // --- 4. security ---
           _buildSectionHeader("Biztonság", Icons.lock_rounded),
-
           ListTile(
             title: Text("2FA titkos kulcs", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(

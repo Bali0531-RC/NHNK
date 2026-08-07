@@ -26,11 +26,23 @@
       },
       {
          "Name":"Budapesti Gazdasági Egyetem",
-         "Url":"https://neptun18.uni-bge.hu/hallgato"
+         "Url":"https://neptun18.uni-bge.hu/hallgato",
+         "Fallbacks":[
+            "https://neptun11.uni-bge.hu/hallgato",
+            "https://neptun12.uni-bge.hu/hallgato",
+            "https://neptun13.uni-bge.hu/hallgato",
+            "https://neptun14.uni-bge.hu/hallgato",
+            "https://neptun15.uni-bge.hu/hallgato",
+            "https://neptun16.uni-bge.hu/hallgato",
+            "https://neptun17.uni-bge.hu/hallgato"
+         ]
       },
       {
          "Name":"Budapesti Metropolitan Egyetem",
-         "Url":"https://neptunweb1.metropolitan.hu/hallgato"
+         "Url":"https://neptunweb1.metropolitan.hu/hallgato",
+         "Fallbacks":[
+            "https://neptunweb2.metropolitan.hu/hallgato"
+         ]
       },
       {
          "Name":"Budapesti Műszaki és Gazdaságtudományi Egyetem",
@@ -114,7 +126,10 @@
       },
       {
          "Name":"Miskolci Egyetem",
-         "Url":"https://neptunweb1.uni-miskolc.hu/hallgato_ng"
+         "Url":"https://neptunweb1.uni-miskolc.hu/hallgato_ng",
+         "Fallbacks":[
+            "https://neptunweb2.uni-miskolc.hu/hallgato_ng"
+         ]
       },
       {
          "Name":"Moholy-Nagy Művészeti Egyetem",
@@ -142,15 +157,26 @@
       },
       {
          "Name":"Pannon Egyetem",
-         "Url":"https://neptun-ws01.uni-pannon.hu/hallgato"
+         "Url":"https://neptun-ws01.uni-pannon.hu/hallgato",
+         "Fallbacks":[
+            "https://neptun-ws03.uni-pannon.hu/hallgato"
+         ]
       },
       {
          "Name":"Pázmány Péter Katolikus Egyetem",
-         "Url":"https://neptun3.ppke.hu/hallgato2_uj"
+         "Url":"https://neptun3.ppke.hu/hallgato2_uj",
+         "Fallbacks":[
+            "https://neptun2.ppke.hu/hallgato2_uj"
+         ]
       },
       {
          "Name":"Pécsi Tudományegyetem",
-         "Url":"https://neptun-web4.tr.pte.hu/hallgato"
+         "Url":"https://neptun-web4.tr.pte.hu/hallgato",
+         "Fallbacks":[
+            "https://neptun-web1.tr.pte.hu/hallgato",
+            "https://neptun-web2.tr.pte.hu/hallgato",
+            "https://neptun-web3.tr.pte.hu/hallgato"
+         ]
       },
       {
          "Name":"Sapientia Erdélyi Magyar Tudományegyetem",

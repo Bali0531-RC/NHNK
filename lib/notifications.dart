@@ -25,8 +25,21 @@ class AppNotifications{
     ));
   }
 
-  static final List<NotificationLink> _scheduledNotifLinks = <NotificationLink>[].toList();
+  /// Same plugin setup minus the permission prompts: requestExactAlarmsPermission
+  /// opens a settings screen, which must never happen from a background task.
+  static Future<void> initializeHeadless() async{
+    if(AppPlatform.isMobile){
+      tz.initializeTimeZones();
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName.identifier));
+    }
+    await _localnotifs.initialize(settings: const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        linux: LinuxInitializationSettings(defaultActionName: 'Dismiss')
+    ));
+  }
 
+  static final List<NotificationLink> _scheduledNotifLinks = <NotificationLink>[].toList();
   static Future<void> cancelScheduledNotifs()async{
     //log('cancle');
     await _localnotifs.cancelAll();
