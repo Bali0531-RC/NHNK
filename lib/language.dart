@@ -136,6 +136,11 @@ class AppStrings{
       settings_ExportCalendar: 'Órarend exportálása',
       settings_BackgroundGradeCheck: 'Ellenőrzés a háttérben',
       settings_BackgroundCheckOff: 'Kikapcsolva',
+      settings_BatteryOptimisation: 'Akkumulátor-korlátozás',
+      settings_OemBackground: 'Gyártói háttérkorlátozás',
+      settings_OemBackgroundDescription: 'A telefonod gyártója külön listát vezet arról, mely appok futhatnak a háttérben. Koppints, és vedd fel rá az NHNK-t.',
+      settings_BatteryOptimisationOn: 'A rendszer korlátozza az appot, így a háttérellenőrzés ritkábban vagy egyáltalán nem fut le. Koppints a beállítás megnyitásához.',
+      settings_BatteryOptimisationOff: 'Nincs korlátozva. A háttérellenőrzés a beállított gyakorisággal futhat.',
       settings_BackgroundCheckMinutes: '%0 percenként',
       settings_BackgroundCheckHours: '%0 óránként',
       settings_BackgroundGradeCheckDescription: 'Napi néhány alkalommal ránéz a jegyeidre akkor is, ha nincs megnyitva az app. Csak wifin/mobilneten fut, és alacsony töltöttségnél kihagyja.',
@@ -335,6 +340,11 @@ class AppStrings{
       settings_ExportCalendar: 'Export timetable',
       settings_BackgroundGradeCheck: 'Check in the background',
       settings_BackgroundCheckOff: 'Off',
+      settings_BatteryOptimisation: 'Battery restrictions',
+      settings_OemBackground: 'Manufacturer restrictions',
+      settings_OemBackgroundDescription: 'Your phone maker keeps its own list of apps allowed to run in the background. Tap to add NHNK to it.',
+      settings_BatteryOptimisationOn: 'The system restricts this app, so background checks run rarely or not at all. Tap to open the setting.',
+      settings_BatteryOptimisationOff: 'Not restricted. Background checks can run at the interval you picked.',
       settings_BackgroundCheckMinutes: 'every %0 minutes',
       settings_BackgroundCheckHours: 'every %0 hours',
       settings_BackgroundGradeCheckDescription: 'Looks for new grades a few times a day even when the app is closed. Only runs while connected, and skips when the battery is low.',
@@ -690,6 +700,11 @@ class LanguagePack{
   final String settings_ExportCalendar;
   final String settings_BackgroundGradeCheck;
   final String settings_BackgroundCheckOff;
+  final String settings_BatteryOptimisation;
+  final String settings_OemBackground;
+  final String settings_OemBackgroundDescription;
+  final String settings_BatteryOptimisationOn;
+  final String settings_BatteryOptimisationOff;
   final String settings_BackgroundCheckMinutes;
   final String settings_BackgroundCheckHours;
   final String settings_BackgroundGradeCheckDescription;
@@ -893,6 +908,11 @@ class LanguagePack{
     required this.settings_ExportCalendar,
     required this.settings_BackgroundGradeCheck,
     required this.settings_BackgroundCheckOff,
+    required this.settings_BatteryOptimisation,
+    required this.settings_OemBackground,
+    required this.settings_OemBackgroundDescription,
+    required this.settings_BatteryOptimisationOn,
+    required this.settings_BatteryOptimisationOff,
     required this.settings_BackgroundCheckMinutes,
     required this.settings_BackgroundCheckHours,
     required this.settings_BackgroundGradeCheckDescription,
@@ -1104,6 +1124,11 @@ class LanguagePack{
         settings_ExportCalendar:lang['settings_ExportCalendar'] ?? 'Órarend exportálása',
         settings_BackgroundGradeCheck:lang['settings_BackgroundGradeCheck'] ?? 'Ellenőrzés a háttérben',
         settings_BackgroundCheckOff:lang['settings_BackgroundCheckOff'] ?? 'Kikapcsolva',
+        settings_BatteryOptimisation:lang['settings_BatteryOptimisation'] ?? 'Akkumulátor-korlátozás',
+        settings_OemBackground:lang['settings_OemBackground'] ?? 'Gyártói háttérkorlátozás',
+        settings_OemBackgroundDescription:lang['settings_OemBackgroundDescription'] ?? 'A gyártód külön listát vezet a háttérben futható appokról. Koppints a megnyitásához.',
+        settings_BatteryOptimisationOn:lang['settings_BatteryOptimisationOn'] ?? 'A rendszer korlátozza az appot. Koppints a beállítás megnyitásához.',
+        settings_BatteryOptimisationOff:lang['settings_BatteryOptimisationOff'] ?? 'Nincs korlátozva.',
         settings_BackgroundCheckMinutes:lang['settings_BackgroundCheckMinutes'] ?? '%0 percenként',
         settings_BackgroundCheckHours:lang['settings_BackgroundCheckHours'] ?? '%0 óránként',
         settings_BackgroundGradeCheckDescription:lang['settings_BackgroundGradeCheckDescription'] ?? 'Akkor is ránéz a jegyeidre, ha nincs megnyitva az app.',
@@ -1318,6 +1343,11 @@ class LanguagePack{
       'settings_ExportCalendar':lang.settings_ExportCalendar,
       'settings_BackgroundGradeCheck':lang.settings_BackgroundGradeCheck,
       'settings_BackgroundCheckOff':lang.settings_BackgroundCheckOff,
+      'settings_BatteryOptimisation':lang.settings_BatteryOptimisation,
+      'settings_OemBackground':lang.settings_OemBackground,
+      'settings_OemBackgroundDescription':lang.settings_OemBackgroundDescription,
+      'settings_BatteryOptimisationOn':lang.settings_BatteryOptimisationOn,
+      'settings_BatteryOptimisationOff':lang.settings_BatteryOptimisationOff,
       'settings_BackgroundCheckMinutes':lang.settings_BackgroundCheckMinutes,
       'settings_BackgroundCheckHours':lang.settings_BackgroundCheckHours,
       'settings_BackgroundGradeCheckDescription':lang.settings_BackgroundGradeCheckDescription,

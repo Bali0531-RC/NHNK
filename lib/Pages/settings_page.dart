@@ -10,6 +10,7 @@ import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
 import '../local_file_actions.dart';
+import '../power_settings.dart';
 import '../storage.dart';
 import '../Misc/emojirich_text.dart';
 import '../Pages/startup_page.dart';
@@ -27,6 +28,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _themesCurrSelect;
   late double _currentFontScale;
   bool _hasTotpSecret = false;
+  bool _batteryExempt = true;
+  bool _hasOemPowerScreen = false;
 
   @override
   void initState() {
@@ -36,6 +39,16 @@ class _SettingsPageState extends State<SettingsPage> {
     _currentFontScale = DataCache.getFontScale();
     _themesCurrSelect = AppColors.getTheme().paletteName;
     _hasTotpSecret = DataCache.getTotpSecret()?.isNotEmpty ?? false;
+
+    PowerSettings.isExempt().then((v){
+      if(!mounted) return;
+      setState(() => _batteryExempt = v);
+    });
+
+    PowerSettings.hasOemSettings().then((v){
+      if(!mounted) return;
+      setState(() => _hasOemPowerScreen = v);
+    });
 
     final lIdx = DataCache.getUserSelectedLanguage()!;
     if (lIdx <= -1) {
@@ -419,6 +432,45 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
+            ),
+
+          // Only worth showing when a background check is actually wanted.
+          if(BackgroundWorker.isSupported && DataCache.getBackgroundGradeCheckMinutes() > 0 && DataCache.getNeedGradeNotifications()!)
+            ListTile(
+              title: Text(AppStrings.getLanguagePack().settings_BatteryOptimisation, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                _batteryExempt
+                    ? AppStrings.getLanguagePack().settings_BatteryOptimisationOff
+                    : AppStrings.getLanguagePack().settings_BatteryOptimisationOn,
+                style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12),
+              ),
+              trailing: Icon(
+                _batteryExempt ? Icons.battery_full_rounded : Icons.battery_alert_rounded,
+                color: _batteryExempt ? AppColors.getTheme().secondary : AppColors.getTheme().errorRed,
+              ),
+              onTap: _batteryExempt ? null : () async {
+                AppHaptics.lightImpact();
+                await PowerSettings.openSettings();
+                // Re-read on return, the user may have changed it.
+                final now = await PowerSettings.isExempt();
+                if(!mounted) return;
+                setState(() => _batteryExempt = now);
+              },
+            ),
+
+          // Vendor list is separate from Android's; being exempt above does not cover it.
+          if(BackgroundWorker.isSupported && _hasOemPowerScreen && DataCache.getBackgroundGradeCheckMinutes() > 0 && DataCache.getNeedGradeNotifications()!)
+            ListTile(
+              title: Text(AppStrings.getLanguagePack().settings_OemBackground, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                AppStrings.getLanguagePack().settings_OemBackgroundDescription,
+                style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12),
+              ),
+              trailing: Icon(Icons.open_in_new_rounded, color: AppColors.getTheme().textColor.withValues(alpha: .6)),
+              onTap: () async {
+                AppHaptics.lightImpact();
+                await PowerSettings.openOemSettings();
+              },
             ),
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
