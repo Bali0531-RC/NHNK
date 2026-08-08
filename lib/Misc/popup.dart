@@ -84,7 +84,9 @@ class PopupWidgetHandler{
           PageRouteBuilder(
               pageBuilder: (context, anim, anim2) => PopupWidgetState(topPadding: MediaQuery.of(context).padding, mode: _instance!.mode, pinfo: values[0] as PackageInfo),
               opaque: false,
-              barrierDismissible: true,
+              // Mode 9 is a blocking login step: a tap meant to dismiss the keyboard
+              // used to hit the barrier and abandon the sign-in silently.
+              barrierDismissible: _instance!.mode != 9,
               transitionDuration: PopupWidgetHandler.animDuration,
               reverseTransitionDuration: Duration.zero,
               fullscreenDialog: true,
@@ -92,7 +94,20 @@ class PopupWidgetHandler{
                 return widget;
               }
           )
-      );
+      ).then((_){
+        // A barrier dismissal never reaches closePopup, which left these set and made
+        // doPopup return early forever after, so no popup could open again.
+        if(_instance!._inUse){
+          _instance!._inUse = false;
+          PopupWidgetHandler._hasPopupActive = false;
+          if(_instance!._closeBlurCallback == null){
+            HomePageState.showBlurPopup(false);
+          }
+          else{
+            _instance!._closeBlurCallback!();
+          }
+        }
+      });
     });
   }
 
@@ -1961,6 +1976,9 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           autofocus: true,
           keyboardType: TextInputType.number,
           maxLength: 6,
+          // Without this a secret pasted into the focused field is cut to six characters
+          // and submitted as if it were the code.
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 28, letterSpacing: 8, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
@@ -2006,17 +2024,22 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             if (secret == null) {
               return;
             }
+            final generated = Totp.generate(secret);
             Future.delayed(Duration.zero, () async {
               await DataCache.setTotpSecret(secret);
             });
-            final generated = Totp.generate(secret);
             Fluttertoast.showToast(
-              msg: generated == null ? "Kulcs elmentve" : "Kulcs elmentve, aktuális kód: $generated",
+              msg: generated == null ? "Kulcs elmentve" : "Kulcs elmentve, beléptetés...",
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.SNACKBAR,
               backgroundColor: AppColors.getTheme().rootBackground,
               textColor: AppColors.getTheme().textColor,
             );
+            // The point of pasting the key here is to get in, so answer the challenge
+            // with it rather than making the user type a code as well.
+            if (generated != null) {
+              PopupWidgetHandler._instance!.callback(generated);
+            }
           },
         ));
         return list;

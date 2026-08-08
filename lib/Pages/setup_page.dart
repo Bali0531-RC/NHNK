@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:nhnk/API/ics_calendar.dart';
@@ -1392,6 +1393,15 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                   MaterialPageRoute(builder: (context) => const main_page.HomePage()),
                 );
               } else {
+                // The popup stays open so a wrong code can be retyped without
+                // starting the whole login over.
+                Fluttertoast.showToast(
+                  msg: "Hibás vagy lejárt kód, próbáld újra",
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.SNACKBAR,
+                  backgroundColor: AppColors.getTheme().rootBackground,
+                  textColor: AppColors.getTheme().textColor,
+                );
                 // Rossz 2FA kód esetén pirosra festjük a beviteli mezőket
                 setState(() {
                   _paintRed = true;
