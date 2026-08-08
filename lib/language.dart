@@ -133,6 +133,11 @@ class AppStrings{
       markbookPage_AverageScholarshipDisplay: 'Ösztöndíj indexed: %0 %1',
       markbookPage_NoGrades: 'nincs jegyed',
       settings_GradeNotifications: 'Értesítés új jegyről',
+      settings_MailNotifications: 'Értesítés új üzenetről',
+      settings_MailNotificationsDescription: 'Szól, ha frissítéskor olvasatlan üzenet érkezett a Neptun postaládádba.',
+      notification_NewMail_Title: 'Új üzeneted érkezett!',
+      notification_NewMail_One: '%0: %1',
+      notification_NewMail_Many: '%0 új olvasatlan üzeneted van.',
       settings_ExportCalendar: 'Órarend exportálása',
       settings_BackgroundGradeCheck: 'Ellenőrzés a háttérben',
       settings_BackgroundCheckOff: 'Kikapcsolva',
@@ -337,6 +342,11 @@ class AppStrings{
       markbookPage_AverageScholarshipDisplay: 'Scholarship index: %0 %1',
       markbookPage_NoGrades: 'You have no grades',
       settings_GradeNotifications: 'New grade notifications',
+      settings_MailNotifications: 'New message notifications',
+      settings_MailNotificationsDescription: 'Tells you when a refresh finds an unread message in your Neptun inbox.',
+      notification_NewMail_Title: 'You have a new message!',
+      notification_NewMail_One: '%0: %1',
+      notification_NewMail_Many: 'You have %0 new unread messages.',
       settings_ExportCalendar: 'Export timetable',
       settings_BackgroundGradeCheck: 'Check in the background',
       settings_BackgroundCheckOff: 'Off',
@@ -697,6 +707,11 @@ class LanguagePack{
   final String markbookPage_AverageScholarshipDisplay;
   final String markbookPage_NoGrades;
   final String settings_GradeNotifications;
+  final String settings_MailNotifications;
+  final String settings_MailNotificationsDescription;
+  final String notification_NewMail_Title;
+  final String notification_NewMail_One;
+  final String notification_NewMail_Many;
   final String settings_ExportCalendar;
   final String settings_BackgroundGradeCheck;
   final String settings_BackgroundCheckOff;
@@ -905,6 +920,11 @@ class LanguagePack{
     required this.markbookPage_AverageScholarshipDisplay,
     required this.markbookPage_NoGrades,
     required this.settings_GradeNotifications,
+    required this.settings_MailNotifications,
+    required this.settings_MailNotificationsDescription,
+    required this.notification_NewMail_Title,
+    required this.notification_NewMail_One,
+    required this.notification_NewMail_Many,
     required this.settings_ExportCalendar,
     required this.settings_BackgroundGradeCheck,
     required this.settings_BackgroundCheckOff,
@@ -1121,6 +1141,11 @@ class LanguagePack{
         markbookPage_AverageScholarshipDisplay:lang['markbookPage_AverageScholarshipDisplay'],
         markbookPage_NoGrades:lang['markbookPage_NoGrades'],
         settings_GradeNotifications:lang['settings_GradeNotifications'] ?? 'Értesítés új jegyről',
+        settings_MailNotifications:lang['settings_MailNotifications'] ?? 'Értesítés új üzenetről',
+        settings_MailNotificationsDescription:lang['settings_MailNotificationsDescription'] ?? 'Szól, ha olvasatlan üzenet érkezett a postaládádba.',
+        notification_NewMail_Title:lang['notification_NewMail_Title'] ?? 'Új üzeneted érkezett!',
+        notification_NewMail_One:lang['notification_NewMail_One'] ?? '%0: %1',
+        notification_NewMail_Many:lang['notification_NewMail_Many'] ?? '%0 új olvasatlan üzeneted van.',
         settings_ExportCalendar:lang['settings_ExportCalendar'] ?? 'Órarend exportálása',
         settings_BackgroundGradeCheck:lang['settings_BackgroundGradeCheck'] ?? 'Ellenőrzés a háttérben',
         settings_BackgroundCheckOff:lang['settings_BackgroundCheckOff'] ?? 'Kikapcsolva',
@@ -1340,6 +1365,11 @@ class LanguagePack{
       'markbookPage_AverageScholarshipDisplay':lang.markbookPage_AverageScholarshipDisplay,
       'markbookPage_NoGrades':lang.markbookPage_NoGrades,
       'settings_GradeNotifications':lang.settings_GradeNotifications,
+      'settings_MailNotifications':lang.settings_MailNotifications,
+      'settings_MailNotificationsDescription':lang.settings_MailNotificationsDescription,
+      'notification_NewMail_Title':lang.notification_NewMail_Title,
+      'notification_NewMail_One':lang.notification_NewMail_One,
+      'notification_NewMail_Many':lang.notification_NewMail_Many,
       'settings_ExportCalendar':lang.settings_ExportCalendar,
       'settings_BackgroundGradeCheck':lang.settings_BackgroundGradeCheck,
       'settings_BackgroundCheckOff':lang.settings_BackgroundCheckOff,

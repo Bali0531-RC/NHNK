@@ -22,6 +22,7 @@ import '../Misc/auto_updater.dart';
 import '../background_worker.dart';
 import '../grade_alerts.dart';
 import '../haptics.dart';
+import '../mail_alerts.dart';
 import '../storage.dart' as storage;
 import '../TimetableElements/timetable_element_widget.dart' as t_table;
 import '../MarkbookElements/markbook_element_widget.dart' as mbook;
@@ -1642,6 +1643,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     if(request == null || request.isEmpty){
       return;
     }
+
+    // Only the first page is comparable; later pages are older mail that would
+    // all look new against a cache holding just page one.
+    final previousMailIds = currentMailPage == 1
+        ? await MailAlerts.readCachedMailIds()
+        : <String>{};
+
     mailEntries = request;
     //debug.log(request!.toString());
 
@@ -1653,16 +1661,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     unreadMailCount = nums[0];
     totalMailCount = nums[1];
 
-    storage.saveInt('CachedMailsLength', mailEntries.length);
-    storage.saveInt('CachedMailsUnread', nums[0]);
-    storage.saveInt('CachedMailsTotal', nums[1]);
-    //cache calendar
-    for (int i = 0; i < mailEntries.length; i++) {
-      storage.saveString('CachedMails_$i', mailEntries[i].toString());
-    }
-    storage.saveString('MailCacheTime', DateTime.now().toString());
+    await MailAlerts.writeCache(mailEntries, nums[0], nums[1]);
 
-    storage.DataCache.setHasCachedMail(1);
+    if(currentMailPage == 1){
+      await MailAlerts.notify(MailAlerts.findNewMails(previousMailIds, mailEntries));
+    }
   }
 
   Timer? _calendarTimer;

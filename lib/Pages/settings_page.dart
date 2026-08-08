@@ -59,6 +59,10 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// The background job serves both alert types, so it stays relevant while either is on.
+  bool get _wantsAnyAlert =>
+      (DataCache.getNeedGradeNotifications() ?? true) || (DataCache.getNeedMailNotifications() ?? true);
+
   int _backgroundIntervalIndex(){
     final idx = BackgroundWorker.intervalSteps.indexOf(DataCache.getBackgroundGradeCheckMinutes());
     return idx < 0 ? BackgroundWorker.intervalSteps.indexOf(60) : idx;
@@ -385,6 +389,29 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           SwitchListTile(
+            title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            activeThumbColor: AppColors.getTheme().secondary,
+            value: DataCache.getNeedPaymentsNotifications()!,
+            onChanged: (b) {
+              AppHaptics.lightImpact();
+              DataCache.setNeedPaymentsNotifications(b ? 1 : 0);
+              b ? HomePageState.setupPaymentsNotifications() : HomePageState.cancelPaymentsNotifications();
+              setState(() {});
+            },
+          ),
+          SwitchListTile(
+            title: Text(AppStrings.getLanguagePack().popup_case1_settingOption5_PeriodsNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            activeThumbColor: AppColors.getTheme().secondary,
+            value: DataCache.getNeedPeriodsNotifications()!,
+            onChanged: (b) {
+              AppHaptics.lightImpact();
+              DataCache.setNeedPeriodsNotifications(b ? 1 : 0);
+              b ? HomePageState.setupPeriodsNotifications() : HomePageState.cancelPeriodsNotifications();
+              setState(() {});
+            },
+          ),
+
+          SwitchListTile(
             title: Text(AppStrings.getLanguagePack().settings_GradeNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(AppStrings.getLanguagePack().settings_GradeNotificationsDescription, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12)),
             activeThumbColor: AppColors.getTheme().secondary,
@@ -396,9 +423,21 @@ class _SettingsPageState extends State<SettingsPage> {
               setState(() {});
             },
           ),
+          SwitchListTile(
+            title: Text(AppStrings.getLanguagePack().settings_MailNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(AppStrings.getLanguagePack().settings_MailNotificationsDescription, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12)),
+            activeThumbColor: AppColors.getTheme().secondary,
+            value: DataCache.getNeedMailNotifications()!,
+            onChanged: (b) {
+              AppHaptics.lightImpact();
+              DataCache.setNeedMailNotifications(b ? 1 : 0);
+              BackgroundWorker.sync();
+              setState(() {});
+            },
+          ),
           if(BackgroundWorker.isSupported)
             ListTile(
-              enabled: DataCache.getNeedGradeNotifications()!,
+              enabled: _wantsAnyAlert,
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -420,7 +459,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     divisions: BackgroundWorker.intervalSteps.length - 1,
                     activeColor: AppColors.getTheme().secondary,
                     label: _backgroundIntervalLabel(BackgroundWorker.intervalSteps[_backgroundIntervalIndex()]),
-                    onChanged: !DataCache.getNeedGradeNotifications()! ? null : (v) {
+                    onChanged: !_wantsAnyAlert ? null : (v) {
                       setState(() {
                         DataCache.setBackgroundGradeCheckMinutes(BackgroundWorker.intervalSteps[v.round()]);
                       });
@@ -435,7 +474,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
           // Only worth showing when a background check is actually wanted.
-          if(BackgroundWorker.isSupported && DataCache.getBackgroundGradeCheckMinutes() > 0 && DataCache.getNeedGradeNotifications()!)
+          if(BackgroundWorker.isSupported && DataCache.getBackgroundGradeCheckMinutes() > 0 && _wantsAnyAlert)
             ListTile(
               title: Text(AppStrings.getLanguagePack().settings_BatteryOptimisation, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
               subtitle: Text(
@@ -459,7 +498,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
           // Vendor list is separate from Android's; being exempt above does not cover it.
-          if(BackgroundWorker.isSupported && _hasOemPowerScreen && DataCache.getBackgroundGradeCheckMinutes() > 0 && DataCache.getNeedGradeNotifications()!)
+          if(BackgroundWorker.isSupported && _hasOemPowerScreen && DataCache.getBackgroundGradeCheckMinutes() > 0 && _wantsAnyAlert)
             ListTile(
               title: Text(AppStrings.getLanguagePack().settings_OemBackground, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
               subtitle: Text(
@@ -472,28 +511,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 await PowerSettings.openOemSettings();
               },
             ),
-          SwitchListTile(
-            title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
-            activeThumbColor: AppColors.getTheme().secondary,
-            value: DataCache.getNeedPaymentsNotifications()!,
-            onChanged: (b) {
-              AppHaptics.lightImpact();
-              DataCache.setNeedPaymentsNotifications(b ? 1 : 0);
-              b ? HomePageState.setupPaymentsNotifications() : HomePageState.cancelPaymentsNotifications();
-              setState(() {});
-            },
-          ),
-          SwitchListTile(
-            title: Text(AppStrings.getLanguagePack().popup_case1_settingOption5_PeriodsNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
-            activeThumbColor: AppColors.getTheme().secondary,
-            value: DataCache.getNeedPeriodsNotifications()!,
-            onChanged: (b) {
-              AppHaptics.lightImpact();
-              DataCache.setNeedPeriodsNotifications(b ? 1 : 0);
-              b ? HomePageState.setupPeriodsNotifications() : HomePageState.cancelPeriodsNotifications();
-              setState(() {});
-            },
-          ),
 
           // --- 3. operation and others ---
           _buildSectionHeader("Működés és Egyéb", Icons.build_circle_rounded),

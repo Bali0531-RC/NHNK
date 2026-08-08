@@ -146,6 +146,7 @@ class DataCache{
   late bool? _persistentSetting_showExamNotifications = true;
   late bool? _persistentSetting_showClassNotifications = true;
   late bool? _persistentSetting_showGradeNotifications = true;
+  late bool? _persistentSetting_showMailNotifications = true;
   /// Minutes between background grade checks; 0 disables it.
   late int _persistentSetting_backgroundGradeCheckMinutes = 60;
   late bool? _persistentSetting_showPaymentsNotifications = true;
@@ -265,6 +266,12 @@ class DataCache{
     _persistentSetting_showGradeNotifications = tmp != null && tmp != 0;
     if(tmp == null){
       _persistentSetting_showGradeNotifications = true;
+    }
+
+    tmp = await getInt('SETTING_IsNeedMailNotifications');
+    _persistentSetting_showMailNotifications = tmp != null && tmp != 0;
+    if(tmp == null){
+      _persistentSetting_showMailNotifications = true;
     }
 
     _persistentSetting_backgroundGradeCheckMinutes = await getInt('SETTING_BackgroundGradeCheckMinutes') ?? 60;
@@ -529,6 +536,12 @@ class DataCache{
   static Future<void> setNeedGradeNotifications(int? value) async{
     _instance._persistentSetting_showGradeNotifications = value != null && value != 0;
     await saveInt('SETTING_IsNeedGradeNotifications', value ?? 1);
+  }
+
+  static bool? getNeedMailNotifications(){return _instance._persistentSetting_showMailNotifications;}
+  static Future<void> setNeedMailNotifications(int? value) async{
+    _instance._persistentSetting_showMailNotifications = value != null && value != 0;
+    await saveInt('SETTING_IsNeedMailNotifications', value ?? 1);
   }
 
   static int getBackgroundGradeCheckMinutes(){return _instance._persistentSetting_backgroundGradeCheckMinutes;}

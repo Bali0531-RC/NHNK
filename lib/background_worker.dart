@@ -7,6 +7,7 @@ import 'package:workmanager/workmanager.dart';
 import 'API/api_coms.dart' as api;
 import 'grade_alerts.dart';
 import 'language.dart';
+import 'mail_alerts.dart';
 import 'notifications.dart';
 import 'storage.dart' as storage;
 
@@ -26,7 +27,8 @@ void backgroundCallbackDispatcher(){
       AppStrings.initialize();
       await storage.DataCache.loadData();
 
-      if(!(storage.DataCache.getNeedGradeNotifications() ?? true)) return true;
+      if(!(storage.DataCache.getNeedGradeNotifications() ?? true)
+          && !(storage.DataCache.getNeedMailNotifications() ?? true)) return true;
       if(storage.DataCache.getIsDemoAccount() ?? false) return true;
 
       final username = storage.DataCache.getUsername();
@@ -35,21 +37,39 @@ void backgroundCallbackDispatcher(){
         return true;
       }
 
-      final fresh = await api.MarkbookRequest.getMarkbookSubjects();
-      if(fresh == null || fresh.isEmpty){
-        return true;
+      var notified = false;
+
+      if(storage.DataCache.getNeedGradeNotifications() ?? true){
+        final fresh = await api.MarkbookRequest.getMarkbookSubjects();
+        if(fresh != null && fresh.isNotEmpty){
+          final previous = await GradeAlerts.readCachedGrades();
+          final changed = GradeAlerts.findNewGrades(previous, fresh);
+
+          // Written even when nothing changed, so the next run compares against
+          // current data rather than re-reporting the same grade forever.
+          await GradeAlerts.writeCache(fresh);
+
+          if(changed.isNotEmpty){
+            if(!notified){ await AppNotifications.initializeHeadless(); notified = true; }
+            await GradeAlerts.notify(changed);
+          }
+        }
       }
 
-      final previous = await GradeAlerts.readCachedGrades();
-      final changed = GradeAlerts.findNewGrades(previous, fresh);
+      if(storage.DataCache.getNeedMailNotifications() ?? true){
+        // Page 1 only: the cache holds the newest page, so older pages are not comparable.
+        final mails = await api.MailRequest.getMails(1);
+        if(mails != null && mails.isNotEmpty){
+          final previous = await MailAlerts.readCachedMailIds();
+          final fresh = MailAlerts.findNewMails(previous, mails);
+          final counts = await api.MailRequest.getUnreadMessagesAndAllMessages();
+          await MailAlerts.writeCache(mails, counts[0], counts[1]);
 
-      // Written even when nothing changed, so the next run compares against
-      // current data rather than re-reporting the same grade forever.
-      await GradeAlerts.writeCache(fresh);
-
-      if(changed.isNotEmpty){
-        await AppNotifications.initializeHeadless();
-        await GradeAlerts.notify(changed);
+          if(fresh.isNotEmpty){
+            if(!notified){ await AppNotifications.initializeHeadless(); notified = true; }
+            await MailAlerts.notify(fresh);
+          }
+        }
       }
     }
     catch(e){
@@ -82,7 +102,8 @@ class BackgroundWorker{
     if(!isSupported) return;
     final minutes = storage.DataCache.getBackgroundGradeCheckMinutes();
     final wanted = minutes > 0
-        && (storage.DataCache.getNeedGradeNotifications() ?? true)
+        && ((storage.DataCache.getNeedGradeNotifications() ?? true)
+            || (storage.DataCache.getNeedMailNotifications() ?? true))
         && !(storage.DataCache.getIsDemoAccount() ?? false)
         && (storage.DataCache.getUsername()?.isNotEmpty ?? false);
     if(wanted){
@@ -101,7 +122,9 @@ class BackgroundWorker{
         _gradeCheckUniqueName,
         _gradeCheckTask,
         frequency: Duration(minutes: minutes < 15 ? 15 : minutes),
-        initialDelay: Duration(minutes: minutes < 60 ? minutes : 60),
+        // Capped rather than matching the interval, so turning the feature on does not
+        // sit idle for up to 12 hours before the first check.
+        initialDelay: const Duration(minutes: 15),
         // Replace rather than keep, so changing the interval takes effect.
         existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
         constraints: Constraints(
