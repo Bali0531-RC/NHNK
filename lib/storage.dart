@@ -147,6 +147,7 @@ class DataCache{
   late bool? _persistentSetting_showClassNotifications = true;
   late bool? _persistentSetting_showGradeNotifications = true;
   late bool? _persistentSetting_showMailNotifications = true;
+  late bool _hasAcceptedTerms = false;
   /// Minutes between background grade checks; 0 disables it.
   late int _persistentSetting_backgroundGradeCheckMinutes = 60;
   late bool? _persistentSetting_showPaymentsNotifications = true;
@@ -210,6 +211,9 @@ class DataCache{
     tmp = await getInt('HasLogin');
     _hasLogin = tmp != null && tmp != 0;
 
+    tmp = await getInt('HasAcceptedTerms');
+    _hasAcceptedTerms = tmp != null && tmp != 0;
+
     tmp = await getInt('HasCachedCalendar');
     _hasCachedCalendar = tmp != null && tmp != 0;
 
@@ -225,9 +229,12 @@ class DataCache{
     tmp = await getInt('HasCachedMail');
     _hasCachedMail = tmp != null && tmp != 0;
 
-    _hasNetwork = await Connectivity().checkConnectivity() != ConnectivityResult.none;
-    Connectivity().onConnectivityChanged.listen((event) async {
-      _hasNetwork = await Connectivity().checkConnectivity() != ConnectivityResult.none;
+    // checkConnectivity returns a List since connectivity_plus 4; comparing the list
+    // itself to ConnectivityResult.none is always true, which left the app permanently
+    // believing it was online.
+    _hasNetwork = _isOnline(await Connectivity().checkConnectivity());
+    Connectivity().onConnectivityChanged.listen((event) {
+      _hasNetwork = _isOnline(event);
     });
 
     tmp = await getInt('HasCachedFirstWeekEpoch');
@@ -459,6 +466,15 @@ class DataCache{
   }
 
   static bool getHasNetwork(){return _instance._hasNetwork;}
+
+  static bool getHasAcceptedTerms(){return _instance._hasAcceptedTerms;}
+  static Future<void> setHasAcceptedTerms(int? value) async{
+    _instance._hasAcceptedTerms = value != null && value != 0;
+    await saveInt('HasAcceptedTerms', value ?? 0);
+  }
+
+  static bool _isOnline(List<ConnectivityResult> results) =>
+      results.any((r) => r != ConnectivityResult.none);
 
   static bool? getHasLogin(){return _instance._hasLogin;}
   static Future<void> setHasLogin(int? value) async {

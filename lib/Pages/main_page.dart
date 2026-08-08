@@ -34,6 +34,8 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
+import '../Misc/average_calculator.dart';
+import '../Misc/offline_notice.dart';
 import 'package:nhnk/platform_support.dart';
 
 class HomePage extends StatefulWidget{
@@ -135,6 +137,26 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   int currentWeekOffset = 1;
   late TabController calendarTabController;
   int currentView = 0;
+
+  /// Cache timestamp per tab, so the offline banner can say how old the figures are.
+  final Map<int, DateTime?> _lastUpdated = {};
+  StreamSubscription? _connectivitySub;
+
+  static const Map<int, String> _cacheTimeKeys = {
+    0: 'CalendarCacheTime',
+    1: 'MarkbookCacheTime',
+    2: 'PaymentsCacheTime',
+    3: 'PeriodsCacheTime',
+    4: 'MailCacheTime',
+  };
+
+  Future<void> refreshLastUpdated() async{
+    for(final entry in _cacheTimeKeys.entries){
+      final raw = await storage.getString(entry.value);
+      _lastUpdated[entry.key] = raw == null ? null : DateTime.tryParse(raw);
+    }
+    if(mounted) setState((){});
+  }
   String calendarGreetText = "";
 
   int totalCredits = 0;
@@ -292,6 +314,11 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
     AppNotifications.initialize();
     BackgroundWorker.sync();
+    refreshLastUpdated();
+    // The banner has to react on its own; nothing else rebuilds when the radio drops.
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((_){
+      if(mounted) setState((){});
+    });
     Future.delayed(Duration.zero, ()async{
       if(((await storage.getInt('NextFirstWeekCacheTime')) ?? 0) < DateTime.now().millisecondsSinceEpoch){
         storage.DataCache.setHasCachedFirstWeekEpoch(0);
@@ -1380,6 +1407,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     );
     for(var item in mailEntries){
       allLoadedMailCount++;
+      if(mailSearchQuery.isNotEmpty){
+        final q = mailSearchQuery.toLowerCase();
+        if(!item.subject.toLowerCase().contains(q) && !item.senderName.toLowerCase().contains(q)){
+          continue;
+        }
+      }
       final date = DateTime.fromMillisecondsSinceEpoch(item.sendDateMs);
       final currDate = DateTime(date.year, date.month, date.day);
       if(mailEntries.length != ++idx && prevDate != currDate){
@@ -1445,7 +1478,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     return list;
   }
 
-  Future<void> fetchCalendar() async{
+  Future<void> fetchCalendar({bool force = false}) async{
     if(storage.DataCache.getHasICSFile() ?? false){
       final epochStart = api.CalendarRequest.weekStartFor(currentWeekOffset).millisecondsSinceEpoch;
       final epochEnd = api.CalendarRequest.weekEndFor(currentWeekOffset).millisecondsSinceEpoch;
@@ -1463,7 +1496,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(hasCachedCalendar && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
+    if(!force && hasCachedCalendar && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
       final len = await storage.getInt('CachedCalendarLength');
       for(int i = 0; i < len!; i++){
         final calEntry = await storage.getString('CachedCalendar_$i');
@@ -1489,6 +1522,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     //calendarEntries = list2;
     calendarEntries = list;
 
+    // Only the current week is cached, so that is the only one worth restoring.
+    if(calendarEntries.isEmpty && currentWeekOffset == 1 && (storage.DataCache.getHasCachedCalendar() ?? false)){
+      final len = await storage.getInt('CachedCalendarLength') ?? 0;
+      for(int i = 0; i < len; i++){
+        final entry = await storage.getString('CachedCalendar_$i');
+        if(entry == null) continue;
+        calendarEntries.add(api.CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(entry));
+      }
+    }
+
     //automatic room finder lol
     api.CalendarRequest.fillMissingDetails(calendarEntries, () {
       if (mounted) setState(() {});
@@ -1510,7 +1553,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     storage.DataCache.setHasCachedCalendar(1);
   }
 
-  Future<void> fetchMarkbook() async{
+  Future<void> _loadMarkbookFromCache() async{
+    final len = await storage.getInt('CachedMarkbookLength') ?? 0;
+    for(int i = 0; i < len; i++){
+      final entry = await storage.getString('CachedMarkbook_$i');
+      if(entry == null) continue;
+      markbookEntries.add(api.Subject(false, 0, 'NULL', 0, 0, 0).fillWithExisting(entry));
+    }
+  }
+
+  Future<void> fetchMarkbook({bool force = false}) async{
     bool hasCachedMarkbook= storage.DataCache.getHasCachedMarkbook() ?? false;
     final cacheTime = await storage.getString('MarkbookCacheTime');
 
@@ -1519,19 +1571,17 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(hasCachedMarkbook && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
-      final len = await storage.getInt('CachedMarkbookLength');
-      for(int i = 0; i < len!; i++){
-        final calEntry = await storage.getString('CachedMarkbook_$i');
-        markbookEntries.add(api.Subject(false, 0, 'NULL', 0, 0, 0).fillWithExisting(calEntry!));
-      }
+    if(!force && hasCachedMarkbook && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+      await _loadMarkbookFromCache();
       return;
     }
 
     //otherwise, just fetch again
     final request = await api.MarkbookRequest.getMarkbookSubjects();
     if(request == null || request.isEmpty){
+      // Stale beats empty: a failed request should not wipe what the user could still read.
       markbookEntries = [];
+      await _loadMarkbookFromCache();
       return;
     }
 
@@ -1543,7 +1593,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     await GradeAlerts.notify(GradeAlerts.findNewGrades(previousGrades, markbookEntries));
   }
 
-  Future<void> fetchPayments() async{
+  Future<void> _loadPaymentsFromCache() async{
+    final len = await storage.getInt('CachedPaymentsLength') ?? 0;
+    for(int i = 0; i < len; i++){
+      final entry = await storage.getString('CachedPayments_$i');
+      if(entry == null) continue;
+      paymentsEntries.add(api.CashinEntry(0, 0, 'NULL', "", 'NULL').fillWithExisting(entry));
+    }
+  }
+
+  Future<void> fetchPayments({bool force = false}) async{
     bool hasCachedPayments = storage.DataCache.getHasCachedPayments() ?? false;
 
     final cacheTime = await storage.getString('PaymentsCacheTime');
@@ -1553,18 +1612,15 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
-      final len = await storage.getInt('CachedPaymentsLength');
-      for(int i = 0; i < len!; i++){
-        final calEntry = await storage.getString('CachedPayments_$i');
-        paymentsEntries.add(api.CashinEntry(0, 0, 'NULL', "", 'NULL').fillWithExisting(calEntry!));
-      }
+    if(!force && hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+      await _loadPaymentsFromCache();
       return;
     }
 
     //otherwise, just fetch again
     final request = await api.CashinRequest.getAllCashins();
     if(request == null || request.isEmpty){
+      await _loadPaymentsFromCache();
       return;
     }
     paymentsEntries = request;
@@ -1579,7 +1635,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     storage.DataCache.setHasCachedPayments(1);
   }
 
-  Future<void> fetchPeriods() async{
+  Future<void> _loadPeriodsFromCache() async{
+    final len = await storage.getInt('CachedPeriodsLength') ?? 0;
+    for(int i = 0; i < len; i++){
+      final entry = await storage.getString('CachedPeriods_$i');
+      if(entry == null) continue;
+      periodEntries.add(api.PeriodEntry("ERROR", 0, 0, 0).fillWithExisting(entry));
+    }
+  }
+
+  Future<void> fetchPeriods({bool force = false}) async{
     bool hasCachedPeriods = storage.DataCache.getHasCachedPeriods() ?? false;
 
     final cacheTime = await storage.getString('PeriodsCacheTime');
@@ -1589,19 +1654,15 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(hasCachedPeriods && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
-      final len = await storage.getInt('CachedPeriodsLength');
-      for(int i = 0; i < len!; i++){
-        final calEntry = await storage.getString('CachedPeriods_$i');
-        final entry = api.PeriodEntry("ERROR", 0, 0, 0).fillWithExisting(calEntry!);
-        periodEntries.add(entry);
-      }
+    if(!force && hasCachedPeriods && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+      await _loadPeriodsFromCache();
       return;
     }
 
     //otherwise, just fetch again
     final request = await api.PeriodsRequest.getPeriods();
     if(request == null || request.isEmpty){
+      await _loadPeriodsFromCache();
       return;
     }
     periodEntries = request;
@@ -1617,9 +1678,21 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   int currentMailPage = 1;
+  String mailSearchQuery = '';
   bool currentMailLoadingDebounce = false;
   late ScrollController currentMailPageController;
-  Future<void> fetchMails({bool force = false})async{
+  Future<void> _loadMailsFromCache() async{
+    final len = await storage.getInt('CachedMailsLength') ?? 0;
+    unreadMailCount = (await storage.getInt('CachedMailsUnread')) ?? 0;
+    totalMailCount = (await storage.getInt('CachedMailsTotal')) ?? 0;
+    for(int i = 0; i < len; i++){
+      final entry = await storage.getString('CachedMails_$i');
+      if(entry == null) continue;
+      mailEntries.add(api.MailEntry("ERROR", "ERROR", "ERROR", 0, false, "").fillWithExisting(entry));
+    }
+  }
+
+  Future<void> fetchMails({bool force = false, bool ignoreCacheAge = false})async{
     bool hasCachedMails = storage.DataCache.getHasCachedMail() ?? false;
 
     final cacheTime = await storage.getString('MailCacheTime');
@@ -1628,19 +1701,16 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
 
-    if(!force && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
-      final len = await storage.getInt('CachedMailsLength');
-      unreadMailCount = (await storage.getInt('CachedMailsUnread')) ?? 0;
-      totalMailCount = (await storage.getInt('CachedMailsTotal')) ?? 0;
-      for(int i = 0; i < len!; i++){
-        final calEntry = await storage.getString('CachedMails_$i');
-        mailEntries.add(api.MailEntry("ERROR", "ERROR", "ERROR", 0, false,"").fillWithExisting(calEntry!));
-      }
+    if(!force && !ignoreCacheAge && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+      await _loadMailsFromCache();
       return;
     }
 
     final request = await api.MailRequest.getMails(currentMailPage);
     if(request == null || request.isEmpty){
+      if(currentMailPage == 1){
+        await _loadMailsFromCache();
+      }
       return;
     }
 
@@ -1695,9 +1765,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         canDoCalendarPaging = false;
         isLoadingCalendar = true;
       });
-      await storage.DataCache.setHasCachedCalendar(0);
-      //await storage.DataCache.setHasCachedFirstWeekEpoch(0);
-      await fetchCalendar();
+      // Cached rows stay valid; a failed refresh should not discard readable data.
+      await fetchCalendar(force: true);
       setupCalendar(false);
       _calendarDebounce = false;
       setState(() {
@@ -1719,10 +1788,12 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     _markbookDebounce = true;
     clearMarkbook();
-    await storage.DataCache.setHasCachedMarkbook(0);
-    await fetchMarkbook();
+    // The cached rows stay valid: clearing the flag here meant a failed refresh
+    // permanently discarded readable data.
+    await fetchMarkbook(force: true);
     setupMarkbook();
     _markbookDebounce = false;
+    refreshLastUpdated();
   }
 
   bool _paymentsDebounce = false;
@@ -1739,10 +1810,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     _paymentsDebounce = true;
     clearPayments();
-    await storage.DataCache.setHasCachedPayments(0);
-    await fetchPayments();
+    await fetchPayments(force: true);
     setupPayments();
     _paymentsDebounce = false;
+    refreshLastUpdated();
   }
 
   bool _periodsDebounce = false;
@@ -1759,10 +1830,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     _periodsDebounce = true;
     clearPeriods();
-    await storage.DataCache.setHasCachedPeriods(0);
-    await fetchPeriods();
+    await fetchPeriods(force: true);
     setupPeriods();
     _periodsDebounce = false;
+    refreshLastUpdated();
   }
 
   bool _mailsDebounce = false;
@@ -1779,10 +1850,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     _mailsDebounce = true;
     clearMails();
-    await storage.DataCache.setHasCachedMail(0);
-    await fetchMails();
+    await fetchMails(ignoreCacheAge: true);
     setupMails();
     _mailsDebounce = false;
+    refreshLastUpdated();
   }
 
   DateTime getClosestMondayTo(DateTime time){
@@ -1831,6 +1902,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     periodEntries.clear();
     mailList.clear();
     mailEntries.clear();
+    _connectivitySub?.cancel();
     currentMailPageController.dispose();
     blurController.dispose();
   }
@@ -1874,6 +1946,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         child: Column(
         children: [
           if (storage.DataCache.getIsDemoAccount() ?? false) const DemoModeBanner(),
+          OfflineBanner(lastUpdated: _lastUpdated[currentView]),
           Expanded(
             child: Stack(
         children: [
@@ -2120,8 +2193,7 @@ class MarkbookPageWidget extends StatelessWidget{
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     EmojiRichText(
-                                      text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().markbookPage_AverageDisplay, [totalAvg.isNaN || totalAvg <= 0 ? AppStrings.getLanguagePack().markbookPage_NoGrades : totalAvg.toStringAsFixed(2), api.Generic.reactionForAvg(totalAvg)]),
-                                      defaultStyle: TextStyle(
+                                      text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().markbookPage_AverageDisplay, [totalAvg.isNaN || totalAvg <= 0 ? AppStrings.getLanguagePack().markbookPage_NoGrades : totalAvg.toStringAsFixed(2), api.Generic.reactionForAvg(totalAvg)]),                                      defaultStyle: TextStyle(
                                         color: AppColors.getTheme().onPrimaryContainer,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 13.0,
@@ -2146,6 +2218,30 @@ class MarkbookPageWidget extends StatelessWidget{
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                            ),
+                            Visibility(
+                              visible: homePage.markbookList.isNotEmpty,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 15),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: (){
+                                      AppHaptics.lightImpact();
+                                      showAverageCalculator(context, totalAvg, totalCredits);
+                                    },
+                                    icon: Icon(Icons.calculate_outlined, size: 18, color: AppColors.getTheme().secondary),
+                                    label: Text(
+                                      AppStrings.getCurrentLangCode() == 'hu' ? 'Átlagszámító' : 'Average calculator',
+                                      style: TextStyle(color: AppColors.getTheme().secondary, fontWeight: FontWeight.w700, fontSize: 13),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: AppColors.getTheme().secondary.withValues(alpha: 0.4)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -2392,6 +2488,25 @@ class MailsPageWidget extends StatelessWidget{
               children: <Widget>[
                 topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
                 HomePageState.getSeparatorLine(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: TextField(
+                    style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 14),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: AppStrings.getCurrentLangCode() == 'hu' ? 'Keresés tárgyra vagy feladóra' : 'Search subject or sender',
+                      hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.35), fontSize: 13),
+                      prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.getTheme().textColor.withValues(alpha: 0.5)),
+                      filled: true,
+                      fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                    onChanged: (v){
+                      homePage.mailSearchQuery = v;
+                      homePage.setupMails(clear: true);
+                    },
+                  ),
+                ),
                 Expanded(
                     child: RefreshIndicator(
                         onRefresh: onRefresh,

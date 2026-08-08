@@ -50,10 +50,17 @@ class MailAlerts{
     if(storage.DataCache.getIsDemoAccount() ?? false) return;
 
     final lang = AppStrings.getLanguagePack();
-    final body = fresh.length == 1
-        ? AppStrings.getStringWithParams(lang.notification_NewMail_One, [fresh.first.senderName, fresh.first.subject])
-        : AppStrings.getStringWithParams(lang.notification_NewMail_Many, [fresh.length]);
-
-    await AppNotifications.showNotification(lang.notification_NewMail_Title, body);
+    if(fresh.length == 1){
+      await AppNotifications.showMailNotification(
+        lang.notification_NewMail_Title,
+        AppStrings.getStringWithParams(lang.notification_NewMail_One, [fresh.first.senderName, fresh.first.subject]),
+        fresh.first.ID,
+      );
+      return;
+    }
+    await AppNotifications.showNotification(
+      lang.notification_NewMail_Title,
+      AppStrings.getStringWithParams(lang.notification_NewMail_Many, [fresh.length]),
+    );
   }
 }

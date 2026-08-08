@@ -4,6 +4,32 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:nhnk/platform_support.dart';
 
+import 'API/api_coms.dart' as api;
+import 'language.dart';
+import 'storage.dart' as storage;
+
+const String markMailReadAction = 'nhnk_mark_mail_read';
+
+/// Compiled in rather than taken from a downloadable pack, like the other warnings.
+String _markAsReadLabel() =>
+    AppStrings.getCurrentLangCode() == 'hu' ? 'Megjelölés olvasottként' : 'Mark as read';
+
+/// Runs on a background isolate with none of the app's statics populated, so the
+/// stored session has to be loaded before the request can be made.
+@pragma('vm:entry-point')
+void onNotificationBackgroundResponse(NotificationResponse response){
+  if(response.actionId != markMailReadAction) return;
+  final id = response.payload;
+  if(id == null || id.isEmpty) return;
+  () async {
+    try{
+      await storage.DataCache.loadData();
+      await api.MailRequest.setMailRead(id);
+    }
+    catch(_){ }
+  }();
+}
+
 class AppNotifications{
   static final FlutterLocalNotificationsPlugin _localnotifs = FlutterLocalNotificationsPlugin();
   static Future<void> initialize()async{
@@ -22,7 +48,9 @@ class AppNotifications{
         linux: LinuxInitializationSettings(
             defaultActionName: 'Dismiss'
         )
-    ));
+    ),
+      onDidReceiveBackgroundNotificationResponse: onNotificationBackgroundResponse,
+    );
   }
 
   /// Same plugin setup minus the permission prompts: requestExactAlarmsPermission
@@ -36,7 +64,9 @@ class AppNotifications{
     await _localnotifs.initialize(settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         linux: LinuxInitializationSettings(defaultActionName: 'Dismiss')
-    ));
+    ),
+      onDidReceiveBackgroundNotificationResponse: onNotificationBackgroundResponse,
+    );
   }
 
   static final List<NotificationLink> _scheduledNotifLinks = <NotificationLink>[].toList();
@@ -101,6 +131,44 @@ class AppNotifications{
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
     }
+  }
+
+  /// Same as [showNotification] but carries a mark-as-read action for a single mail.
+  static Future<void> showMailNotification(String title, String desc, String? mailId) async{
+    final actions = mailId == null || mailId.isEmpty
+        ? const <AndroidNotificationAction>[]
+        : <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              markMailReadAction,
+              _markAsReadLabel(),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ];
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+          '1',
+          'NHNK Azonnali',
+          channelDescription: 'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
+          importance: Importance.high,
+          priority: Priority.high,
+          ticker: 'NHNK Azonnali Értesítés',
+          actions: actions,
+          styleInformation: BigTextStyleInformation(desc, contentTitle: title)
+      ),
+      linux: const LinuxNotificationDetails(
+        defaultActionName: 'Dismiss',
+        urgency: LinuxNotificationUrgency.normal,
+      ),
+    );
+    await _localnotifs.show(
+      id: Counter.getCount(),
+      title: title,
+      body: desc,
+      notificationDetails: details,
+      payload: mailId,
+    );
   }
 
   static Future<void> showNotification(String title, String desc) async{
