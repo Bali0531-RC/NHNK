@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../colors.dart';
@@ -9,12 +10,25 @@ import '../storage.dart';
 /// pack: packs are downloaded at runtime and must not be able to reword a disclaimer.
 String _t(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
 
-class DisclosurePage extends StatelessWidget {
+class DisclosurePage extends StatefulWidget {
   final VoidCallback onAccepted;
   const DisclosurePage({super.key, required this.onAccepted});
 
+  @override
+  State<DisclosurePage> createState() => _DisclosurePageState();
+}
+
+class _DisclosurePageState extends State<DisclosurePage> {
   static const String privacyUrl = 'https://nhnk.bali0531.hu/adatvedelem';
   static const String termsUrl = 'https://nhnk.bali0531.hu/felhasznalasi-feltetelek';
+
+  @override
+  void initState() {
+    super.initState();
+    // Every other entry screen does this; without it the native splash stays on top
+    // of this page forever and the app looks frozen on a fresh install.
+    FlutterNativeSplash.remove();
+  }
 
   static Future<void> _open(String url) async {
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -137,7 +151,7 @@ class DisclosurePage extends StatelessWidget {
                       ),
                       onPressed: () async {
                         await DataCache.setHasAcceptedTerms(1);
-                        onAccepted();
+                        widget.onAccepted();
                       },
                       child: Text(
                         _t('Megértettem, folytatom', 'I understand, continue'),

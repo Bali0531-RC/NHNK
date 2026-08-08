@@ -16,9 +16,12 @@ double? requiredAverage({
   required int remainingCredits,
 }) {
   if (remainingCredits <= 0) return null;
-  final totalCredits = currentCredits + remainingCredits;
-  final earned = currentAverage.isNaN ? 0 : currentAverage * currentCredits;
-  return (target * totalCredits - earned) / remainingCredits;
+  // With no usable average there is nothing earned yet, so past credits must not
+  // count against the target -- otherwise they read as credits scored at zero.
+  final hasAverage = !currentAverage.isNaN && currentAverage > 0 && currentCredits > 0;
+  final priorCredits = hasAverage ? currentCredits : 0;
+  final earned = hasAverage ? currentAverage * currentCredits : 0;
+  return (target * (priorCredits + remainingCredits) - earned) / remainingCredits;
 }
 
 Future<void> showAverageCalculator(BuildContext context, double currentAverage, int currentCredits) {

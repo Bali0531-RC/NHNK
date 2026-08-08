@@ -163,6 +163,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   int totalMoney = 0;
   double totalAvg = 0;
   double totalAvg30 = 0;
+  /// Credits that carry a grade, which is what the average is weighted over.
+  int gradedCredits = 0;
 
   int currentSemester = -1;
   int countActivePeriods = 0;
@@ -1121,6 +1123,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     totalAvg30 = totalAvg / 30;
     totalAvg /= currCredits;
+    gradedCredits = currCredits;
   }
 
   void _markbookCalcGhostAvg(){
@@ -1149,6 +1152,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
     totalAvg30 = totalAvg / 30;
     totalAvg /= currCredits;
+    gradedCredits = currCredits;
   }
 
   void _setupPayments(){
@@ -2230,7 +2234,7 @@ class MarkbookPageWidget extends StatelessWidget{
                                   child: OutlinedButton.icon(
                                     onPressed: (){
                                       AppHaptics.lightImpact();
-                                      showAverageCalculator(context, totalAvg, totalCredits);
+                                      showAverageCalculator(context, totalAvg, homePage.gradedCredits);
                                     },
                                     icon: Icon(Icons.calculate_outlined, size: 18, color: AppColors.getTheme().secondary),
                                     label: Text(
