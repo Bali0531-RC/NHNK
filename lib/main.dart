@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:nhnk/colors.dart';
+import 'package:nhnk/platform_support.dart';
 import 'package:nhnk/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
@@ -67,6 +68,18 @@ class NhnkApp extends StatelessWidget with WidgetsBindingObserver {
       navigatorKey: navigatorKey,
       title: 'NHNK',
       theme: themeNotifier._themeData,
+      // A browser reports no safe area, so SafeArea insets nothing and headers sit
+      // hard against the top edge. The web build is shown inside a phone frame on
+      // the site, so it stands in for the status bar the layout expects.
+      builder: AppPlatform.isWeb
+          ? (context, child) {
+              final media = MediaQuery.of(context);
+              return MediaQuery(
+                data: media.copyWith(padding: media.padding.copyWith(top: 28)),
+                child: child!,
+              );
+            }
+          : null,
       home: const Splitter(),
     );
   }

@@ -1396,7 +1396,9 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                 // The popup stays open so a wrong code can be retyped without
                 // starting the whole login over.
                 Fluttertoast.showToast(
-                  msg: "Hibás vagy lejárt kód, próbáld újra",
+                  msg: AppStrings.getCurrentLangCode() == 'hu'
+                      ? "Hibás vagy lejárt kód, próbáld újra"
+                      : "Wrong or expired code, try again",
                   toastLength: Toast.LENGTH_LONG,
                   gravity: ToastGravity.SNACKBAR,
                   backgroundColor: AppColors.getTheme().rootBackground,

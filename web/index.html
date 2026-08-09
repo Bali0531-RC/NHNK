@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="NHNK - Nem Hivatalos Neptun Kliens. Interaktív demó, kitalált adatokkal.">
+
+  <!-- The demo is embedded in nhnk.bali0531.hu; it should not compete with it in search results. -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="NHNK">
+  <meta name="theme-color" content="#222222">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>NHNK - demó</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Matches the app's dark palette (rootBackground #222222) so there is no
+       colour pop when Flutter paints its first frame. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #222222;
+      overflow: hidden;
+    }
+    #loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #222222;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      transition: opacity .35s ease;
+    }
+    #loader.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loader .ring {
+      width: 34px;
+      height: 34px;
+      border: 3px solid rgba(255, 255, 255, .14);
+      border-top-color: #4F696E;
+      border-radius: 50%;
+      animation: spin 900ms linear infinite;
+    }
+    #loader .label {
+      color: rgba(255, 255, 255, .55);
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #loader .ring { animation-duration: 3s; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader" role="status" aria-live="polite">
+    <div class="ring"></div>
+    <div class="label">NHNK betöltése...</div>
+  </div>
+
+  <script>
+    // Flutter fires this on the window once it has painted, which is the only
+    // reliable signal that the (fairly large) demo bundle is actually ready.
+    window.addEventListener('flutter-first-frame', function () {
+      var loader = document.getElementById('loader');
+      if (!loader) return;
+      loader.classList.add('done');
+      setTimeout(function () { loader.remove(); }, 400);
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

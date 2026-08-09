@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:nhnk/platform_support.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -325,7 +325,7 @@ class _AboutPageState extends State<AboutPage> {
           color: theme.textColor.withValues(alpha: 0.7),
           fontSize: 11.5,
           height: 1.5,
-          fontFamily: Platform.isAndroid ? 'monospace' : null,
+          fontFamily: AppPlatform.isAndroid ? 'monospace' : null,
         ),
       ),
     );

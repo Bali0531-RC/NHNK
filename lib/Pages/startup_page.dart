@@ -1,3 +1,4 @@
+import 'package:nhnk/platform_support.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nhnk/API/api_coms.dart' as api;
@@ -59,6 +60,25 @@ class _SplitterState extends State<Splitter>{
       });
     }).then((value) {
       Navigator.popUntil(context, (route) => route.willHandlePopInternally);
+      // The web build exists only to let people try the app from the site. A real
+      // login could not work anyway: Neptun servers send no CORS headers, and the
+      // site must not invite anyone to type institutional credentials into a page.
+      if (AppPlatform.isWeb) {
+        Future.microtask(() async {
+          await api.InstitutesRequest.validateLoginCredentialsUrl('', 'DEMO', 'DEMO');
+          await DataCache.setUsername('DEMO');
+          await DataCache.setPassword('DEMO');
+          await DataCache.setInstituteUrl('');
+          await DataCache.setHasLogin(1);
+          await DataCache.setHasAcceptedTerms(1);
+          if (!context.mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+          );
+        });
+        return;
+      }
       if (DataCache.getHasLogin() != null && DataCache.getHasLogin()!) {
         Navigator.push(
           context,

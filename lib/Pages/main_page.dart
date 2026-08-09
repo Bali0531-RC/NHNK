@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -223,7 +222,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       });
     }
 
-    if(Platform.isAndroid && storage.DataCache.getIsInstalledFromGPlay() != 0){
+    if(AppPlatform.isAndroid && storage.DataCache.getIsInstalledFromGPlay() != 0){
       Future.delayed(const Duration(seconds: 4), ()async{
         final cacheTime = await storage.getInt('UpdateCacheTime') ?? -1;
         if(cacheTime <= 0){ // fresh app version

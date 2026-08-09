@@ -51,6 +51,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        # Full history and tags, so the notes can be derived from the previous tag.
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -151,10 +154,33 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        # --generate-notes appends the commit summary below the install instructions.
+        # --generate-notes was silently producing nothing next to --notes-file, so every
+        # release shipped the same install instructions with no word on what changed.
+        # A hand written .github/release-notes/<tag>.md wins; otherwise the commit
+        # subjects since the previous tag are used so a release is never left empty.
         run: |
+          NOTES_FILE="$RUNNER_TEMP/notes.md"
+          CUSTOM=".github/release-notes/${GITHUB_REF_NAME}.md"
+
+          if [ -f "$CUSTOM" ]; then
+            cat "$CUSTOM" > "$NOTES_FILE"
+          else
+            PREV=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+            {
+              echo "## Mi változott"
+              echo
+              if [ -n "$PREV" ]; then
+                git log --no-merges --format='- %s' "$PREV..${GITHUB_REF_NAME}"
+              else
+                git log --no-merges --format='- %s' -1 "${GITHUB_REF_NAME}"
+              fi
+            } > "$NOTES_FILE"
+          fi
+
+          printf '\n---\n\n' >> "$NOTES_FILE"
+          cat .github/release-body.md >> "$NOTES_FILE"
+
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "NHNK $GITHUB_REF_NAME" \
-            --notes-file .github/release-body.md \
-            --generate-notes
+            --notes-file "$NOTES_FILE"

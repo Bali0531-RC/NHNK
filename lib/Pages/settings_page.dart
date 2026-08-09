@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:nhnk/platform_support.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:nhnk/Pages/main_page.dart';
@@ -24,6 +24,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  /// Section headers were hardcoded Hungarian, so they stayed Hungarian in every
+  /// other language. Compiled in rather than taken from a downloadable pack.
+  String _t(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
+
   late String _languageCurrSelect;
   late String _themesCurrSelect;
   late double _currentFontScale;
@@ -52,7 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final lIdx = DataCache.getUserSelectedLanguage()!;
     if (lIdx <= -1) {
-      final langCodeIdx = AppStrings.getAllLangCodes().indexOf(Platform.localeName.split('_')[0].toLowerCase());
+      final langCodeIdx = AppStrings.getAllLangCodes().indexOf(AppPlatform.localeName.split('_')[0].toLowerCase());
       _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[langCodeIdx];
     } else {
       _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[lIdx];
@@ -72,6 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final lang = AppStrings.getLanguagePack();
     if(minutes <= 0) return lang.settings_BackgroundCheckOff;
     if(minutes < 60) return AppStrings.getStringWithParams(lang.settings_BackgroundCheckMinutes, [minutes]);
+    if(minutes == 60) return _t("óránként", "every hour");
     return AppStrings.getStringWithParams(lang.settings_BackgroundCheckHours, [minutes ~/ 60]);
   }
 
@@ -104,18 +109,24 @@ class _SettingsPageState extends State<SettingsPage> {
           final preview = parsed == null ? null : Totp.generate(parsed!);
           return AlertDialog(
             backgroundColor: AppColors.getTheme().rootBackground,
-            title: Text("2FA titkos kulcs", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+            title: Text(_t("2FA titkos kulcs", "Two-factor secret key"), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Ez az a kulcs, amit a hitelesítő alkalmazás beállításakor kaptál a Neptuntól. Beillesztheted magát a kulcsot, vagy a teljes otpauth:// linket is.",
+                  _t(
+                    "Ez az a kulcs, amit a hitelesítő alkalmazás beállításakor kaptál a Neptuntól. Beillesztheted magát a kulcsot, vagy a teljes otpauth:// linket is.",
+                    "This is the key Neptun gave you when you set up your authenticator app. Paste either the key itself or the full otpauth:// link.",
+                  ),
                   style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7), fontSize: 12),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Ha elmented, a kétlépcsős védelem ezen a készüléken gyakorlatilag egylépcsőssé válik.",
+                  _t(
+                    "Ha elmented, a kétlépcsős védelem ezen a készüléken gyakorlatilag egylépcsőssé válik.",
+                    "Saving it makes two-factor protection effectively single-factor on this device.",
+                  ),
                   style: TextStyle(color: AppColors.getTheme().errorRed.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 16),
@@ -124,7 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   autofocus: true,
                   style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: "pl. JBSWY3DPEHPK3PXP",
+                    hintText: _t("pl. JBSWY3DPEHPK3PXP", "e.g. JBSWY3DPEHPK3PXP"),
                     hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.3), fontSize: 12),
                     filled: true,
                     fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
@@ -136,7 +147,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 // Showing the live code lets the user check it against their authenticator before saving.
                 if (controller.text.trim().isNotEmpty)
                   Text(
-                    preview == null ? "Érvénytelen kulcs" : "Jelenlegi kód: $preview",
+                    preview == null
+                        ? _t("Érvénytelen kulcs", "Invalid key")
+                        : _t("Jelenlegi kód: $preview", "Current code: $preview"),
                     style: TextStyle(
                       color: preview == null ? AppColors.getTheme().errorRed : AppColors.getTheme().secondary,
                       fontWeight: FontWeight.bold,
@@ -155,11 +168,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.pop(ctx);
                     setState(() => _hasTotpSecret = false);
                   },
-                  child: Text("Törlés", style: TextStyle(color: AppColors.getTheme().errorRed)),
+                  child: Text(_t("Törlés", "Delete"), style: TextStyle(color: AppColors.getTheme().errorRed)),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text("Mégse", style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7))),
+                child: Text(_t("Mégse", "Cancel"), style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7))),
               ),
               TextButton(
                 onPressed: parsed == null
@@ -172,7 +185,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         setState(() => _hasTotpSecret = true);
                       },
                 child: Text(
-                  "Mentés",
+                  _t("Mentés", "Save"),
                   style: TextStyle(
                     color: parsed == null
                         ? AppColors.getTheme().textColor.withValues(alpha: 0.3)
@@ -234,7 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
         physics: const BouncingScrollPhysics(),
         children: [
           // --- 1. appearance and language ---
-          _buildSectionHeader("Megjelenés és Nyelv", Icons.palette_rounded),
+          _buildSectionHeader(_t("Megjelenés és Nyelv", "Appearance and language"), Icons.palette_rounded),
 
           ListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption9_ThemeSwap, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
@@ -340,7 +353,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("App Betűméret skálázás", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600, fontSize: 16)),
+                Text(_t("App betűméret skálázás", "App text size"), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600, fontSize: 16)),
                 Slider(
                   value: _currentFontScale,
                   min: 0.8,
@@ -364,7 +377,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           // --- 2. notifications ---
-          _buildSectionHeader("Értesítések", Icons.notifications_active_rounded),
+          _buildSectionHeader(_t("Értesítések", "Notifications"), Icons.notifications_active_rounded),
 
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption2_ExamNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
@@ -513,7 +526,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
           // --- 3. operation and others ---
-          _buildSectionHeader("Működés és Egyéb", Icons.build_circle_rounded),
+          _buildSectionHeader(_t("Működés és Egyéb", "Behaviour and other"), Icons.build_circle_rounded),
 
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption1_FamilyFriendlyLoadingText, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
@@ -573,13 +586,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           // --- 4. security ---
-          _buildSectionHeader("Biztonság", Icons.lock_rounded),
+          _buildSectionHeader(_t("Biztonság", "Security"), Icons.lock_rounded),
           ListTile(
-            title: Text("2FA titkos kulcs", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            title: Text(_t("2FA titkos kulcs", "Two-factor secret key"), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(
               _hasTotpSecret
-                  ? "Mentve - az app magától lép be, ha lejár a munkamenet"
-                  : "Nincs mentve - újra belépéskor kézzel kell kódot megadni",
+                  ? _t("Mentve - az app magától lép be, ha lejár a munkamenet",
+                       "Saved - the app signs in by itself when the session expires")
+                  : _t("Nincs mentve - újra belépéskor kézzel kell kódot megadni",
+                       "Not saved - you will have to type a code when signing in again"),
               style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.5), fontSize: 12),
             ),
             trailing: Icon(

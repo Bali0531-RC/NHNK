@@ -1,3 +1,4 @@
+import 'package:nhnk/platform_support.dart';
 import 'dart:async';
 import 'dart:convert' as conv;
 import 'dart:io';
@@ -147,7 +148,8 @@ import '../storage.dart';
   class _APIRequest{
     // POST-REQUEST for old API and modern login
     static Future<String> postRequest(Uri url, String requestBody,{String? bearerToken, bool isRetry = false}) async{
-      HttpOverrides.global = NeptunCerts.getCerts();
+      // dart:io has no web implementation; the demo build never makes these calls anyway.
+      if(!AppPlatform.isWeb) HttpOverrides.global = NeptunCerts.getCerts();
   
       final client = http.Client();
       final request = http.Request('POST', url);
@@ -194,7 +196,8 @@ import '../storage.dart';
     }
 
     static Future<http.Response> postRequestRaw(Uri url, String requestBody,{String? bearerToken, String? cookie, bool isRetry = false}) async {
-      HttpOverrides.global = NeptunCerts.getCerts();
+      // dart:io has no web implementation; the demo build never makes these calls anyway.
+      if(!AppPlatform.isWeb) HttpOverrides.global = NeptunCerts.getCerts();
   
       final client = http.Client();
       final request = http.Request('POST', url);
@@ -305,7 +308,8 @@ import '../storage.dart';
     }
 
     static Future<String> getRequest(Uri url, {required String bearerToken, bool isRetry = false}) async {
-      HttpOverrides.global = NeptunCerts.getCerts();
+      // dart:io has no web implementation; the demo build never makes these calls anyway.
+      if(!AppPlatform.isWeb) HttpOverrides.global = NeptunCerts.getCerts();
       final client = http.Client();
       final request = http.Request('GET', url);
       request.headers['Authorization'] = 'Bearer $bearerToken';
@@ -1529,6 +1533,11 @@ class MailRequest{
   static const int _modernMailCountWindow = 200;
 
   static Future<List<int>> getUnreadMessagesAndAllMessages()async{
+    // Every other endpoint short-circuits for the demo account; this one did not,
+    // so demo mode still fired a request at whatever the institute URL resolved to.
+    if(storage.DataCache.getIsDemoAccount() ?? false){
+      return [2, 2, 2];
+    }
     try{
       if (storage.DataCache.getIsModernApi()/* ?? false*/) {
         final token = await storage.DataCache.getAccessToken();
@@ -2304,7 +2313,7 @@ class CashinEntry{
 
   class Language{
     static Future<bool> checkSupportedUserLanguage()async{
-      final deviceLang = Platform.localeName.split('_')[0].toLowerCase();
+      final deviceLang = AppPlatform.localeName.split('_')[0].toLowerCase();
       // check language
       final allLang = await Language.getAllLanguages();
       return Language.getHasLanguageById(allLang, deviceLang);

@@ -19,7 +19,15 @@ Weboldal: **https://nhnk.bali0531.hu**
 
 Legfrissebb kiadás: **https://github.com/Bali0531-RC/NHNK/releases/latest**
 
-### Android
+### Google Play
+
+Az app jelenleg **zárt tesztelés** alatt áll, így a Play Áruházban csak a tesztelők
+látják. Jelentkezni itt lehet: **https://nhnk.bali0531.hu/zart-teszt/**
+
+A Play-es változatban nincs beépített frissítő (ezt a Play szabályzata tiltja), a
+frissítéseket az áruház kezeli.
+
+### Android (sideload)
 
 A legtöbb telefonra az `arm64-v8a` APK kell. Automatikus frissítéshez ajánlott az
 [Obtainium](https://github.com/ImranR98/Obtainium): add meg neki ezt a repót, és a
@@ -44,36 +52,59 @@ Hasznos, ha leírod a telefon típusát, az Android verziót és az app verziój
 
 ## Funkciók
 
-- Órarend, benne a Neptun naptár-exportjából jövő órákkal is, ha a Neptun API üresen hagyja
-- Szellemjegyek az átlagszámításhoz
-- Értesítések órákról, vizsgákról és befizetésekről
+**Órarend**
+- Heti nézet, tetszőleges hétre lapozva; a hét neve mellől egy koppintással vissza a mai hétre
+- Ha a Neptun API üresen hagyja az órarendet, a naptár-exportból tölti be
+- Kezdőképernyő-widget a mai órákkal (Android)
+- Órarend mentése `.ics` fájlba, amit a telefon naptára beolvas
+
+**Értesítések**
+- Órák, vizsgák, befizetések és időszakok előtt
+- Új jegyről és új üzenetről, az app bezárása után is, állítható gyakorisággal (15 perc – 12 óra, vagy ki)
+- Üzenet olvasottnak jelölése egyből az értesítésből
+- Ha a rendszer vagy a gyártó korlátozza a háttérfutást, a beállításokban egy koppintással eljutsz a megfelelő rendszerbeállításhoz
+
+**Jegyek és pénzügyek**
 - Jegyek, átlagok, kreditek, üzenetek, befizetések, időszakok
+- Szellemjegyek: mit tenne az átlagoddal egy még meg nem szerzett jegy
+- Átlagszámító: milyen átlag kell a hátralévő kreditekre a célodhoz
+- Keresés az üzenetek között tárgy vagy feladó szerint
+
+**Egyéb**
+- Offline mód: a legutóbb letöltött adatok megmaradnak, egy sáv jelzi, mikor frissültek
+- Több kiszolgálós intézményeknél automatikus átváltás, ha az elsődleges nem válaszol
 - Kétlépcsős azonosítás, opcionálisan elmentett kulccsal automatikus újrabejelentkezés
 - Testreszabható témák és nyelvek
 
 ## Verziók
 
-### 1.0.7
+Részletes kiadási jegyzet minden verzióhoz:
+**https://github.com/Bali0531-RC/NHNK/releases**
+
+### 1.2
+
+Kezdőképernyő-widget a mai órákkal. Offline módban megmaradnak a legutóbb letöltött
+adatok: korábban a hálózat elvesztése kiürítette a listákat, mert az app a
+`connectivity_plus` visszatérési értékét rosszul hasonlította össze, és sosem tudta,
+hogy offline van. Átlagszámító, keresés az üzenetek között, és a belépés előtt megjelenő
+tájékoztató a nem hivatalos státuszról. A 2FA ablak mellé koppintás többé nem szakítja
+félbe a bejelentkezést.
+
+### 1.1
+
+Értesítés új jegyről és új üzenetről, a háttérben is, állítható gyakorisággal. Órarend
+exportálása `.ics` fájlba. Több kiszolgálós intézményeknél automatikus átváltás, ha az
+elsődleges szerver nem válaszol. A „vissza a mai hétre" gomb átkerült a hétváltó sávba,
+mert lebegő gombként rátakart az alsó menüsorra.
+
+### 1.0
 
 Munkamenet-kezelés javítása: a token-frissítés eddig sosem működött, ezért a lejáró
-munkamenet kiürítette az adatokat. Az órarend mostantól a Neptun naptár-exportjából is
-betölthető, így munkamenet nélkül is látszik. A 2FA titkos kulcs elmenthető az automatikus
-újrabejelentkezéshez. Az 52. tanulmányi hét után is lehet lapozni, és a fejlécben látszik
-a hét tényleges dátuma. Sokkal kevesebb emoji a felületen.
-
-### 1.0.6
-
-Az app indulásakor azonnal összeomlott, mert a csomagátnevezéskor törölt `MainActivity`
-nem került vissza. Ezzel együtt a hiányzó ProGuard szabályok is pótolva lettek.
-
-### 1.0.5
-
-Első saját kulccsal aláírt kiadás, így a frissítések telepíthetők a korábbi verzióra.
-
-### 1.0.4 és korábbi
-
-Órarend, naptár logika, pénzügyek, tárgyak, üzenetek, időszakok oldalak, 2FA alapok.
-A korábbi változások a lenti forkok repóiban találhatók.
+munkamenet kiürítette az adatokat. Az órarend a Neptun naptár-exportjából is betölthető,
+így munkamenet nélkül is látszik. A 2FA titkos kulcs elmenthető az automatikus
+újrabejelentkezéshez. Saját aláírókulcs, hogy a frissítések telepíthetők legyenek a
+korábbi verzióra. A Play-es változatból kikerültek azok a jogosultságok, amelyeket
+függőségek húztak be, és amelyeket az app nem használ.
 
 ## Származás
 
@@ -108,6 +139,34 @@ dönti el, a dart-define pedig a Dart oldali frissítőt kapcsolja ki.
 Kiadáshoz aláírókulcs kell: másold az `android/key.properties.example` fájlt
 `android/key.properties` néven, és töltsd ki. Enélkül a release build a debug kulcsot
 használja, ami nem telepíthető frissítésként a korábbi verzióra.
+
+### Intézmények
+
+Az intézménylistát a `universityNameUrlPairs.json` tartalmazza, és a telepített appok
+**futásidőben** töltik le a `main` ágról. Ezért csak bővíteni szabad: a `Name` és `Url`
+mezők átnevezése vagy törlése a már kint lévő verziókat is elrontaná.
+
+Ha egy intézmény több egyenrangú Neptun-kiszolgálót üzemeltet, azok `Fallbacks` tömbként
+vehetők fel. Ha az aktív kiszolgáló nem válaszol, az app átvált a következőre, és a
+mentett belépési adatokkal újra bejelentkezik — a munkamenet ugyanis kiszolgálónként szól.
+
+```jsonc
+{
+   "Name": "Pannon Egyetem",
+   "Url": "https://neptun-ws01.uni-pannon.hu/hallgato",
+   "Fallbacks": ["https://neptun-ws03.uni-pannon.hu/hallgato"]
+}
+```
+
+Új kiszolgáló felvétele előtt érdemes ellenőrizni, hogy tényleg a mobil API válaszol-e
+rajta, és nem a webes felület: a `/api/Account/Authenticate` címre küldött GET kérésre
+`405`-tel és JSON-nal kell válaszolnia.
+
+### Tesztek
+
+```sh
+flutter test
+```
 
 ## Licenc
 

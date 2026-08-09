@@ -1,5 +1,5 @@
+import 'package:nhnk/platform_support.dart';
 import 'dart:developer' as debug;
-import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
@@ -88,7 +88,7 @@ class BackgroundWorker{
 
   /// iOS background refresh needs AppDelegate and Info.plist changes the unsigned
   /// build does not carry, so this stays Android-only for now.
-  static bool get isSupported => !kIsWebFallback && Platform.isAndroid;
+  static bool get isSupported => AppPlatform.isAndroid;
 
   static bool _initialised = false;
 
@@ -152,7 +152,3 @@ class BackgroundWorker{
     }
   }
 }
-
-// Platform.isAndroid would throw on web; the app does not ship a web build, but
-// this keeps the getter honest.
-const bool kIsWebFallback = bool.fromEnvironment('dart.library.js_util');

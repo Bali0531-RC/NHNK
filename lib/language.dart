@@ -1,5 +1,5 @@
+import 'package:nhnk/platform_support.dart';
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert' as conv;
 import 'package:flutter/material.dart';
 import 'package:nhnk/storage.dart';
@@ -22,7 +22,7 @@ class AppStrings{
     if(_hasInit){
       return;
     }
-    _defaultLocale = Platform.localeName.split('_')[0].toLowerCase();
+    _defaultLocale = AppPlatform.localeName.split('_')[0].toLowerCase();
     _languages.addAll({_supportedLanguages[0]: LanguagePack(
       language_flag: '🇭🇺',
       rootpage_setupPage_SelectLoginTypeHeader: 'Válassz bejelentkezési módot',
@@ -1481,7 +1481,7 @@ class LanguageManager{
       // applied via native, or has a language preference, or no network
       return;
     }
-    final deviceLang = Platform.localeName.split('_')[0].toLowerCase();
+    final deviceLang = AppPlatform.localeName.split('_')[0].toLowerCase();
     var langPack = await Language.getLanguagePackById(await Language.getAllLanguages(), deviceLang);
     if(langPack == null){
       return;

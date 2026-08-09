@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -192,7 +191,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
 
     final l_idx = DataCache.getUserSelectedLanguage()!;
     if(l_idx <= -1){
-      final langCodeIdx = AppStrings.getAllLangCodes().indexOf(Platform.localeName.split('_')[0].toLowerCase());
+      final langCodeIdx = AppStrings.getAllLangCodes().indexOf(AppPlatform.localeName.split('_')[0].toLowerCase());
       _languageCurrSelect = AppStrings.getLanguageNamesWithFlag()[langCodeIdx];
     }
     else{
@@ -2029,7 +2028,9 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               await DataCache.setTotpSecret(secret);
             });
             Fluttertoast.showToast(
-              msg: generated == null ? "Kulcs elmentve" : "Kulcs elmentve, beléptetés...",
+              msg: AppStrings.getCurrentLangCode() == 'hu'
+                  ? (generated == null ? "Kulcs elmentve" : "Kulcs elmentve, beléptetés...")
+                  : (generated == null ? "Key saved" : "Key saved, signing in..."),
               toastLength: Toast.LENGTH_LONG,
               gravity: ToastGravity.SNACKBAR,
               backgroundColor: AppColors.getTheme().rootBackground,

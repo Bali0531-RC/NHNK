@@ -1,3 +1,4 @@
+import 'package:nhnk/platform_support.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
@@ -20,7 +21,7 @@ class AppUpdater {
   /// Google Play bans APKs that update themselves, so the playstore flavor ships
   /// without this. iOS has no way to install one at all.
   static bool get isSupported =>
-      Platform.isAndroid &&
+      AppPlatform.isAndroid &&
       String.fromEnvironment('NHNK_DISTRIBUTION', defaultValue: 'github') != 'playstore';
 
   /// Fő belépési pont. Ezt hívd meg a main_page initState-jében!
