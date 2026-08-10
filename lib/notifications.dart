@@ -40,7 +40,10 @@ class AppNotifications{
       final String timeZone = timeZoneName.identifier;
       tz.setLocalLocation(tz.getLocation(timeZone));
 
-      AndroidFlutterLocalNotificationsPlugin().requestExactAlarmsPermission();
+      // Only the notification prompt belongs here. Android shows it once and then
+      // remembers the answer. requestExactAlarmsPermission throws the user out to a
+      // full system settings screen and keeps doing it on every cold start until it
+      // is granted, so it is asked for from the settings toggle instead.
       _localnotifs.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
     }
     await _localnotifs.initialize(settings: const InitializationSettings(
@@ -51,6 +54,15 @@ class AppNotifications{
     ),
       onDidReceiveBackgroundNotificationResponse: onNotificationBackgroundResponse,
     );
+  }
+
+  /// Asked for at the moment the user turns background checks on, where the trip to
+  /// the system settings screen makes sense to them. Returns false if it was denied.
+  static Future<bool> requestExactAlarms() async{
+    if(!AppPlatform.isAndroid) return true;
+    final android = _localnotifs.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if(android == null) return true;
+    return await android.requestExactAlarmsPermission() ?? false;
   }
 
   /// Same plugin setup minus the permission prompts: requestExactAlarmsPermission

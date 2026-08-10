@@ -11,8 +11,9 @@ class PaymentElementWidget extends StatelessWidget{
   final int dueDateMs;
   final String name;
   final bool completed;
+  final String status;
 
-  const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed});
+  const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed, this.status = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +23,11 @@ class PaymentElementWidget extends StatelessWidget{
     final dueDate = DateTime.fromMillisecondsSinceEpoch(dueDateMs);
     final isNonTimed = dueDateMs <= 0;
     final isMissed = dueDateMs < nowMs && !isNonTimed && !completed;
+    final isCancelled = status.toLowerCase() == 'törölt';
 
 
-    final cardColor = completed ? AppColors.getTheme().currentClassGreen :
+    final cardColor = isCancelled ? AppColors.getTheme().textColor.withValues(alpha: 0.55) :
+    completed ? AppColors.getTheme().currentClassGreen :
     isMissed ? AppColors.getTheme().errorRed :
     Colors.amber.shade600;
 
@@ -52,13 +55,32 @@ class PaymentElementWidget extends StatelessWidget{
               fontSize: 15.0 * fontScale,
             ),
           ),
+          if(status.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: cardColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: cardColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.0 * fontScale,
+                  decoration: isCancelled ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               EmojiRichText(
-                text: completed ? '✅' : isMissed ? '🙉' : '💰',
+                text: isCancelled ? '❌' : completed ? '✅' : isMissed ? '🙉' : '💰',
                 defaultStyle: TextStyle(
                   color: AppColors.getTheme().onPrimaryContainer,
                   fontWeight: FontWeight.w900,

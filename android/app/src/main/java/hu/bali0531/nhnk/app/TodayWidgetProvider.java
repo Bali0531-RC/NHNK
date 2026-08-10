@@ -1,5 +1,6 @@
 package hu.bali0531.nhnk.app;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -28,6 +29,59 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         for (int id : ids) {
             manager.updateAppWidget(id, buildViews(context));
         }
+        scheduleNextBoundary(context);
+    }
+
+    /**
+     * updatePeriodMillis cannot go below 30 minutes, which would leave the countdown wrong
+     * by up to half an hour. An inexact alarm at the next class boundary costs no permission
+     * and pulls the widget back in line at the only moments the text actually changes.
+     */
+    private void scheduleNextBoundary(Context context) {
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            long now = System.currentTimeMillis();
+            long next = Long.MAX_VALUE;
+
+            for (String[] row : readToday(prefs)) {
+                try {
+                    long start = Long.parseLong(row[3]);
+                    long end = Long.parseLong(row[4]);
+                    if (start > now) next = Math.min(next, start);
+                    if (end > now) next = Math.min(next, end);
+                } catch (NumberFormatException ignored) {
+                    // A malformed row should not stop the rest from scheduling.
+                }
+            }
+            if (next == Long.MAX_VALUE) {
+                return;
+            }
+
+            AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarms == null) {
+                return;
+            }
+            Intent intent = new Intent(context, TodayWidgetProvider.class);
+            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            PendingIntent pending = PendingIntent.getBroadcast(
+                    context, 1, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            alarms.set(AlarmManager.RTC, next + 1000L, pending);
+        } catch (Exception ignored) {
+            // The widget is still correct without this, just coarser.
+        }
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (AppWidgetManager.ACTION_APPWIDGET_UPDATE.equals(intent.getAction())) {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            int[] ids = manager.getAppWidgetIds(new android.content.ComponentName(context, TodayWidgetProvider.class));
+            for (int id : ids) {
+                manager.updateAppWidget(id, buildViews(context));
+            }
+        }
     }
 
     private RemoteViews buildViews(Context context) {
@@ -41,7 +95,16 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         if (today.isEmpty()) {
             views.setTextViewText(R.id.widget_body,
                     hungarian ? "Ma nincs órád." : "No classes today.");
+            views.setViewVisibility(R.id.widget_next, android.view.View.GONE);
         } else {
+            String headline = buildHeadline(today, hungarian);
+            if (headline == null) {
+                views.setViewVisibility(R.id.widget_next, android.view.View.GONE);
+            } else {
+                views.setTextViewText(R.id.widget_next, headline);
+                views.setViewVisibility(R.id.widget_next, android.view.View.VISIBLE);
+            }
+
             StringBuilder body = new StringBuilder();
             for (String[] row : today) {
                 if (body.length() > 0) {
@@ -103,9 +166,53 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             c.setTimeInMillis(start);
             String clock = String.format(Locale.getDefault(), "%02d:%02d",
                     c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE));
-            out.add(new String[]{clock, parts[3], parts[2]});
+            out.add(new String[]{clock, parts[3], parts[2], parts[0].trim(), parts[1].trim()});
         }
         return out;
+    }
+
+    /**
+     * "Now" beats "next": during a class the useful answer is when it ends, and after the
+     * last one there is nothing worth a headline at all.
+     */
+    private String buildHeadline(List<String[]> today, boolean hungarian) {
+        long now = System.currentTimeMillis();
+
+        for (String[] row : today) {
+            long start;
+            long end;
+            try {
+                start = Long.parseLong(row[3]);
+                end = Long.parseLong(row[4]);
+            } catch (NumberFormatException ignored) {
+                continue;
+            }
+
+            if (now >= start && now < end) {
+                long minutes = Math.max(1, (end - now) / 60000L);
+                return (hungarian ? "Most: " : "Now: ") + row[1]
+                        + (hungarian ? "  (még " + describe(minutes, true) + ")"
+                                     : "  (" + describe(minutes, false) + " left)");
+            }
+            if (start > now) {
+                long minutes = Math.max(1, (start - now) / 60000L);
+                return (hungarian ? "Következő " + describe(minutes, true) + " múlva: "
+                                  : "Next in " + describe(minutes, false) + ": ") + row[1];
+            }
+        }
+        return null;
+    }
+
+    private String describe(long minutes, boolean hungarian) {
+        if (minutes < 60) {
+            return minutes + (hungarian ? " perc" : " min");
+        }
+        long hours = minutes / 60;
+        long rest = minutes % 60;
+        if (rest == 0) {
+            return hours + (hungarian ? " óra" : "h");
+        }
+        return hours + (hungarian ? " óra " + rest + " perc" : "h " + rest + "m");
     }
 
     private String shortTime(String iso) {

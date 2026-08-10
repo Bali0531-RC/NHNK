@@ -1171,11 +1171,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     bool isEmpty = true;
     for(var item in paymentsEntries){
       if(item.completed){
-        totalMoney += item.ammount;
+        // "Törölt" counts as completed so it stops nagging, but a cancelled
+        // transaction is not money the student ever spent.
+        if(!item.isCancelled) totalMoney += item.ammount;
         continue;
       }
       isEmpty = false;
-      paymentsList.add(PaymentElementWidget(ammount: item.ammount, dueDateMs: item.dueDateMs, ID: item.ID, name: item.comment, completed: item.completed));
+      paymentsList.add(PaymentElementWidget(ammount: item.ammount, dueDateMs: item.dueDateMs, ID: item.ID, name: item.comment, completed: item.completed, status: item.status));
       if(item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0){
         _paymentsNotificationList.add(item);
       }

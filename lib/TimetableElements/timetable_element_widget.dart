@@ -29,6 +29,40 @@ class TimetableElementWidget extends StatelessWidget {
 
   late final bool isTask;
 
+  /// The teacher field carries a pile of placeholder values depending on which API
+  /// and cache path filled it in, and none of them are worth a line on the card.
+  bool get _hasRealTeacher{
+    final t = entry.teacher.trim();
+    if(t.isEmpty) return false;
+    const placeholders = {
+      '-', 'nincs megadva', 'nincs tanár', 'offline mód', 'null',
+      'hiba a betöltésnél', 'nem támogatott',
+    };
+    return !placeholders.contains(t.toLowerCase());
+  }
+
+  /// One spoken sentence per card. Without this a screen reader reads the time, the
+  /// title, the room and the teacher as four unrelated fragments.
+  String get _semanticsLabel{
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final kind = isExam
+        ? (hu ? 'Vizsga' : 'Exam')
+        : isTask
+            ? (hu ? 'Feladat' : 'Task')
+            : (hu ? 'Óra' : 'Class');
+    final parts = <String>[
+      kind,
+      title,
+      '$displayStartTime - $displayEndTime',
+    ];
+    if(location.trim().isNotEmpty && location != 'NULL' && location != 'Nincs megadva'){
+      parts.add(location);
+    }
+    if(_hasRealTeacher) parts.add(entry.teacher);
+    if(currentOverride) parts.add(hu ? 'most tart' : 'in progress');
+    return parts.join(', ');
+  }
+
   TimetableElementWidget(
       {super.key, required this.entry, required this.position, required this.isCurrent}) {
     isExam = entry.isExam;
@@ -68,7 +102,10 @@ class TimetableElementWidget extends StatelessWidget {
   //double fontScale = storage.DataCache.getFontScale()/* ?? 1.0*/;
   double fontScale = 1.15;
 
-  return GestureDetector(
+  return Semantics(
+    button: true,
+    label: _semanticsLabel,
+    child: GestureDetector(
     onTap: () {
       if (isExam) {
         TimetableCurrentlySelected.entry = entry;
@@ -239,6 +276,21 @@ class TimetableElementWidget extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Already fetched and cached for the detail popup; there is room for it here.
+                  if(_hasRealTeacher)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        entry.teacher,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: AppColors.getTheme().textColor.withValues(alpha: 0.45),
+                            fontSize: 11.5 * fontScale,
+                            fontWeight: FontWeight.w500
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -300,6 +352,7 @@ class TimetableElementWidget extends StatelessWidget {
         ),
       )
     ),
+  ),
   );
 }
 }

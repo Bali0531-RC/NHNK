@@ -10,6 +10,7 @@ import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
 import '../local_file_actions.dart';
+import '../notifications.dart';
 import '../power_settings.dart';
 import '../storage.dart';
 import '../Misc/emojirich_text.dart';
@@ -66,6 +67,13 @@ class _SettingsPageState extends State<SettingsPage> {
   /// The background job serves both alert types, so it stays relevant while either is on.
   bool get _wantsAnyAlert =>
       (DataCache.getNeedGradeNotifications() ?? true) || (DataCache.getNeedMailNotifications() ?? true);
+
+  /// The exact alarm permission sends the user to a system settings screen, so it is
+  /// only worth asking at the moment they actually switch an alert on.
+  Future<void> _ensureExactAlarms(bool enabling) async{
+    if(!enabling || !BackgroundWorker.isSupported) return;
+    await AppNotifications.requestExactAlarms();
+  }
 
   int _backgroundIntervalIndex(){
     final idx = BackgroundWorker.intervalSteps.indexOf(DataCache.getBackgroundGradeCheckMinutes());
@@ -420,6 +428,7 @@ class _SettingsPageState extends State<SettingsPage> {
               AppHaptics.lightImpact();
               DataCache.setNeedPeriodsNotifications(b ? 1 : 0);
               b ? HomePageState.setupPeriodsNotifications() : HomePageState.cancelPeriodsNotifications();
+              _ensureExactAlarms(b);
               setState(() {});
             },
           ),
@@ -433,6 +442,7 @@ class _SettingsPageState extends State<SettingsPage> {
               AppHaptics.lightImpact();
               DataCache.setNeedGradeNotifications(b ? 1 : 0);
               BackgroundWorker.sync();
+              _ensureExactAlarms(b);
               setState(() {});
             },
           ),
@@ -445,6 +455,7 @@ class _SettingsPageState extends State<SettingsPage> {
               AppHaptics.lightImpact();
               DataCache.setNeedMailNotifications(b ? 1 : 0);
               BackgroundWorker.sync();
+              _ensureExactAlarms(b);
               setState(() {});
             },
           ),

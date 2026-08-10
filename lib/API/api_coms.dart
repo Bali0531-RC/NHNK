@@ -1197,6 +1197,129 @@ class CalendarRequest {
   }
 
 class MarkbookRequest{
+  /// Every term the student has ever taken, newest last.
+  ///
+  /// The grade endpoint is one request per subject, so a six semester history is
+  /// dozens of calls. Past terms cannot change once they are closed, which is why
+  /// [getSemesterHistory] caches them individually and only refetches the newest.
+  static Future<List<SemesterResult>> getSemesterHistory({bool force = false}) async{
+    if(storage.DataCache.getIsDemoAccount()!){
+      return _demoHistory();
+    }
+    if(storage.DataCache.getHasICSFile() ?? false){ return []; }
+
+    if(!storage.DataCache.getIsModernApi()){
+      // The legacy markbook endpoint returns everything at once with no term on it,
+      // so the best that can be offered is a single combined bucket.
+      final all = await getMarkbookSubjects();
+      if(all == null || all.isEmpty) return [];
+      final label = AppStrings.getCurrentLangCode() == 'hu' ? 'Összes tárgy' : 'All subjects';
+      return [SemesterResult('legacy', label, all)];
+    }
+
+    try{
+      final token = await storage.DataCache.getAccessToken();
+      final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+
+      final termsUrl = Uri.parse("$baseUrl/api/TakenSubjects/Terms");
+      final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token!);
+      final termsDecoded = conv.json.decode(termsResponse);
+      if(termsDecoded['data'] == null || termsDecoded['data'].isEmpty) return [];
+
+      final terms = (termsDecoded['data'] as List<dynamic>);
+      final results = <SemesterResult>[];
+
+      for(int t = 0; t < terms.length; t++){
+        final termId = terms[t]['value'].toString();
+        final termName = (terms[t]['text'] ?? termId).toString();
+        final isNewest = t == terms.length - 1;
+
+        // Only the term still in progress is allowed to go stale.
+        if(!force && !isNewest){
+          final cached = await _readCachedTerm(termId);
+          if(cached != null){
+            results.add(cached);
+            continue;
+          }
+        }
+
+        final subjects = await _fetchTermSubjects(baseUrl, token, termId);
+        final result = SemesterResult(termId, termName, subjects);
+        results.add(result);
+        if(!isNewest) await _writeCachedTerm(result);
+      }
+      return results;
+    }
+    catch(e){
+      debug.log("Hiba a félévek lekérésekor: $e");
+      return [];
+    }
+  }
+
+  static Future<List<Subject>> _fetchTermSubjects(String baseUrl, String token, String termId) async{
+    final subjectsUrl = Uri.parse("$baseUrl/api/TakenSubjects?request.termId=$termId&sortAndPage.firstRow=0&sortAndPage.lastRow=50");
+    final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: token);
+    final subjectsDecoded = conv.json.decode(subjectsResponse);
+    if(subjectsDecoded['data'] == null) return [];
+
+    final entries = (subjectsDecoded['data'] as List<dynamic>);
+    final out = <Subject>[];
+
+    const int batchSize = 6;
+    for(int i = 0; i < entries.length; i += batchSize){
+      final batch = entries.skip(i).take(batchSize).map((item){
+        return _fetchSubjectGrade(
+          baseUrl, token, item['subjectId'], termId,
+          item['subjectName'] ?? 'Ismeretlen', item['subjectCredit'] ?? 0,
+        );
+      }).toList();
+      for(var res in await Future.wait(batch)){
+        if(res != null) out.add(res);
+      }
+    }
+    return out;
+  }
+
+  static Future<SemesterResult?> _readCachedTerm(String termId) async{
+    final raw = await storage.getString('TermCache_$termId');
+    if(raw == null) return null;
+    try{ return SemesterResult.fromJson(conv.json.decode(raw)); }
+    catch(_){ return null; }
+  }
+
+  static Future<void> _writeCachedTerm(SemesterResult result) async{
+    await storage.saveString('TermCache_${result.termId}', conv.json.encode(result.toJson()));
+  }
+
+  static List<SemesterResult> _demoHistory(){
+    return <SemesterResult>[
+      SemesterResult('d1', '2023/24/1', [
+        Subject(true, 5, 'DEMO Analízis I.', 0, 3, 0),
+        Subject(true, 5, 'DEMO Programozás I.', 0, 4, 0),
+        Subject(true, 4, 'DEMO Diszkrét matematika', 0, 3, 0),
+        Subject(true, 3, 'DEMO Számítógép architektúrák', 0, 4, 0),
+      ]),
+      SemesterResult('d2', '2023/24/2', [
+        Subject(true, 5, 'DEMO Analízis II.', 0, 4, 0),
+        Subject(true, 5, 'DEMO Programozás II.', 0, 5, 0),
+        Subject(true, 4, 'DEMO Adatbázisok', 0, 4, 0),
+        Subject(true, 3, 'DEMO Operációs rendszerek', 0, 3, 0),
+      ]),
+      SemesterResult('d3', '2024/25/1', [
+        Subject(true, 5, 'DEMO Algoritmusok', 0, 5, 0),
+        Subject(true, 5, 'DEMO Hálózatok', 0, 4, 0),
+        Subject(true, 4, 'DEMO Szoftvertechnológia', 0, 5, 0),
+        Subject(true, 3, 'DEMO Valószínűségszámítás', 0, 4, 0),
+      ]),
+      SemesterResult('d4', '2024/25/2', [
+        Subject(true, 5, 'DEMO Mesterséges intelligencia', 0, 5, 0),
+        Subject(true, 5, 'DEMO Mobilfejlesztés', 0, 5, 0),
+        Subject(false, 4, 'DEMO Szakdolgozat', 0, 0, 0),
+        Subject(true, 3, 'DEMO Vállalati gazdaságtan', 0, 4, 0),
+      ]),
+    ];
+  }
+
   static Future<List<Subject>?> getMarkbookSubjects() async{
     if(storage.DataCache.getIsDemoAccount()!){
       return <Subject>[
@@ -1375,6 +1498,7 @@ class CashinRequest{
       return <CashinEntry>[
         CashinEntry(10000, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, 'DEMO befizetés 1', "1", 'aktív'),
         CashinEntry(70, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, 'DEMO befizetés 2', "2", 'teljesített'),
+        CashinEntry(5000, DateTime(now.year, now.month - 1).millisecondsSinceEpoch, 'DEMO befizetés 3', "3", 'törölt'),
       ];
     }
     else if(storage.DataCache.getHasICSFile() ?? false){
@@ -1721,6 +1845,68 @@ class MailRequest{
   
     Term(this.id, this.termName);
   }
+
+  /// One semester's subjects plus the figures every student actually cares about.
+  class SemesterResult{
+    final String termId;
+    final String termName;
+    final List<Subject> subjects;
+
+    SemesterResult(this.termId, this.termName, this.subjects);
+
+    /// Credit weighted average over graded subjects only. Pass/fail subjects carry
+    /// no grade, so counting them would drag the number down for no reason.
+    double get average{
+      var points = 0.0;
+      var credits = 0;
+      for(final s in subjects){
+        if(s.completed && s.grade >= 2){
+          points += s.grade * s.credit;
+          credits += s.credit;
+        }
+      }
+      return credits == 0 ? 0 : points / credits;
+    }
+
+    /// Neptun's scholarship index: the same weighted sum divided by a fixed 30.
+    double get averageOver30{
+      var points = 0.0;
+      for(final s in subjects){
+        if(s.completed && s.grade >= 2) points += s.grade * s.credit;
+      }
+      return points / 30;
+    }
+
+    int get totalCredits => subjects.fold(0, (a, s) => a + s.credit);
+    int get completedCredits => subjects.where((s) => s.completed).fold(0, (a, s) => a + s.credit);
+    int get gradedCredits => subjects.where((s) => s.completed && s.grade >= 2).fold(0, (a, s) => a + s.credit);
+    bool get hasGrades => gradedCredits > 0;
+
+    /// Count of each grade 1..5, for the distribution chart.
+    Map<int, int> get gradeDistribution{
+      final out = <int, int>{for(var i = 1; i <= 5; i++) i: 0};
+      for(final s in subjects){
+        if(s.completed && s.grade >= 1 && s.grade <= 5){
+          out[s.grade] = out[s.grade]! + 1;
+        }
+      }
+      return out;
+    }
+
+    Map<String, dynamic> toJson() => {
+      'termId': termId,
+      'termName': termName,
+      'subjects': subjects.map((s) => s.toString()).toList(),
+    };
+
+    factory SemesterResult.fromJson(Map<String, dynamic> json) => SemesterResult(
+      json['termId'] ?? '',
+      json['termName'] ?? '',
+      (json['subjects'] as List<dynamic>? ?? [])
+          .map((s) => Subject(false, 0, 'NULL', 0, 0, 0).fillWithExisting(s as String))
+          .toList(),
+    );
+  }
   
   class Subject{
     bool completed;
@@ -1876,8 +2062,12 @@ class CashinEntry{
   late int dueDateMs;
   late String comment;
   late bool completed = false;
+  /// Kept verbatim so the card can say which kind of "done" this is. Collapsing it
+  /// to a bool made a cancelled transaction look identical to a paid one.
+  late String status;
 
   CashinEntry(this.ammount, this.dueDateMs, this.comment, this.ID, String completedStatus){
+    status = completedStatus;
     if(completedStatus.toLowerCase() == 'teljesített' ||
         completedStatus.toLowerCase() == 'törölt' ||
         completedStatus.toLowerCase() == 'pénzügyileg igazolt'){
@@ -1885,9 +2075,11 @@ class CashinEntry{
     }
   }
 
+  bool get isCancelled => status.toLowerCase() == 'törölt';
+
   @override
   String toString() {
-    return '$ammount\n$dueDateMs\n$comment\n$completed\n$ID';
+    return '$ammount\n$dueDateMs\n$comment\n$completed\n$ID\n$status';
   }
 
   CashinEntry fillWithExisting(String existing){
@@ -1900,6 +2092,8 @@ class CashinEntry{
     comment = data[2];
     completed = bool.parse(data[3]);
     ID = data[4];
+    // Caches written before the status was kept only have five fields.
+    status = data.length > 5 ? data[5] : (completed ? 'Teljesített' : '');
     return this;
   }
 }

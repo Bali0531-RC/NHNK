@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nhnk/Misc/popup.dart';
 import '../Misc/emojirich_text.dart';
 import '../colors.dart';
+import '../language.dart';
 import '../storage.dart'; // ÚJ: Betűméret lekéréséhez
 
 typedef Callback = void Function(int, int);
@@ -32,6 +33,23 @@ class MarkbookElementWidget extends StatelessWidget{
     }
   }
 
+  /// A screen reader otherwise reads a bare digit with no hint of what it means.
+  String get _spokenValue{
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final bits = <String>['$credit ${hu ? "kredit" : "credits"}'];
+    if(completed && grade >= 1){
+      bits.add(hu ? '$grade-es jegy' : 'grade $grade');
+    }
+    else if(completed){
+      bits.add(hu ? 'teljesítve' : 'completed');
+    }
+    else{
+      bits.add(hu ? 'nincs lezárva' : 'not completed');
+    }
+    if(isFailed) bits.add(hu ? 'megbukott' : 'failed');
+    return bits.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     double fontScale = DataCache.getFontScale(); // ÚJ: Betűméret szorzó
@@ -41,7 +59,11 @@ class MarkbookElementWidget extends StatelessWidget{
     (!completed && isFailed || grade == 1) ? AppColors.getTheme().errorRed :
     AppColors.getTheme().textColor;
 
-    return GestureDetector(
+    return Semantics(
+      label: name,
+      value: _spokenValue,
+      button: grade < 2 && credit != 0,
+      child: GestureDetector(
         onTap: grade >= 2 || credit == 0 ? null : () {
           PopupWidgetHandler(mode: 0, callback: (r){
             onPopupResult(r as int, listIndex);
@@ -141,6 +163,7 @@ class MarkbookElementWidget extends StatelessWidget{
             ],
           ),
         )
+    ),
     );
   }
 }
