@@ -23,11 +23,14 @@ PY
 
 ~/flutter/bin/flutter build web --release --no-wasm-dry-run --base-href=/demo/
 
-# Only the variant the browser negotiates is ever fetched, but shipping all of them
-# would put ~30 MB of dead weight in the website repository.
-rm -rf build/web/canvaskit/chromium build/web/canvaskit/experimental_webparagraph
-rm -f build/web/canvaskit/skwasm_heavy.wasm build/web/canvaskit/skwasm_heavy.js \
-      build/web/canvaskit/skwasm_heavy.worker.js
+# Nothing here is ever fetched. Flutter only loads the local copy when
+# useLocalCanvasKit is set, and it is not, so the bootstrap goes to
+# gstatic.com/flutter-canvaskit/<engineRevision> instead and these 20 MB just sit
+# in the website repository. That Google request is disclosed in the privacy
+# policy; to serve it ourselves instead, drop this line and build with
+# --dart-define=FLUTTER_WEB_CANVASKIT_URL=/demo/canvaskit/ (adds ~2.8 MB gzipped
+# to every uncached visit).
+rm -rf build/web/canvaskit
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
