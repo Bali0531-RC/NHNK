@@ -6,6 +6,8 @@ import '../API/api_coms.dart' as api;
 import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
+import '../storage.dart';
+import 'subject_detail_page.dart';
 
 /// Semester history: averages, credits and grade spread across every term.
 ///
@@ -176,6 +178,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
       children: [
         _buildSummaryRow(theme),
         const SizedBox(height: 22),
+        _sectionTitle(theme, _t('Diploma felé', 'Toward your degree')),
+        const SizedBox(height: 12),
+        _card(theme, _buildDegreeProgress(theme)),
+        const SizedBox(height: 22),
         if (graded.length >= 2) ...[
           _sectionTitle(theme, _t('Féléves átlag', 'Average per semester')),
           const SizedBox(height: 12),
@@ -279,6 +285,103 @@ class _StatisticsPageState extends State<StatisticsPage> {
   Widget _sectionTitle(AppPalette theme, String text) {
     return Text(text,
         style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 17));
+  }
+
+  /// Neptun knows nothing about how long a programme is, so the target is the
+  /// student's own. The usual Hungarian ones are offered rather than a free number.
+  Widget _buildDegreeProgress(AppPalette theme) {
+    final target = DataCache.getDegreeCreditTarget();
+    final done = _totalCompletedCredits;
+
+    if (target <= 0) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _t('Állítsd be, hány kredit a képzésed, és látod majd, hol tartasz.',
+                'Set how many credits your programme is, and you will see where you stand.'),
+            style: TextStyle(color: theme.textColor.withValues(alpha: 0.6), fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in const [180, 210, 240, 120, 300])
+                ActionChip(
+                  label: Text('$option'),
+                  labelStyle: TextStyle(color: theme.secondary, fontWeight: FontWeight.bold),
+                  backgroundColor: theme.secondary.withValues(alpha: 0.12),
+                  side: BorderSide(color: theme.secondary.withValues(alpha: 0.4)),
+                  onPressed: () async {
+                    AppHaptics.lightImpact();
+                    await DataCache.setDegreeCreditTarget(option);
+                    if (mounted) setState(() {});
+                  },
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    final ratio = (done / target).clamp(0.0, 1.0);
+    return Row(
+      children: [
+        Semantics(
+          label: _t('Diploma haladás', 'Degree progress'),
+          value: _t('$done kredit a(z) $target kreditből', '$done of $target credits'),
+          child: SizedBox(
+            width: 108,
+            height: 108,
+            child: CustomPaint(painter: _RingPainter(ratio, theme)),
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$done / $target',
+                  style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w900, fontSize: 26)),
+              const SizedBox(height: 4),
+              Text(
+                _t('teljesített kredit', 'credits completed'),
+                style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                done >= target
+                    ? _t('Megvan a képzés kreditje. 🎓', 'You have the credits. 🎓')
+                    : _t('Még ${target - done} kredit van hátra.',
+                        '${target - done} credits to go.'),
+                style: TextStyle(
+                    color: done >= target ? theme.currentClassGreen : theme.textColor.withValues(alpha: 0.7),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () async {
+                  AppHaptics.lightImpact();
+                  await DataCache.setDegreeCreditTarget(0);
+                  if (mounted) setState(() {});
+                },
+                child: Text(
+                  _t('Módosítás', 'Change'),
+                  style: TextStyle(
+                      color: theme.secondary,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                      decorationColor: theme.secondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _card(AppPalette theme, Widget child) {
@@ -445,23 +548,38 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   children: [
                     Divider(color: theme.textColor.withValues(alpha: 0.08), height: 14),
                     for (final sub in sem.subjects)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(sub.name,
-                                  style: TextStyle(
-                                      color: theme.textColor.withValues(alpha: 0.85),
-                                      fontSize: 13)),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          AppHaptics.lightImpact();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SubjectDetailPage(subject: sub, termName: sem.termName),
                             ),
-                            Text(_t('${sub.credit} kr', '${sub.credit} cr'),
-                                style: TextStyle(
-                                    color: theme.textColor.withValues(alpha: 0.4),
-                                    fontSize: 12)),
-                            const SizedBox(width: 12),
-                            _gradeChip(theme, sub),
-                          ],
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 7),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(sub.name,
+                                    style: TextStyle(
+                                        color: theme.textColor.withValues(alpha: 0.85),
+                                        fontSize: 13)),
+                              ),
+                              Text(_t('${sub.credit} kr', '${sub.credit} cr'),
+                                  style: TextStyle(
+                                      color: theme.textColor.withValues(alpha: 0.4),
+                                      fontSize: 12)),
+                              const SizedBox(width: 12),
+                              _gradeChip(theme, sub),
+                              const SizedBox(width: 4),
+                              Icon(Icons.chevron_right_rounded,
+                                  size: 18, color: theme.textColor.withValues(alpha: 0.3)),
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -501,6 +619,56 @@ class _StatisticsPageState extends State<StatisticsPage> {
               color: colours[sub.grade], fontWeight: FontWeight.w900, fontSize: 14)),
     );
   }
+}
+
+/// Progress ring for the degree credit target.
+class _RingPainter extends CustomPainter {
+  final double ratio;
+  final AppPalette theme;
+
+  _RingPainter(this.ratio, this.theme);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centre = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 9;
+    const stroke = 13.0;
+
+    canvas.drawCircle(
+      centre,
+      radius,
+      Paint()
+        ..color = theme.textColor.withValues(alpha: 0.08)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke,
+    );
+
+    if (ratio > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: centre, radius: radius),
+        -math.pi / 2,
+        2 * math.pi * ratio,
+        false,
+        Paint()
+          ..color = ratio >= 1 ? theme.currentClassGreen : theme.secondary
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: '${(ratio * 100).round()}%',
+        style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w900, fontSize: 22),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, centre - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) => old.ratio != ratio || old.theme != theme;
 }
 
 /// Line chart of the credit weighted average, locked to the 1-5 grade scale so

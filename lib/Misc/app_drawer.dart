@@ -12,6 +12,7 @@ import '../notifications.dart';
 import '../Pages/settings_page.dart';
 import '../Pages/about_page.dart';
 import '../Pages/statistics_page.dart';
+import '../Pages/upcoming_page.dart';
 import 'package:nhnk/platform_support.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -65,6 +66,21 @@ class AppDrawer extends StatelessWidget {
             const SizedBox(height: 10),
 
             // --- menus ---
+            ListTile(
+              leading: Icon(Icons.event_rounded, color: AppColors.getTheme().textColor),
+              title: Text(
+                AppStrings.getCurrentLangCode() == 'hu' ? 'Közelgő' : 'Upcoming',
+                style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                AppHaptics.lightImpact();
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const UpcomingPage()),
+                );
+              },
+            ),
             ListTile(
               leading: Icon(Icons.insights_rounded, color: AppColors.getTheme().textColor),
               title: Text(

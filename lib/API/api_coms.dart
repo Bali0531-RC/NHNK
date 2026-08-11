@@ -681,6 +681,58 @@ class CalendarRequest {
   static List<CalendarEntry>? _icsFallbackCache;
   static int _icsFallbackFetchedMs = 0;
 
+  static List<CalendarEntry>? _upcomingCache;
+  static int _upcomingFetchedMs = 0;
+
+  /// Exams and task deadlines from the weeks ahead.
+  ///
+  /// The calendar view only ever holds one week, so anything further out is
+  /// invisible unless the user happens to page to exactly the right week. This
+  /// walks a few weeks forward and keeps only the dated things worth chasing.
+  static Future<List<CalendarEntry>> fetchUpcoming({int weeks = 8, bool force = false}) async{
+    const int cacheTtlMs = 3 * 60 * 60 * 1000;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    if(!force && _upcomingCache != null && now - _upcomingFetchedMs < cacheTtlMs){
+      return _upcomingCache!;
+    }
+
+    final out = <CalendarEntry>[];
+    final seen = <String>{};
+
+    void take(Iterable<CalendarEntry> entries){
+      for(final e in entries){
+        if(!e.isExam && !e.isTask) continue;
+        if(e.startEpoch < now) continue;
+        if(!seen.add('${e.startEpoch}|${e.title}')) continue;
+        out.add(e);
+      }
+    }
+
+    if(storage.DataCache.getHasICSFile() ?? false){
+      final end = DateTime.now().add(Duration(days: weeks * 7)).millisecondsSinceEpoch;
+      take(ICSCalendar.getCalendarInterval(now, end));
+    }
+    else{
+      final username = storage.DataCache.getUsername() ?? '';
+      final password = storage.DataCache.getPassword() ?? '';
+      // weekOffset 1 is the current week.
+      for(int w = 1; w <= weeks; w++){
+        try{
+          final raw = await makeCalendarRequest(getCalendarOneWeekJSON(username, password, w));
+          take(getCalendarEntriesFromJSON(raw));
+        }
+        catch(e){
+          debug.log('Upcoming: a $w. hét lekérése nem sikerült: $e');
+        }
+      }
+    }
+
+    out.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
+    _upcomingCache = out;
+    _upcomingFetchedMs = now;
+    return out;
+  }
+
   /// Whole-semester timetable from the personal iCal export, rather than the one
   /// week the calendar view holds.
   static Future<List<CalendarEntry>?> fetchFullTimetable() => _fetchIcsFallback();
@@ -1148,6 +1200,11 @@ class CalendarRequest {
         monday = weekStartFor(1);
       }
 
+      final thisMonday = weekStartFor(1);
+      final weekIndex = DateTime(monday.year, monday.month, monday.day)
+          .difference(DateTime(thisMonday.year, thisMonday.month, thisMonday.day))
+          .inDays ~/ 7;
+
       Map<String, dynamic> entry(int day, int fromHour, int fromMin, int toHour, int toMin,
           String title, String location, String teacher, String code, int type){
         return {
@@ -1170,7 +1227,18 @@ class CalendarRequest {
         entry(2, 8, 0, 9, 30, 'Programozás alapjai (előadás)', 'E-101', 'Dr. Tóth Gábor', 'DEMO-INF102', 0),
         entry(2, 14, 0, 15, 30, 'Szaknyelvi kommunikáció', 'N-12', 'Kiss Judit', 'DEMO-ANG201', 0),
         entry(3, 10, 0, 11, 30, 'Számítógép-architektúrák', 'E-103', 'Dr. Varga Zsolt', 'DEMO-INF120', 0),
-        entry(4, 9, 0, 11, 0, 'Analízis I. vizsga', 'A-201', 'Dr. Kovács Anna', 'DEMO-MAT101', 1),
+        // Dated items are spread across the weeks so the upcoming list has something
+        // to show rather than the same exam repeating every week.
+        if(weekIndex == 0)
+          entry(4, 9, 0, 11, 0, 'Analízis I. vizsga', 'A-201', 'Dr. Kovács Anna', 'DEMO-MAT101', 1),
+        if(weekIndex == 0)
+          entry(2, 23, 59, 23, 59, 'Beadandó: Programozás alapjai', '-', 'Nagy Péter', 'DEMO-INF102', 2),
+        if(weekIndex == 1)
+          entry(1, 23, 59, 23, 59, 'Zárthelyi dolgozat beadás', '-', 'Dr. Szabó Béla', 'DEMO-MAT110', 2),
+        if(weekIndex == 2)
+          entry(2, 10, 0, 12, 0, 'Diszkrét matematika vizsga', 'A-105', 'Dr. Szabó Béla', 'DEMO-MAT110', 1),
+        if(weekIndex == 4)
+          entry(3, 14, 0, 16, 0, 'Számítógép-architektúrák vizsga', 'A-201', 'Dr. Varga Zsolt', 'DEMO-INF120', 1),
       ]});
     }
 
@@ -1312,10 +1380,11 @@ class MarkbookRequest{
         Subject(true, 3, 'DEMO Valószínűségszámítás', 0, 4, 0),
       ]),
       SemesterResult('d4', '2024/25/2', [
-        Subject(true, 5, 'DEMO Mesterséges intelligencia', 0, 5, 0),
-        Subject(true, 5, 'DEMO Mobilfejlesztés', 0, 5, 0),
-        Subject(false, 4, 'DEMO Szakdolgozat', 0, 0, 0),
-        Subject(true, 3, 'DEMO Vállalati gazdaságtan', 0, 4, 0),
+        Subject(false, 5, 'Analízis I.', 0, 0, 0),
+        Subject(false, 5, 'Programozás alapjai', 1, 0, 0),
+        Subject(true, 4, 'Diszkrét matematika', 2, 4, 0),
+        Subject(true, 3, 'Számítógép-architektúrák', 3, 5, 0),
+        Subject(true, 2, 'Szaknyelvi kommunikáció', 4, 0, 0),
       ]),
     ];
   }
@@ -1323,8 +1392,11 @@ class MarkbookRequest{
   static Future<List<Subject>?> getMarkbookSubjects() async{
     if(storage.DataCache.getIsDemoAccount()!){
       return <Subject>[
-        Subject(false, 1, 'DEMO tantárgy 1', 0, 4, 0),
-        Subject(true, 4, 'DEMO szellemjegy', 1, 0, 0),
+        Subject(false, 5, 'Analízis I.', 0, 0, 0),
+        Subject(false, 5, 'Programozás alapjai', 1, 0, 0),
+        Subject(true, 4, 'Diszkrét matematika', 2, 4, 0),
+        Subject(true, 3, 'Számítógép-architektúrák', 3, 5, 0),
+        Subject(true, 2, 'Szaknyelvi kommunikáció', 4, 0, 0),
       ];
     }
     else if(storage.DataCache.getHasICSFile() ?? false){ return []; }

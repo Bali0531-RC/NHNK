@@ -142,6 +142,15 @@ class DataCache{
     await _prefs?.setDouble('FontScale', scale);
   }
 
+  /// 0 means the student has not told us how long their programme is.
+  static int getDegreeCreditTarget() {
+    return _prefs?.getInt('DegreeCreditTarget') ?? 0;
+  }
+
+  static Future<void> setDegreeCreditTarget(int credits) async {
+    await _prefs?.setInt('DegreeCreditTarget', credits);
+  }
+
   late bool? _persistentSetting_familyFriendlyLoadingComments = false;
   late bool? _persistentSetting_showExamNotifications = true;
   late bool? _persistentSetting_showClassNotifications = true;
@@ -247,6 +256,9 @@ class DataCache{
     _isDemoAccount = tmp != null && tmp != 0;
 
     final prefs = await SharedPreferences.getInstance();
+    // _prefs was declared but never assigned, so getFontScale() always answered 1.0
+    // and setFontScale() wrote into a null. The font size slider did nothing at all.
+    _prefs = prefs;
     _displayClasses = prefs.getBool('CALENDAR_DisplayClasses') ?? true;
     _displayExams = prefs.getBool('CALENDAR_DisplayExams') ?? true;
     _displayPeriods = prefs.getBool('CALENDAR_DisplayPeriods') ?? true;
