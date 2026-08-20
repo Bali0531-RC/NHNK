@@ -5,6 +5,10 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:
 
+      - name: Build unsigned iOS app
+      - name: Build unsigned iOS app
+      - name: Build unsigned iOS app
+      - name: Build unsigned iOS app
 permissions:
   contents: write
 
@@ -36,7 +40,9 @@ jobs:
           cp -R build/ios/iphoneos/Runner.app dist/Payload/
           (cd dist && zip -qry "NHNK-${VERSION}-unsigned.ipa" Payload && rm -rf Payload)
           ls -lh dist
+      - name: Build unsigned iOS app
 
+      - name: Build unsigned iOS app
       - uses: actions/upload-artifact@v4
         with:
           name: ios-unsigned-ipa

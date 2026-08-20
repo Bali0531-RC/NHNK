@@ -1,125 +1,100 @@
 # NHNK
 
-**Nem Hivatalos Neptun Kliens** / **Unofficial Neptun Client** — an alternative Neptun
-mobile app built on the modern Neptun REST API.
+**Nem Hivatalos Neptun Kliens** / Unofficial Neptun Client. A Flutter app for Hungarian university students who have to use Neptun and would rather not suffer.
 
 [![Downloads](https://img.shields.io/github/downloads/Bali0531-RC/NHNK/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/NHNK/releases)
 [![Latest release](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
 
-Website / Weboldal: **https://nhnk.bali0531.hu**
+Website: **https://nhnk.bali0531.hu**
+
+> [!IMPORTANT]
+> This is an independent, unofficial app. It has nothing to do with Campus Codeworks Zrt. (formerly SDA Informatika Zrt., who make Neptun) or with any university, and none of them have endorsed it. The "Neptun" name belongs to its owner and I only use it here to describe what the app talks to. Your login goes straight to your university's own Neptun server. I don't run a server and I don't collect anything. If the app and the Neptun website disagree, the website is right.
+>
+> Ez egy független, nem hivatalos alkalmazás. Semmilyen kapcsolatban nem áll a Campus Codeworks Zrt.-vel (korábban SDA Informatika Zrt.), sem egyetemekkel, és egyikük sem hagyta jóvá. A belépési adatok közvetlenül az intézmény Neptun-szerverére mennek, én nem üzemeltetek szervert és nem gyűjtök adatot. Ha az app és a webes Neptun mást mond, a web a mérvadó.
+
+---
 
 <details open>
 <summary><b>English</b></summary>
 
-> [!IMPORTANT]
-> **This is an independent, unofficial application.** It is not affiliated with, endorsed
-> or approved by Campus Codeworks Zrt. (formerly SDA Informatika Zrt., the developer of
-> the Neptun system), nor by any higher education institution. The "Neptun" name and
-> trademark belong to their respective owner and are used here for descriptive purposes
-> only. Login credentials go directly to your institution's Neptun server; NHNK does not
-> operate a server of its own and does not collect user data. The information shown in
-> the Neptun web interface is always the authoritative source.
+## Why I made this
+
+I'm a student and I open Neptun most days. There is no official app to open: the official Neptun mobile app was discontinued years ago, so your choices are the web interface squinted at on a phone screen, or nothing.
+
+I didn't start from an empty `flutter create`. [domedav's Neptun 2](https://github.com/domedav/Neptun-2) was the community answer to that gap for a long time, but Neptun moved to a new API and the app stopped working, so it's dead now. [zoligamer's fork](https://github.com/zoligamer/Neptun-Mobile-fork) is what brought it onto the new routes, and that's where I forked from. It gave me a foundation that already knew the shape of a Neptun client (project layout, timetable rendering, theming) instead of three weeks of scaffolding, and I'd rather spend that time on features than on re-deciding where the state lives.
+
+That foundation still had a rough first day waiting for me. `MainActivity` was broken so the app died on launch, and a lot of the API path was still subtly wrong underneath the new routes. The training ID was cached in a static, but Neptun issues a new one on every login, so any silent token refresh left the app querying a dead ID and rendering an empty timetable. The week window did `now.subtract(Duration(days: now.weekday))`, which puts Mondays eight days in the past. Message counts were hardcoded to zero, so the unread badge could never appear. The display toggles in settings were read from storage and then thrown away in favour of hardcoded values, so they did nothing at all.
+
+The one that actually bothered me was the TLS handling. There was a global `HttpOverrides` whose `badCertificateCallback` returned `true` for everything, meaning the app accepted any certificate anyone handed it. Your Neptun password was one hostile network away from being read in plaintext. That was the first thing I fixed, and it's why the app now just uses platform certificate validation with a 20 second connect timeout instead. The university endpoints all serve valid chains, so there was never a reason for that override to exist.
+
+Everything after that is mine, roughly three weeks of it: 2FA with an optionally persisted secret so you don't retype a code every session, background notifications for new grades and messages, offline mode, automatic failover between a university's servers, an Android home screen widget, semester statistics with degree progress, per-subject pages, an upcoming list, `.ics` calendar export, and the whole Play Store build split.
+
+I use it daily at my own university. That's mostly how the bugs get found.
+
+## The two things that ate my time
+
+**Background notifications.** Android does not want your app to wake up, and it is right to feel that way, but it made this miserable. Between Doze, battery optimisation and every manufacturer skin having its own private process killer, a periodic check that works perfectly on one phone silently never fires on another. I can't fix that from inside the app, so I did the next best thing: the settings screen works out what's blocking it and sends you straight to the system page that controls it (see `lib/power_settings.dart`). The interval is yours, 15 minutes up to 12 hours, or off if you'd rather keep the battery.
+
+**Google Play.** Play bans apps that update themselves. Fair enough, except sideloaded users need exactly that, so now there are two build flavors that differ in whether the updater and `REQUEST_INSTALL_PACKAGES` exist at all. Play also rejected a build over photo and video permissions I never asked for, which turned out to be dependencies quietly merging them into the manifest. Then there's the waiting: a new personal developer account has to run 14 days of closed testing with at least 12 testers before you're even allowed to apply for production. That part is done. The production review itself is in progress as I write this and takes about a week.
 
 ## Download
 
 Latest release: **https://github.com/Bali0531-RC/NHNK/releases/latest**
 
-### Google Play
+**Google Play.** The 14 day closed test is finished and the production release is in review, which takes roughly a week. Until it clears, only testers can see the listing, and you can still sign up at **https://nhnk.bali0531.hu/zart-teszt/**. The Play build has no built-in updater, Play handles updates itself.
 
-The app is currently in **closed testing**, so only testers can see it on the Play
-Store. You can sign up here: **https://nhnk.bali0531.hu/zart-teszt/**
+**Android sideload.** Grab the `arm64-v8a` APK, that's what almost every phone wants. If you want automatic updates, [Obtainium](https://github.com/ImranR98/Obtainium) is the easiest option: point it at this repo and it takes care of the rest.
 
-The Play build has no built-in updater (Play policy forbids it); updates are handled by
-the store.
+**iPhone.** There's an `unsigned.ipa` in every release, and the name is the warning. Signing it properly needs a paid Apple Developer account that I don't have, so you sign it yourself with your own Apple ID using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) or [Sideloadly](https://sideloadly.io/). Needs iOS 14+. On a free Apple ID it expires every 7 days and you re-sign it, which is Apple's rule, not mine. If that sounds like too much hassle, you can subscribe to Neptun's calendar export in Apple Calendar and at least have your timetable.
 
-### Android (sideload)
+## Features
 
-Most phones need the `arm64-v8a` APK. For automatic updates we recommend
-[Obtainium](https://github.com/ImranR98/Obtainium): point it at this repository and
-future releases will install themselves.
+**Timetable**
+- Weekly view, page to any week, one tap next to the week name to get back to today
+- If Neptun's API hands back an empty timetable it falls back to the calendar export
+- Android home screen widget showing today's classes
+- Export to `.ics` so your phone's calendar can eat it
 
-### iPhone
+**Notifications**
+- Ahead of classes, exams, payments and periods
+- New grades and new messages, including when the app is closed
+- Mark a message read from the notification itself
+- One tap from settings to whichever system screen is blocking background work
 
-Releases also contain an `unsigned.ipa`, but it is **not signed**: signing would require
-a paid Apple Developer account, so you have to sign it yourself with your own Apple ID,
-for example using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/)
-or [Sideloadly](https://sideloadly.io/). iOS 14 or newer is required.
+**Grades, stats and money**
+- Grades, averages, credits, messages, payments, periods
+- Statistics page: cumulative average, average and credits per semester as charts, grade distribution, and degree progress against a credit target you set
+- Subject pages: credits, grade, pass/fail/ongoing status, this week's classes and anything upcoming for that subject
+- Upcoming list, everything due soon in one place
+- Ghost grades, so you can see what a grade you haven't earned yet would do to your average
+- Average calculator, telling you what you need across your remaining credits to hit a target
+- Search messages by subject or sender
 
-With a free Apple ID the app expires every 7 days and has to be re-signed — this is an
-Apple limitation. If that is not for you, the timetable can also be added to Apple
-Calendar as a subscription from Neptun's calendar export.
+**Everything else**
+- Offline mode keeps the last data it downloaded, with a bar telling you how stale it is
+- Automatic failover if your university runs several servers and the main one is down
+- 2FA, with the secret optionally stored for automatic re-login
+- Themes and languages you can change
 
 ## Reporting bugs
 
 **https://github.com/Bali0531-RC/NHNK/issues/new/choose**
 
-It helps if you include your phone model, the Android version and the app version.
+Tell me your phone model, Android version and app version, otherwise I'm guessing.
 
-## Features
+## Version history
 
-**Timetable**
-- Weekly view, browse to any week; one tap next to the week name jumps back to the current week
-- If the Neptun API returns an empty timetable, it is loaded from the calendar export instead
-- Home screen widget with today's classes (Android)
-- Export the timetable to an `.ics` file that your phone's calendar can import
+Full release notes live at **https://github.com/Bali0531-RC/NHNK/releases**. The short version:
 
-**Notifications**
-- Before classes, exams, payments and periods
-- For new grades and new messages, even after the app is closed, with a configurable interval (15 minutes – 12 hours, or off)
-- Mark a message as read straight from the notification
-- If the system or the manufacturer restricts background execution, the settings screen takes you to the relevant system setting in one tap
+**1.2** brought the home screen widget, the statistics and subject pages, the upcoming list, the average calculator and message search. Offline mode also started actually working: losing signal used to wipe every list because I was comparing `connectivity_plus`'s return value wrong, so the app never once realised it was offline. Also fixed 2FA, where tapping beside the dialog cancelled the login the dialog was there to complete.
 
-**Grades and finances**
-- Grades, averages, credits, messages, payments, periods
-- Ghost grades: what a not-yet-earned grade would do to your average
-- Average calculator: the average you need across your remaining credits to reach your target
-- Search messages by subject or sender
+**1.1** added background notifications for grades and messages, `.ics` export and server failover. The "back to this week" button moved into the week switcher bar because as a floating button it sat right on top of the bottom navigation.
 
-**Other**
-- Offline mode: the most recently downloaded data is kept, a bar shows when it was refreshed
-- Automatic failover at institutions with several servers, if the primary one does not respond
-- Two-factor authentication, with an optionally stored secret for automatic re-login
-- Customizable themes and languages
+**1.0** was mostly repair work. Token refresh had never worked, so an expiring session just emptied your data. The timetable can now load from the calendar export as well, so it shows up even without a session. Added a real signing key so updates install over older versions instead of failing, and stripped the permissions that dependencies had dragged into the Play build.
 
-## Versions
+## Building it
 
-Detailed release notes for every version:
-**https://github.com/Bali0531-RC/NHNK/releases**
-
-### 1.2
-
-Home screen widget with today's classes. Offline mode now keeps the most recently
-downloaded data: previously losing the network cleared the lists, because the app
-compared the return value of `connectivity_plus` incorrectly and never knew it was
-offline. Average calculator, message search, and a notice about the unofficial status
-shown before login. Tapping next to the 2FA dialog no longer aborts the login.
-
-### 1.1
-
-Notifications for new grades and new messages, in the background as well, with a
-configurable interval. Timetable export to an `.ics` file. Automatic failover at
-institutions with several servers, if the primary server does not respond. The "back to
-the current week" button moved into the week switcher bar, because as a floating button
-it covered the bottom navigation bar.
-
-### 1.0
-
-Session handling fixes: token refresh never actually worked, so an expiring session
-cleared the data. The timetable can also be loaded from Neptun's calendar export, so it
-is visible even without a session. The 2FA secret can be stored for automatic re-login.
-Own signing key, so updates can be installed over an earlier version. The Play build no
-longer requests the permissions that were pulled in by dependencies and that the app
-does not use.
-
-## Origin
-
-This project is a fork of [Neptun 2](https://github.com/domedav/Neptun-2) (domedav), by
-way of the [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (zoligamer)
-fork. MIT licensed, keeping the earlier copyright notices.
-
-## Development
-
-There are two build flavors, because Google Play forbids self-updating applications:
+Two flavors, because of the Play updater rule above:
 
 | Flavor | Distribution | Built-in updater | `REQUEST_INSTALL_PACKAGES` |
 | --- | --- | --- | --- |
@@ -138,23 +113,21 @@ flutter build appbundle --release \
   --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
 ```
 
-`--dart-define` and `--flavor` must always go together: the flavor decides the manifest
-permission, while the dart-define switches off the updater on the Dart side.
+Always pass `--flavor` and `--dart-define` together. The flavor decides the manifest permission, the dart-define switches the updater off on the Dart side, and getting one without the other gives you a build that's wrong in a way you won't notice until Play rejects it.
 
-A release needs a signing key: copy `android/key.properties.example` to
-`android/key.properties` and fill it in. Without it the release build uses the debug
-key, which cannot be installed as an update over an earlier version.
+For a release build you need a signing key: copy `android/key.properties.example` to `android/key.properties` and fill it in. Skip this and the release build quietly uses the debug key, which won't install over an existing version.
 
-### Institutions
+Tests:
 
-The institution list is stored in `universityNameUrlPairs.json`, and installed apps
-download it **at runtime** from the `main` branch. It may therefore only be extended:
-renaming or removing the `Name` and `Url` fields would break the versions that are
-already out there.
+```sh
+flutter test
+```
 
-If an institution runs several equivalent Neptun servers, they can be listed in a
-`Fallbacks` array. If the active server does not respond, the app switches to the next
-one and logs in again with the stored credentials — sessions are per-server.
+### Adding a university
+
+The list lives in `universityNameUrlPairs.json`, and installed apps fetch it from the `main` branch **at runtime**. So it can only ever be added to. Renaming or deleting the `Name` and `Url` fields breaks every copy of the app already out in the world, including the ones nobody is going to update.
+
+If a university runs several equivalent Neptun servers, list the spares under `Fallbacks`. When the active one stops responding the app moves to the next and logs in again with the saved credentials, because sessions are per server and don't carry across.
 
 ```jsonc
 {
@@ -164,133 +137,99 @@ one and logs in again with the stored credentials — sessions are per-server.
 }
 ```
 
-Before adding a new server it is worth checking that the mobile API really is the one
-answering, and not the web interface: a GET request to `/api/Account/Authenticate` must
-respond with `405` and JSON.
+Before you add a server, check that it's actually the mobile API answering and not the web frontend. Send a GET to `/api/Account/Authenticate`: you want a `405` and JSON back. Anything else and you've found the website.
 
-### Tests
+## Credit
 
-```sh
-flutter test
-```
+Forked from [Neptun 2](https://github.com/domedav/Neptun-2) by domedav, by way of [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) by zoligamer, who did the work of moving it onto Neptun's new API after the original stopped working. MIT, and their copyright notices stay where they are.
 
 ## License
 
-MIT — see the [LICENSE](LICENSE) file.
+MIT, see [LICENSE](LICENSE).
 
 </details>
 
 <details>
 <summary><b>Magyar</b></summary>
 
-> [!IMPORTANT]
-> **Ez egy független, nem hivatalos alkalmazás.** Nem áll kapcsolatban a Campus Codeworks Zrt.-vel
-> (korábban SDA Informatika Zrt., a Neptun rendszer fejlesztője), sem bármely felsőoktatási
-> intézménnyel, és azok nem támogatják vagy hagyták jóvá. A „Neptun" név és védjegy a jogosultja
-> tulajdona, itt kizárólag leíró jelleggel szerepel. A belépési adatok közvetlenül az intézmény
-> Neptun-kiszolgálójára mennek; az NHNK nem üzemeltet saját szervert és nem gyűjt felhasználói
-> adatokat. Hivatalos adatnak minden esetben a webes Neptun felületén látható információ számít.
+## Miért csináltam
+
+Hallgató vagyok, és nagyjából minden nap megnyitom a Neptunt. Csak épp nincs mit megnyitni: a hivatalos Neptun mobilappot évekkel ezelőtt megszüntették, úgyhogy marad a webes felület telefonon hunyorogva, vagy semmi.
+
+Nem nulláról indultam. A [domedav-féle Neptun 2](https://github.com/domedav/Neptun-2) sokáig ezt a hiányt töltötte be, de a Neptun áttért egy új API-ra, és az app megállt, ma már nem működik. A [zoligamer forkja](https://github.com/zoligamer/Neptun-Mobile-fork) hozta át az új végpontokra, én innen forkoltam. Így kaptam egy alapot, ami már ismerte egy Neptun-kliens felépítését (projektstruktúra, órarend megjelenítés, témák), ahelyett hogy három hetet töltöttem volna állványozással.
+
+Az alap azért tartogatott egy elég csúnya első napot. A `MainActivity` el volt törve, így az app indításkor meghalt, az API-réteg alatt pedig még bőven maradt hiba az új végpontok mögött. A képzésazonosító egy statikus mezőben ragadt, pedig a Neptun minden belépésnél újat ad, így egy csendes tokenfrissítés után az app egy halott azonosítót kérdezgetett és üres órarendet rajzolt. A hétablak a `now.subtract(Duration(days: now.weekday))` képletet használta, ami a hétfőket nyolc nappal korábbra tolja. Az üzenetszámlálók fixen nullák voltak, így az olvasatlan jelző soha nem jelenhetett meg. A beállítások megjelenítési kapcsolóit kiolvasta a tárolóból, aztán eldobta és hardkódolt értékeket használt helyettük, vagyis a kapcsolók semmit nem csináltak.
+
+Ami viszont tényleg zavart, az a TLS-kezelés volt. Volt egy globális `HttpOverrides`, aminek a `badCertificateCallback`-je mindenre `true`-val tért vissza, tehát az app bármilyen tanúsítványt elfogadott, amit elé toltak. A Neptun jelszavad egyetlen rosszindulatú hálózatra volt attól, hogy olvashatóan kiessen. Ez volt az első, amit megjavítottam, és ezért használ ma az app sima platform szintű tanúsítványellenőrzést, helyette 20 másodperces csatlakozási időkorláttal. Az egyetemi végpontok érvényes láncot szolgálnak ki, szóval annak az override-nak soha nem volt létjogosultsága.
+
+Onnantól minden a saját munkám, nagyjából három hétnyi: 2FA elmenthető kulccsal, hogy ne kelljen minden belépésnél kódot pötyögni, háttérértesítés új jegyről és üzenetről, offline mód, automatikus átváltás az intézmény tartalék szervereire, kezdőképernyő-widget, statisztika oldal diplomahaladással, tárgyankénti nézet, közelgő események listája, `.ics` naptárexport, és a teljes Play Store-os buildszétválasztás.
+
+Minden nap használom a saját egyetememen. Jellemzően így derülnek ki a hibák.
+
+## Ami a legtöbb időt elvitte
+
+**A háttérértesítések.** Az Android nem szeretné, ha az appod felébredne. Alapvetően igaza van, de ettől még kínszenvedés volt. A Doze, az akkumulátor-optimalizálás és az, hogy minden gyártói felületnek megvan a saját folyamatgyilkosa, együtt oda vezet, hogy egy időzített ellenőrzés az egyik telefonon tökéletesen működik, a másikon meg némán soha nem fut le. Ezt az appon belülről nem tudom megjavítani, úgyhogy azt csináltam, amit lehetett: a beállítások kitalálják, mi blokkolja, és egy koppintással átdobnak a megfelelő rendszerbeállításra (`lib/power_settings.dart`). A gyakoriságot te állítod, 15 perctől 12 óráig, vagy ki, ha inkább az aksi kell.
+
+**A Google Play.** A Play tiltja az önmagukat frissítő appokat. Érthető, csak épp a sideloadolt verziónak pont erre van szüksége, így most két flavor van, amik abban különböznek, hogy létezik-e bennük egyáltalán a frissítő és a `REQUEST_INSTALL_PACKAGES`. Ezen kívül visszadobtak egy buildet fotó- és videójogosultságok miatt, amiket soha nem kértem: függőségek fűzték bele csendben a manifestbe. És ott a várakozás: egy új személyes fejlesztői fióknak 14 nap zárt tesztet kell lefuttatnia legalább 12 tesztelővel, mielőtt egyáltalán jelentkezhet produkcióra. Ez megvan. Maga a produkciós felülvizsgálat most fut, és nagyjából egy hét.
 
 ## Letöltés
 
 Legfrissebb kiadás: **https://github.com/Bali0531-RC/NHNK/releases/latest**
 
-### Google Play
+**Google Play.** A 14 napos zárt teszt lement, a produkciós kiadás felülvizsgálat alatt van, ami nagyjából egy hét. Amíg át nem megy, csak a tesztelők látják a listázást, jelentkezni továbbra is itt lehet: **https://nhnk.bali0531.hu/zart-teszt/**. A Play-es buildben nincs beépített frissítő, azt az áruház intézi.
 
-Az app jelenleg **zárt tesztelés** alatt áll, így a Play Áruházban csak a tesztelők
-látják. Jelentkezni itt lehet: **https://nhnk.bali0531.hu/zart-teszt/**
+**Android sideload.** Az `arm64-v8a` APK kell, gyakorlatilag minden telefonra az jó. Automatikus frissítéshez az [Obtainium](https://github.com/ImranR98/Obtainium) a legegyszerűbb: megadod neki ezt a repót, és onnantól magától megy.
 
-A Play-es változatban nincs beépített frissítő (ezt a Play szabályzata tiltja), a
-frissítéseket az áruház kezeli.
+**iPhone.** Minden kiadásban van `unsigned.ipa`, és a név egyben a figyelmeztetés is. A rendes aláíráshoz fizetős Apple Developer fiók kellene, ami nincs, úgyhogy magadnak kell aláírnod a saját Apple ID-ddal, például [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy [Sideloadly](https://sideloadly.io/) segítségével. iOS 14 vagy újabb kell. Ingyenes Apple ID-val 7 naponta lejár és újra alá kell írni, ez az Apple szabálya, nem az enyém. Ha ez sok, az órarendet a Neptun naptárexportjából fel tudod venni az Apple Naptárba, az legalább megvan.
 
-### Android (sideload)
+## Funkciók
 
-A legtöbb telefonra az `arm64-v8a` APK kell. Automatikus frissítéshez ajánlott az
-[Obtainium](https://github.com/ImranR98/Obtainium): add meg neki ezt a repót, és a
-későbbi kiadások maguktól települnek.
+**Órarend**
+- Heti nézet, bármelyik hétre lapozható, a hét neve mellett egy koppintás visszavisz a maira
+- Ha a Neptun API üres órarendet ad vissza, a naptárexportból tölti be
+- Kezdőképernyő-widget a mai órákkal (Android)
+- Exportálás `.ics` fájlba, amit a telefon naptára beolvas
 
-### iPhone
+**Értesítések**
+- Órák, vizsgák, befizetések és időszakok előtt
+- Új jegyről és új üzenetről, bezárt app mellett is
+- Üzenet olvasottnak jelölése egyenesen az értesítésből
+- Egy koppintás a beállításokból arra a rendszerképernyőre, ami épp blokkolja a háttérfutást
 
-A kiadásokban van `unsigned.ipa` is, de **aláírás nélkül**: az aláíráshoz fizetős Apple
-Developer fiók kellene, ezért magadnak kell aláírnod a saját Apple ID-ddal, például
-[AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy
-[Sideloadly](https://sideloadly.io/) segítségével. iOS 14 vagy újabb kell hozzá.
+**Jegyek, statisztika, pénz**
+- Jegyek, átlagok, kreditek, üzenetek, befizetések, időszakok
+- Statisztika oldal: halmozott átlag, féléves átlagok és kreditek grafikonon, jegyek megoszlása, és diplomahaladás az általad megadott kreditcélhoz mérve
+- Tárgyoldalak: kredit, jegy, teljesített/bukott/folyamatban állapot, az adott heti órák és a tárgyhoz tartozó közelgő események
+- Közelgő lista, egy helyen minden, ami hamarosan esedékes
+- Szellemjegyek: mit csinálna az átlagoddal egy még meg nem szerzett jegy
+- Átlagszámító: milyen átlag kell a maradék kreditekre a célodhoz
+- Keresés az üzenetek közt tárgy vagy feladó szerint
 
-Ingyenes Apple ID-val az app 7 naponta lejár és újra alá kell írni — ez az Apple
-korlátozása. Aki ezt nem vállalja, annak az órarend a Neptun naptár-exportjából
-feliratkozásként is hozzáadható az Apple Naptárhoz.
+**Egyéb**
+- Offline mód: megmarad a legutóbb letöltött adat, egy sáv jelzi, mennyire régi
+- Automatikus átváltás, ha az intézménynek több szervere van és az elsődleges nem válaszol
+- 2FA, opcionálisan elmentett kulccsal az automatikus újrabelépéshez
+- Állítható témák és nyelvek
 
 ## Hibabejelentés
 
 **https://github.com/Bali0531-RC/NHNK/issues/new/choose**
 
-Hasznos, ha leírod a telefon típusát, az Android verziót és az app verzióját.
-
-## Funkciók
-
-**Órarend**
-- Heti nézet, tetszőleges hétre lapozva; a hét neve mellől egy koppintással vissza a mai hétre
-- Ha a Neptun API üresen hagyja az órarendet, a naptár-exportból tölti be
-- Kezdőképernyő-widget a mai órákkal (Android)
-- Órarend mentése `.ics` fájlba, amit a telefon naptára beolvas
-
-**Értesítések**
-- Órák, vizsgák, befizetések és időszakok előtt
-- Új jegyről és új üzenetről, az app bezárása után is, állítható gyakorisággal (15 perc – 12 óra, vagy ki)
-- Üzenet olvasottnak jelölése egyből az értesítésből
-- Ha a rendszer vagy a gyártó korlátozza a háttérfutást, a beállításokban egy koppintással eljutsz a megfelelő rendszerbeállításhoz
-
-**Jegyek és pénzügyek**
-- Jegyek, átlagok, kreditek, üzenetek, befizetések, időszakok
-- Szellemjegyek: mit tenne az átlagoddal egy még meg nem szerzett jegy
-- Átlagszámító: milyen átlag kell a hátralévő kreditekre a célodhoz
-- Keresés az üzenetek között tárgy vagy feladó szerint
-
-**Egyéb**
-- Offline mód: a legutóbb letöltött adatok megmaradnak, egy sáv jelzi, mikor frissültek
-- Több kiszolgálós intézményeknél automatikus átváltás, ha az elsődleges nem válaszol
-- Kétlépcsős azonosítás, opcionálisan elmentett kulccsal automatikus újrabejelentkezés
-- Testreszabható témák és nyelvek
+Írd meg a telefon típusát, az Android verziót és az app verzióját, különben tippelek.
 
 ## Verziók
 
-Részletes kiadási jegyzet minden verzióhoz:
-**https://github.com/Bali0531-RC/NHNK/releases**
+Részletes kiadási jegyzet: **https://github.com/Bali0531-RC/NHNK/releases**. Röviden:
 
-### 1.2
+**1.2**: kezdőképernyő-widget, statisztika és tárgyoldalak, közelgő lista, átlagszámító, keresés az üzenetek közt. Az offline mód is elkezdett működni: korábban a hálózat elvesztése kiürítette a listákat, mert rosszul hasonlítottam össze a `connectivity_plus` visszatérési értékét, így az app soha nem jött rá, hogy offline van. Javítva a 2FA is, ahol az ablak mellé koppintás megszakította azt a bejelentkezést, amit az ablak épp befejezni akart.
 
-Kezdőképernyő-widget a mai órákkal. Offline módban megmaradnak a legutóbb letöltött
-adatok: korábban a hálózat elvesztése kiürítette a listákat, mert az app a
-`connectivity_plus` visszatérési értékét rosszul hasonlította össze, és sosem tudta,
-hogy offline van. Átlagszámító, keresés az üzenetek között, és a belépés előtt megjelenő
-tájékoztató a nem hivatalos státuszról. A 2FA ablak mellé koppintás többé nem szakítja
-félbe a bejelentkezést.
+**1.1**: háttérértesítés jegyekről és üzenetekről, `.ics` export, szerverátváltás. A „vissza a mai hétre" gomb átkerült a hétváltó sávba, mert lebegő gombként pont az alsó menüsoron ült.
 
-### 1.1
-
-Értesítés új jegyről és új üzenetről, a háttérben is, állítható gyakorisággal. Órarend
-exportálása `.ics` fájlba. Több kiszolgálós intézményeknél automatikus átváltás, ha az
-elsődleges szerver nem válaszol. A „vissza a mai hétre" gomb átkerült a hétváltó sávba,
-mert lebegő gombként rátakart az alsó menüsorra.
-
-### 1.0
-
-Munkamenet-kezelés javítása: a token-frissítés eddig sosem működött, ezért a lejáró
-munkamenet kiürítette az adatokat. Az órarend a Neptun naptár-exportjából is betölthető,
-így munkamenet nélkül is látszik. A 2FA titkos kulcs elmenthető az automatikus
-újrabejelentkezéshez. Saját aláírókulcs, hogy a frissítések telepíthetők legyenek a
-korábbi verzióra. A Play-es változatból kikerültek azok a jogosultságok, amelyeket
-függőségek húztak be, és amelyeket az app nem használ.
-
-## Származás
-
-Ez a projekt a [Neptun 2](https://github.com/domedav/Neptun-2) (domedav) forkja, a
-[Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (zoligamer) forkon
-keresztül. MIT licenc, a korábbi szerzői jogi megjelölések megtartásával.
+**1.0**: főleg javítás. A tokenfrissítés soha nem működött, így a lejáró munkamenet egyszerűen kiürítette az adatokat. Az órarend a naptárexportból is betölthető lett, így munkamenet nélkül is látszik. Bekerült egy rendes aláírókulcs, hogy a frissítések rátelepüljenek a korábbi verzióra, és kikerültek a Play-es buildből azok a jogosultságok, amiket a függőségek húztak be.
 
 ## Fejlesztés
 
-Két build flavor van, mert a Google Play tiltja az önmagukat frissítő alkalmazásokat:
+Két flavor, a fenti Play-szabály miatt:
 
 | Flavor | Terítés | Beépített frissítő | `REQUEST_INSTALL_PACKAGES` |
 | --- | --- | --- | --- |
@@ -309,22 +248,21 @@ flutter build appbundle --release \
   --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
 ```
 
-A `--dart-define` és a `--flavor` mindig együtt járjon: a flavor a manifest jogosultságát
-dönti el, a dart-define pedig a Dart oldali frissítőt kapcsolja ki.
+A `--flavor` és a `--dart-define` mindig együtt megy. A flavor a manifest jogosultságát dönti el, a dart-define a Dart oldali frissítőt kapcsolja ki, és ha csak az egyiket adod meg, olyan buildet kapsz, ami rossz, csak ezt majd a Play mondja meg neked.
 
-Kiadáshoz aláírókulcs kell: másold az `android/key.properties.example` fájlt
-`android/key.properties` néven, és töltsd ki. Enélkül a release build a debug kulcsot
-használja, ami nem telepíthető frissítésként a korábbi verzióra.
+Kiadáshoz aláírókulcs kell: másold az `android/key.properties.example` fájlt `android/key.properties` néven és töltsd ki. Enélkül a release build szó nélkül a debug kulcsot használja, ami nem telepíthető rá a korábbi verzióra.
 
-### Intézmények
+Tesztek:
 
-Az intézménylistát a `universityNameUrlPairs.json` tartalmazza, és a telepített appok
-**futásidőben** töltik le a `main` ágról. Ezért csak bővíteni szabad: a `Name` és `Url`
-mezők átnevezése vagy törlése a már kint lévő verziókat is elrontaná.
+```sh
+flutter test
+```
 
-Ha egy intézmény több egyenrangú Neptun-kiszolgálót üzemeltet, azok `Fallbacks` tömbként
-vehetők fel. Ha az aktív kiszolgáló nem válaszol, az app átvált a következőre, és a
-mentett belépési adatokkal újra bejelentkezik — a munkamenet ugyanis kiszolgálónként szól.
+### Új intézmény felvétele
+
+A lista a `universityNameUrlPairs.json`-ban van, és a telepített appok **futásidőben** húzzák le a `main` ágról. Ezért csak bővíteni szabad. A `Name` és `Url` mezők átnevezése vagy törlése minden kint lévő példányt elront, azokat is, amiket soha senki nem fog frissíteni.
+
+Ha egy intézmény több egyenrangú Neptun-szervert üzemeltet, a tartalékok a `Fallbacks` tömbbe mennek. Ha az aktív nem válaszol, az app átvált a következőre, és a mentett adatokkal újra belép, mert a munkamenet szerverenként szól és nem vihető át.
 
 ```jsonc
 {
@@ -334,18 +272,14 @@ mentett belépési adatokkal újra bejelentkezik — a munkamenet ugyanis kiszol
 }
 ```
 
-Új kiszolgáló felvétele előtt érdemes ellenőrizni, hogy tényleg a mobil API válaszol-e
-rajta, és nem a webes felület: a `/api/Account/Authenticate` címre küldött GET kérésre
-`405`-tel és JSON-nal kell válaszolnia.
+Mielőtt felveszel egy szervert, ellenőrizd, hogy tényleg a mobil API válaszol rajta és nem a webes felület. Küldj egy GET kérést a `/api/Account/Authenticate` címre: `405`-öt és JSON-t kell visszakapnod. Ha mást kapsz, a weboldalt találtad meg.
 
-### Tesztek
+## Származás
 
-```sh
-flutter test
-```
+A [Neptun 2](https://github.com/domedav/Neptun-2) (domedav) forkja, a [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (zoligamer) forkján keresztül, aki az eredeti leállása után áthozta a Neptun új API-jára. MIT licenc, a korábbi szerzői jogi megjelölések maradnak.
 
 ## Licenc
 
-MIT — lásd a [LICENSE](LICENSE) fájlt.
+MIT, lásd a [LICENSE](LICENSE) fájlt.
 
 </details>
