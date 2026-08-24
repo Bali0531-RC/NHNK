@@ -1,0 +1,3 @@
+[submodule "nhnk-web"]
+	path = nhnk-web
+	url = https://github.com/Bali0531-RC/NHNK-web.git
