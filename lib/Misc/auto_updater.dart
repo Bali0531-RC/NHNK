@@ -11,6 +11,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../storage.dart'; // A getInt és saveInt miatt kell
 import '../colors.dart';
+import '../language.dart';
+
+String _ut(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
 
 class AppUpdater {
   // Must track this fork: upstream releases are signed with a different key and
@@ -76,12 +79,15 @@ class AppUpdater {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.getTheme().rootBackground,
-        title: Text("Frissítés elérhető!", style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
-        content: Text("Az alkalmazás új verziója (v$version) letölthető. Szeretnéd most telepíteni?", style: TextStyle(color: AppColors.getTheme().textColor)),
+        title: Text(_ut("Frissítés elérhető!", "Update available"), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.bold)),
+        content: Text(
+          _ut("Az alkalmazás új verziója (v$version) letölthető. Szeretnéd most telepíteni?",
+              "A new version (v$version) is ready to download. Install it now?"),
+          style: TextStyle(color: AppColors.getTheme().textColor)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text("Később", style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6)))
+              child: Text(_ut("Később", "Later"), style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6)))
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -89,7 +95,7 @@ class AppUpdater {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Igen", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(_ut("Igen", "Yes"), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -177,9 +183,9 @@ class _DownloadProgressDialog extends StatelessWidget {
         children: [
           CircularProgressIndicator(color: AppColors.getTheme().currentClassGreen),
           const SizedBox(height: 20),
-          Text("Frissítés letöltése folyamatban...", style: TextStyle(color: AppColors.getTheme().textColor)),
+          Text(_ut("Frissítés letöltése folyamatban...", "Downloading the update..."), style: TextStyle(color: AppColors.getTheme().textColor)),
           const SizedBox(height: 10),
-          Text("Kérlek, ne zárd be az alkalmazást.", style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6), fontSize: 12)),
+          Text(_ut("Kérlek, ne zárd be az alkalmazást.", "Please keep the app open."), style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.6), fontSize: 12)),
         ],
       ),
     );

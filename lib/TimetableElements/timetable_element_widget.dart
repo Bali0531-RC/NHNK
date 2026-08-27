@@ -10,6 +10,8 @@ import '../haptics.dart';
 
 typedef Callback = Future<void> Function();
 
+String _tt(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
+
 class TimetableCurrentlySelected{
   static api.CalendarEntry? entry;
 }
@@ -134,11 +136,11 @@ class TimetableElementWidget extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Tárgy: ${entry.location}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                              Text(_tt('Tárgy: ', 'Subject: ') + entry.location, style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                               const SizedBox(height: 10),
-                              Text("Típus: ${snapshot.data ?? 'Ismeretlen'}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                              Text(_tt('Típus: ', 'Type: ') + (snapshot.data ?? _tt('Ismeretlen', 'Unknown')), style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                               const SizedBox(height: 10),
-                              Text("Eredmény: ${resSnapshot.data ?? 'Nincs még kiírva'}", style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(_tt('Eredmény: ', 'Result: ') + (resSnapshot.data ?? _tt('Nincs még kiírva', 'Not published yet')), style: TextStyle(color: AppColors.getTheme().currentClassGreen, fontSize: 16, fontWeight: FontWeight.bold)),
                             ],
                           );
                         }
@@ -148,7 +150,7 @@ class TimetableElementWidget extends StatelessWidget {
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
+                      child: Text(_tt("Bezárás", "Close"), style: TextStyle(color: AppColors.getTheme().textColor))
                   )
                 ],
               );
@@ -178,19 +180,19 @@ class TimetableElementWidget extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Terem: ${snapshot.data!['room']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                        Text(_tt('Terem: ', 'Room: ') + (snapshot.data!['room'] ?? ''), style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                         const SizedBox(height: 10),
-                        Text("Tanár: ${snapshot.data!['teacher']}", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
+                        Text(_tt('Tanár: ', 'Teacher: ') + (snapshot.data!['teacher'] ?? ''), style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 16)),
                       ],
                     );
                   }
-                  return Text("Hiba a betöltésnél.", style: TextStyle(color: AppColors.getTheme().textColor));
+                  return Text(_tt("Hiba a betöltésnél.", "Could not load the details."), style: TextStyle(color: AppColors.getTheme().textColor));
                 },
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text("Bezárás", style: TextStyle(color: AppColors.getTheme().textColor))
+                  child: Text(_tt("Bezárás", "Close"), style: TextStyle(color: AppColors.getTheme().textColor))
                 )
               ],
             );

@@ -544,6 +544,24 @@ class AppStrings{
 
   static Future<void> loadDownloadedLanguageData(BuildContext context)async{
     final downloadedSupportedLanguages = DataCache.getDownloadedSupportedLanguages();
+
+    // The downloadable packs were retired: most were only part translated, so picking
+    // one left the app in a mix of two languages. Anything still stored from before is
+    // dropped, and a user sitting on one of them goes back to their device language.
+    if(downloadedSupportedLanguages.isNotEmpty){
+      await DataCache.setDownloadedSupportedLanguages(<String>[]);
+      await DataCache.setDownloadedSupportedLanguagesData(<String>[]);
+      _downloadedSupportedLanguages = [];
+      _downloadedSupportedLanguagesFlags = [];
+      _downloadedLanguages.clear();
+
+      final selected = DataCache.getUserSelectedLanguage();
+      if(selected != null && selected >= _supportedLanguages.length){
+        await DataCache.setUserSelectedLanguage(-1);
+      }
+      return;
+    }
+
     final List<String> converted = DataCache.getDownloadedSupportedLanguagesData();
     for(int i = 0; i < downloadedSupportedLanguages.length; i++){
       LanguagePack.fromJson(downloadedSupportedLanguages[i], converted[i], ()async{

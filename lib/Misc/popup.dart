@@ -1967,7 +1967,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
         ));
         return list;
       case 9: // 2FA Mód
-        list.add(Text("Kétlépcsős azonosítás", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 22, fontWeight: FontWeight.bold)));
+        list.add(Text(AppStrings.getCurrentLangCode() == 'hu' ? "Kétlépcsős azonosítás" : "Two-factor authentication", style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 22, fontWeight: FontWeight.bold)));
         list.add(const SizedBox(height: 10));
         list.add(Text("Add meg a(z) Hitelesítő alkalmazásban generált 6 jegyű kódot!", textAlign: TextAlign.center, style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.7))));
         list.add(const SizedBox(height: 25));

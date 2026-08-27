@@ -13,6 +13,10 @@ import 'package:nhnk/language.dart';
 import '../storage.dart' as storage;
 import 'dart:developer' as debug;
 import '../storage.dart';
+
+/// The demo account's fixtures are the only thing most visitors ever see, so they
+/// follow the app language instead of staying Hungarian.
+String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
   
   class URLs{
     static const String INSTITUTIONS_URL = "https://mobilecloudservice.cloudapp.net/MobileServiceLib/MobileCloudService.svc/GetAllNeptunMobileUrls";
@@ -380,14 +384,14 @@ import '../storage.dart';
   
     static Future<List<Term>> _getTermIDs() async{
       if(storage.DataCache.getIsDemoAccount()!){
-        return <Term>[Term(70876, 'DEMO Félév')];
+        return <Term>[Term(70876, _demoText('DEMO Félév', 'DEMO Semester'))];
       }
       return getTerms();
     }
 
     static Future<List<Term>> getTerms() async{
       if(storage.DataCache.getIsDemoAccount()!){
-        return <Term>[Term(70876, 'DEMO Félév')];
+        return <Term>[Term(70876, _demoText('DEMO Félév', 'DEMO Semester'))];
       }
       final username = storage.DataCache.getUsername();
       final password = storage.DataCache.getPassword();
@@ -692,7 +696,10 @@ class CalendarRequest {
   static Future<List<CalendarEntry>> fetchUpcoming({int weeks = 8, bool force = false}) async{
     const int cacheTtlMs = 3 * 60 * 60 * 1000;
     final int now = DateTime.now().millisecondsSinceEpoch;
-    if(!force && _upcomingCache != null && now - _upcomingFetchedMs < cacheTtlMs){
+    // Demo fixtures are generated in the current language, so caching them would
+    // strand the list in whichever language it was first opened with.
+    final bool isDemo = storage.DataCache.getIsDemoAccount() ?? false;
+    if(!force && !isDemo && _upcomingCache != null && now - _upcomingFetchedMs < cacheTtlMs){
       return _upcomingCache!;
     }
 
@@ -1221,24 +1228,24 @@ class CalendarRequest {
       }
 
       return conv.json.encode({'calendarData': [
-        entry(0, 8, 0, 9, 30, 'Analízis I. (előadás)', 'E-101', 'Dr. Kovács Anna', 'DEMO-MAT101', 0),
-        entry(0, 10, 0, 11, 30, 'Programozás alapjai (gyakorlat)', 'L-204', 'Nagy Péter', 'DEMO-INF102', 0),
-        entry(1, 12, 0, 13, 30, 'Diszkrét matematika (előadás)', 'E-102', 'Dr. Szabó Béla', 'DEMO-MAT110', 0),
-        entry(2, 8, 0, 9, 30, 'Programozás alapjai (előadás)', 'E-101', 'Dr. Tóth Gábor', 'DEMO-INF102', 0),
-        entry(2, 14, 0, 15, 30, 'Szaknyelvi kommunikáció', 'N-12', 'Kiss Judit', 'DEMO-ANG201', 0),
-        entry(3, 10, 0, 11, 30, 'Számítógép-architektúrák', 'E-103', 'Dr. Varga Zsolt', 'DEMO-INF120', 0),
+        entry(0, 8, 0, 9, 30, _demoText('Analízis I. (előadás)', 'Calculus I (lecture)'), 'E-101', 'Dr. Kovács Anna', 'DEMO-MAT101', 0),
+        entry(0, 10, 0, 11, 30, _demoText('Programozás alapjai (gyakorlat)', 'Intro to Programming (lab)'), 'L-204', 'Nagy Péter', 'DEMO-INF102', 0),
+        entry(1, 12, 0, 13, 30, _demoText('Diszkrét matematika (előadás)', 'Discrete Mathematics (lecture)'), 'E-102', 'Dr. Szabó Béla', 'DEMO-MAT110', 0),
+        entry(2, 8, 0, 9, 30, _demoText('Programozás alapjai (előadás)', 'Intro to Programming (lecture)'), 'E-101', 'Dr. Tóth Gábor', 'DEMO-INF102', 0),
+        entry(2, 14, 0, 15, 30, _demoText('Szaknyelvi kommunikáció', 'Technical English'), 'N-12', 'Kiss Judit', 'DEMO-ANG201', 0),
+        entry(3, 10, 0, 11, 30, _demoText('Számítógép-architektúrák', 'Computer Architecture'), 'E-103', 'Dr. Varga Zsolt', 'DEMO-INF120', 0),
         // Dated items are spread across the weeks so the upcoming list has something
         // to show rather than the same exam repeating every week.
         if(weekIndex == 0)
-          entry(4, 9, 0, 11, 0, 'Analízis I. vizsga', 'A-201', 'Dr. Kovács Anna', 'DEMO-MAT101', 1),
+          entry(4, 9, 0, 11, 0, _demoText('Analízis I. vizsga', 'Calculus I exam'), 'A-201', 'Dr. Kovács Anna', 'DEMO-MAT101', 1),
         if(weekIndex == 0)
-          entry(2, 23, 59, 23, 59, 'Beadandó: Programozás alapjai', '-', 'Nagy Péter', 'DEMO-INF102', 2),
+          entry(2, 23, 59, 23, 59, _demoText('Beadandó: Programozás alapjai', 'Assignment: Intro to Programming'), '-', 'Nagy Péter', 'DEMO-INF102', 2),
         if(weekIndex == 1)
-          entry(1, 23, 59, 23, 59, 'Zárthelyi dolgozat beadás', '-', 'Dr. Szabó Béla', 'DEMO-MAT110', 2),
+          entry(1, 23, 59, 23, 59, _demoText('Zárthelyi dolgozat beadás', 'Midterm paper submission'), '-', 'Dr. Szabó Béla', 'DEMO-MAT110', 2),
         if(weekIndex == 2)
-          entry(2, 10, 0, 12, 0, 'Diszkrét matematika vizsga', 'A-105', 'Dr. Szabó Béla', 'DEMO-MAT110', 1),
+          entry(2, 10, 0, 12, 0, _demoText('Diszkrét matematika vizsga', 'Discrete Mathematics exam'), 'A-105', 'Dr. Szabó Béla', 'DEMO-MAT110', 1),
         if(weekIndex == 4)
-          entry(3, 14, 0, 16, 0, 'Számítógép-architektúrák vizsga', 'A-201', 'Dr. Varga Zsolt', 'DEMO-INF120', 1),
+          entry(3, 14, 0, 16, 0, _demoText('Számítógép-architektúrák vizsga', 'Computer Architecture exam'), 'A-201', 'Dr. Varga Zsolt', 'DEMO-INF120', 1),
       ]});
     }
 
@@ -1362,42 +1369,40 @@ class MarkbookRequest{
   static List<SemesterResult> _demoHistory(){
     return <SemesterResult>[
       SemesterResult('d1', '2023/24/1', [
-        Subject(true, 5, 'DEMO Analízis I.', 0, 3, 0),
-        Subject(true, 5, 'DEMO Programozás I.', 0, 4, 0),
-        Subject(true, 4, 'DEMO Diszkrét matematika', 0, 3, 0),
-        Subject(true, 3, 'DEMO Számítógép architektúrák', 0, 4, 0),
+        Subject(true, 5, _demoText('DEMO Analízis I.', 'DEMO Calculus I'), 0, 3, 0),
+        Subject(true, 5, _demoText('DEMO Programozás I.', 'DEMO Programming I'), 0, 4, 0),
+        Subject(true, 4, _demoText('DEMO Diszkrét matematika', 'DEMO Discrete Mathematics'), 0, 3, 0),
+        Subject(true, 3, _demoText('DEMO Számítógép architektúrák', 'DEMO Computer Architecture'), 0, 4, 0),
       ]),
       SemesterResult('d2', '2023/24/2', [
-        Subject(true, 5, 'DEMO Analízis II.', 0, 4, 0),
-        Subject(true, 5, 'DEMO Programozás II.', 0, 5, 0),
-        Subject(true, 4, 'DEMO Adatbázisok', 0, 4, 0),
-        Subject(true, 3, 'DEMO Operációs rendszerek', 0, 3, 0),
+        Subject(true, 5, _demoText('DEMO Analízis II.', 'DEMO Calculus II'), 0, 4, 0),
+        Subject(true, 5, _demoText('DEMO Programozás II.', 'DEMO Programming II'), 0, 5, 0),
+        Subject(true, 4, _demoText('DEMO Adatbázisok', 'DEMO Databases'), 0, 4, 0),
+        Subject(true, 3, _demoText('DEMO Operációs rendszerek', 'DEMO Operating Systems'), 0, 3, 0),
       ]),
       SemesterResult('d3', '2024/25/1', [
-        Subject(true, 5, 'DEMO Algoritmusok', 0, 5, 0),
-        Subject(true, 5, 'DEMO Hálózatok', 0, 4, 0),
-        Subject(true, 4, 'DEMO Szoftvertechnológia', 0, 5, 0),
-        Subject(true, 3, 'DEMO Valószínűségszámítás', 0, 4, 0),
+        Subject(true, 5, _demoText('DEMO Algoritmusok', 'DEMO Algorithms'), 0, 5, 0),
+        Subject(true, 5, _demoText('DEMO Hálózatok', 'DEMO Networks'), 0, 4, 0),
+        Subject(true, 4, _demoText('DEMO Szoftvertechnológia', 'DEMO Software Engineering'), 0, 5, 0),
+        Subject(true, 3, _demoText('DEMO Valószínűségszámítás', 'DEMO Probability'), 0, 4, 0),
       ]),
-      SemesterResult('d4', '2024/25/2', [
-        Subject(false, 5, 'Analízis I.', 0, 0, 0),
-        Subject(false, 5, 'Programozás alapjai', 1, 0, 0),
-        Subject(true, 4, 'Diszkrét matematika', 2, 4, 0),
-        Subject(true, 3, 'Számítógép-architektúrák', 3, 5, 0),
-        Subject(true, 2, 'Szaknyelvi kommunikáció', 4, 0, 0),
-      ]),
+      SemesterResult('d4', '2024/25/2', _demoCurrentSubjects()),
     ];
   }
 
+  /// Shared by the markbook and the newest semester so a subject opened from either
+  /// place lines up with the timetable.
+  static List<Subject> _demoCurrentSubjects() => <Subject>[
+    Subject(false, 5, _demoText('Analízis I.', 'Calculus I'), 0, 0, 0),
+    Subject(false, 5, _demoText('Programozás alapjai', 'Intro to Programming'), 1, 0, 0),
+    Subject(true, 4, _demoText('Diszkrét matematika', 'Discrete Mathematics'), 2, 4, 0),
+    Subject(true, 3, _demoText('Számítógép-architektúrák', 'Computer Architecture'), 3, 5, 0),
+    Subject(true, 2, _demoText('Szaknyelvi kommunikáció', 'Technical English'), 4, 0, 0),
+  ];
+
   static Future<List<Subject>?> getMarkbookSubjects() async{
     if(storage.DataCache.getIsDemoAccount()!){
-      return <Subject>[
-        Subject(false, 5, 'Analízis I.', 0, 0, 0),
-        Subject(false, 5, 'Programozás alapjai', 1, 0, 0),
-        Subject(true, 4, 'Diszkrét matematika', 2, 4, 0),
-        Subject(true, 3, 'Számítógép-architektúrák', 3, 5, 0),
-        Subject(true, 2, 'Szaknyelvi kommunikáció', 4, 0, 0),
-      ];
+      return _demoCurrentSubjects();
     }
     else if(storage.DataCache.getHasICSFile() ?? false){ return []; }
 
@@ -1568,9 +1573,9 @@ class CashinRequest{
     if(storage.DataCache.getIsDemoAccount()!){
       final now = DateTime.now();
       return <CashinEntry>[
-        CashinEntry(10000, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, 'DEMO befizetés 1', "1", 'aktív'),
-        CashinEntry(70, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, 'DEMO befizetés 2', "2", 'teljesített'),
-        CashinEntry(5000, DateTime(now.year, now.month - 1).millisecondsSinceEpoch, 'DEMO befizetés 3', "3", 'törölt'),
+        CashinEntry(10000, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, _demoText('DEMO befizetés 1', 'DEMO payment 1'), "1", 'aktív'),
+        CashinEntry(70, DateTime(now.year + 1, now.month).millisecondsSinceEpoch, _demoText('DEMO befizetés 2', 'DEMO payment 2'), "2", 'teljesített'),
+        CashinEntry(5000, DateTime(now.year, now.month - 1).millisecondsSinceEpoch, _demoText('DEMO befizetés 3', 'DEMO payment 3'), "3", 'törölt'),
       ];
     }
     else if(storage.DataCache.getHasICSFile() ?? false){
@@ -1650,8 +1655,8 @@ class PeriodsRequest{
     if(storage.DataCache.getIsDemoAccount()!){
       final now = DateTime.now();
       return <PeriodEntry>[
-        PeriodEntry('lejárt időszak', DateTime(now.year - 1, now.month, now.day - 2).millisecondsSinceEpoch, DateTime(now.year - 1, now.month, now.day + 1).millisecondsSinceEpoch, 1),
-        PeriodEntry('bejelentkezési időszak', DateTime(now.year, now.month, now.day - 2).millisecondsSinceEpoch, DateTime(now.year, now.month, now.day +7).millisecondsSinceEpoch, 1),
+        PeriodEntry(_demoText('lejárt időszak', 'expired period'), DateTime(now.year - 1, now.month, now.day - 2).millisecondsSinceEpoch, DateTime(now.year - 1, now.month, now.day + 1).millisecondsSinceEpoch, 1),
+        PeriodEntry(_demoText('bejelentkezési időszak', 'enrolment period'), DateTime(now.year, now.month, now.day - 2).millisecondsSinceEpoch, DateTime(now.year, now.month, now.day +7).millisecondsSinceEpoch, 1),
       ];
     }
     else if(storage.DataCache.getHasICSFile() ?? false){
@@ -1775,8 +1780,8 @@ class MailRequest{
     if(storage.DataCache.getIsDemoAccount()!){
       final now = DateTime.now();
       return <MailEntry>[
-        MailEntry('Tárgy', 'Szöveg', 'DEMO feladó', now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch, false, "0"),
-        MailEntry('DEMO', 'Demo Demo Demo', 'DEMO feladó', now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch, false, "1"),
+        MailEntry(_demoText('Tárgy', 'Subject line'), _demoText('Szöveg', 'Message body'), _demoText('DEMO feladó', 'DEMO sender'), now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch, false, "0"),
+        MailEntry('DEMO', 'Demo Demo Demo', _demoText('DEMO feladó', 'DEMO sender'), now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch, false, "1"),
       ];
     }
     else if(storage.DataCache.getHasICSFile() ?? false){
@@ -2149,6 +2154,18 @@ class CashinEntry{
 
   bool get isCancelled => status.toLowerCase() == 'törölt';
 
+  /// Neptun only ever answers in Hungarian, so the raw status is kept for the
+  /// logic above and translated here purely for display.
+  String get statusLabel{
+    switch(status.toLowerCase().trim()){
+      case 'aktív': return _demoText('aktív', 'active');
+      case 'teljesített': return _demoText('teljesített', 'paid');
+      case 'törölt': return _demoText('törölt', 'cancelled');
+      case 'pénzügyileg igazolt': return _demoText('pénzügyileg igazolt', 'financially confirmed');
+      default: return status;
+    }
+  }
+
   @override
   String toString() {
     return '$ammount\n$dueDateMs\n$comment\n$completed\n$ID\n$status';
@@ -2238,30 +2255,39 @@ class CashinEntry{
   
       switch (name.toLowerCase().trim()){
         case 'előzetes tárgyjelentkezés':
+        case 'preliminary course registration':
           type = PeriodType.timetableRegistration;
           break;
         case 'jegybeírási időszak':
+        case 'grade entry period':
           type = PeriodType.gradingTime;
           break;
         case 'bejelentkezési időszak':
+        case 'enrolment period':
           type = PeriodType.loginTime;
           break;
         case 'megajánlott jegy beírási időszak':
+        case 'offered grade entry period':
           type = PeriodType.pregivenGradingAccepting;
           break;
         case 'végleges tárgyjelentkezés':
+        case 'final course registration':
           type = PeriodType.timetableFinalization;
           break;
         case 'kurzusjelentkezési időszak':
+        case 'course registration period':
           type = PeriodType.coursesRegistration;
           break;
         case 'szorgalmi időszak':
+        case 'teaching period':
           type = PeriodType.nerdTime;
           break;
         case 'vizsgajelentkezési időszak':
+        case 'exam registration period':
           type = PeriodType.examTime;
           break;
         case 'beiratkozási időszak':
+        case 'registration period':
           type = PeriodType.signinTime;
           break;
         default:

@@ -1177,7 +1177,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         continue;
       }
       isEmpty = false;
-      paymentsList.add(PaymentElementWidget(ammount: item.ammount, dueDateMs: item.dueDateMs, ID: item.ID, name: item.comment, completed: item.completed, status: item.status));
+      paymentsList.add(PaymentElementWidget(ammount: item.ammount, dueDateMs: item.dueDateMs, ID: item.ID, name: item.comment, completed: item.completed, status: item.statusLabel, isCancelled: item.isCancelled));
       if(item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0){
         _paymentsNotificationList.add(item);
       }
@@ -1576,7 +1576,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(!force && hasCachedMarkbook && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!force && hasCachedMarkbook && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
       await _loadMarkbookFromCache();
       return;
     }
@@ -1617,7 +1617,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(!force && hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!force && hasCachedPayments && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
       await _loadPaymentsFromCache();
       return;
     }
@@ -1659,7 +1659,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(!force && hasCachedPeriods && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!force && hasCachedPeriods && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
       await _loadPeriodsFromCache();
       return;
     }

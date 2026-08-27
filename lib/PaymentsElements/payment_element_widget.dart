@@ -12,8 +12,9 @@ class PaymentElementWidget extends StatelessWidget{
   final String name;
   final bool completed;
   final String status;
+  final bool isCancelled;
 
-  const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed, this.status = ''});
+  const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed, this.status = '', this.isCancelled = false});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,6 @@ class PaymentElementWidget extends StatelessWidget{
     final dueDate = DateTime.fromMillisecondsSinceEpoch(dueDateMs);
     final isNonTimed = dueDateMs <= 0;
     final isMissed = dueDateMs < nowMs && !isNonTimed && !completed;
-    final isCancelled = status.toLowerCase() == 'törölt';
 
 
     final cardColor = isCancelled ? AppColors.getTheme().textColor.withValues(alpha: 0.55) :
