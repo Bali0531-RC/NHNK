@@ -6,14 +6,19 @@ import 'package:nhnk/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
 import 'language.dart';
+import 'startup_trace.dart';
 
 void main() {
   //DataCache.dataWipeNoKeep();
+  StartupTrace.begin();
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  StartupTrace.mark('binding ready');
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   DataCache.loadThemeOnly().whenComplete((){
+    StartupTrace.mark('loadThemeOnly');
     AppColors.initialize();
     AppStrings.initialize();
+    StartupTrace.mark('colors + strings');
     final app = const NhnkApp();
     final themeNotifier = ThemeNotifier(ThemeNotifier._initialTheme(AppColors.getTheme().basedOnDark));
     runApp(
@@ -22,6 +27,7 @@ void main() {
         child: app,
       ),
     );
+    StartupTrace.mark('runApp');
     WidgetsBinding.instance.addObserver(app);
   });
 }

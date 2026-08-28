@@ -23,6 +23,7 @@ import '../grade_alerts.dart';
 import '../haptics.dart';
 import '../mail_alerts.dart';
 import '../storage.dart' as storage;
+import '../startup_trace.dart';
 import '../TimetableElements/timetable_element_widget.dart' as t_table;
 import '../MarkbookElements/markbook_element_widget.dart' as mbook;
 import '../PeriodsElements/periods_element_widget.dart' as priods;
@@ -185,6 +186,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   void initState() {
     super.initState();
 
+    StartupTrace.mark('HomePage initState');
     FlutterNativeSplash.remove();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarIconBrightness: AppColors.isDarktheme() ? Brightness.light : Brightness.dark,
@@ -216,9 +218,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
         final String timeZone = timeZoneInfo.identifier;
         tz.setLocalLocation(tz.getLocation(timeZone));
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        AppUpdater.checkAndInstallUpdate(context);
       });
     }
 
@@ -342,6 +341,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }).whenComplete((){
       Future.delayed(Duration.zero, () async{
         await fetchCalendar();
+        StartupTrace.mark('fetchCalendar');
       }).then((value) async {
         if(storage.DataCache.getNeedExamNotifications()!){
           Future.delayed(Duration.zero,() async{
@@ -352,6 +352,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           });
         }
         setupCalendar(true);
+        StartupTrace.finish('timetable visible');
       });
 
       Future.delayed(Duration.zero, () async{

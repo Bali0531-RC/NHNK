@@ -7,6 +7,7 @@ import 'package:nhnk/haptics.dart';
 import 'package:nhnk/language.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../storage.dart';
+import '../startup_trace.dart';
 import 'disclosure_page.dart';
 import 'main_page.dart' as main_page;
 import 'setup_page.dart' as setup_page;
@@ -27,6 +28,7 @@ class _SplitterState extends State<Splitter>{
     ));
 
     DataCache.loadData().then((value) async {
+      StartupTrace.mark('loadData');
       AppHaptics.initialise();
       if(((await getInt('NextFirstWeekCacheTime')) ?? 0) < DateTime.now().millisecondsSinceEpoch){
         DataCache.setHasCachedFirstWeekEpoch(0);
@@ -48,10 +50,12 @@ class _SplitterState extends State<Splitter>{
       final flag2 = DataCache.getIsInstalledFromGPlay(excludeDefaultState: false);
       if(flag2 == 0){
         final pinfo = await PackageInfo.fromPlatform();
+        StartupTrace.mark('PackageInfo.fromPlatform');
         DataCache.setIsInstalledFromGPlay(pinfo.installerStore == 'com.android.vending' ? 2 : 1);
       }
     }).then((value)async{
       await AppStrings.loadDownloadedLanguageData(context);
+      StartupTrace.mark('loadDownloadedLanguageData');
       Future.delayed(Duration.zero,()async{
         await api.Language.getAllLanguages();
       });
@@ -80,6 +84,7 @@ class _SplitterState extends State<Splitter>{
         return;
       }
       if (DataCache.getHasLogin() != null && DataCache.getHasLogin()!) {
+        StartupTrace.mark('push HomePage');
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const main_page.HomePage()),

@@ -11,6 +11,7 @@ import 'package:nhnk/Misc/clickable_text_span.dart';
 import 'package:nhnk/colors.dart';
 import 'package:nhnk/language.dart';
 import '../storage.dart' as storage;
+import '../startup_trace.dart';
 import 'dart:developer' as debug;
 import '../storage.dart';
 
@@ -215,13 +216,16 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
       }
       request.body = requestBody;
 
+      final sw = Stopwatch()..start();
       try {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
+        NetTrace.record(url.path, sw.elapsedMilliseconds);
         return response;
       } catch (e) {
         client.close();
+        NetTrace.record('${url.path} (failed)', sw.elapsedMilliseconds);
         if(!isRetry && await InstituteFailover.trySwitch()){
           final rebuilt = InstituteFailover.rebuild(url);
           final refreshedToken = storage.DataCache.getAccessToken();
@@ -319,10 +323,12 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
       request.headers['Authorization'] = 'Bearer $bearerToken';
       request.headers['Content-Type'] = 'application/json';
 
+      final sw = Stopwatch()..start();
       try {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
+        NetTrace.record(url.path, sw.elapsedMilliseconds);
 
         // Ha a token lejárt:
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
@@ -705,6 +711,8 @@ class CalendarRequest {
 
     final out = <CalendarEntry>[];
     final seen = <String>{};
+    NetTrace.reset('fetchUpcoming start');
+    final swUpcoming = Stopwatch()..start();
 
     void take(Iterable<CalendarEntry> entries){
       for(final e in entries){
@@ -722,14 +730,29 @@ class CalendarRequest {
     else{
       final username = storage.DataCache.getUsername() ?? '';
       final password = storage.DataCache.getPassword() ?? '';
-      // weekOffset 1 is the current week.
-      for(int w = 1; w <= weeks; w++){
+
+      Future<List<CalendarEntry>> fetchWeek(int w) async {
         try{
           final raw = await makeCalendarRequest(getCalendarOneWeekJSON(username, password, w));
-          take(getCalendarEntriesFromJSON(raw));
+          return getCalendarEntriesFromJSON(raw);
         }
         catch(e){
           debug.log('Upcoming: a $w. hét lekérése nem sikerült: $e');
+          return const <CalendarEntry>[];
+        }
+      }
+
+      // weekOffset 1 is the current week. The weeks do not depend on each other, so
+      // they go out in parallel batches. Sequentially one slow week stalled the whole
+      // screen: a measured run spent 3.2 s of its 4.0 s waiting on a single request.
+      const int batchSize = 4;
+      for(int start = 1; start <= weeks; start += batchSize){
+        final int end = start + batchSize - 1 > weeks ? weeks : start + batchSize - 1;
+        final batch = await Future.wait([
+          for(int w = start; w <= end; w++) fetchWeek(w),
+        ]);
+        for(final entries in batch){
+          take(entries);
         }
       }
     }
@@ -737,6 +760,7 @@ class CalendarRequest {
     out.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
     _upcomingCache = out;
     _upcomingFetchedMs = now;
+    NetTrace.reset('fetchUpcoming done in ${swUpcoming.elapsedMilliseconds} ms');
     return out;
   }
 

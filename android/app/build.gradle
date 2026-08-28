@@ -112,6 +112,11 @@ android {
             signingConfig signingConfigs.debug
             debuggable true
         }
+        profile {
+            // Release-signed so an instrumented profile build installs over an existing
+            // release install instead of failing on INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
+        }
     }
 
     applicationVariants.all { variant ->
