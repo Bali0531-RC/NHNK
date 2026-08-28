@@ -18,10 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned rather than tracking stable: 3.47 raised the minimum Gradle and AGP
+      # versions, so a release would break on its own whenever Flutter shipped,
+      # with no change on our side. Bump this deliberately after testing locally.
       - name: Setup Flutter SDK
         uses: flutter-actions/setup-flutter@v3
         with:
-          channel: stable
+          version: 3.44.8
 
       - name: Install dependencies
         run: flutter pub get
@@ -64,7 +67,7 @@ jobs:
       - name: Setup Flutter SDK
         uses: flutter-actions/setup-flutter@v3
         with:
-          channel: stable
+          version: 3.44.8
 
       - name: Install dependencies
         run: flutter pub get
