@@ -18,6 +18,17 @@ import '../storage.dart';
 /// The demo account's fixtures are the only thing most visitors ever see, so they
 /// follow the app language instead of staying Hungarian.
 String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
+
+/// The language, theme and version manifests are fetched from GitHub rather than
+/// Neptun. Every caller already treats null as "not available", but with no network
+/// these threw out of fire-and-forget startup tasks instead of returning it.
+Future<http.Response?> _tryGet(Uri url) async {
+  try {
+    return await http.get(url);
+  } catch (_) {
+    return null;
+  }
+}
   
   class URLs{
     static const String INSTITUTIONS_URL = "https://mobilecloudservice.cloudapp.net/MobileServiceLib/MobileCloudService.svc/GetAllNeptunMobileUrls";
@@ -104,7 +115,7 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
 
       final current = storage.DataCache.getInstituteUrl();
       final username = storage.DataCache.getUsername();
-      final password = storage.DataCache.getPassword();
+      final password = await storage.DataCache.getPassword();
 
       if(current == null || current.isEmpty) return false;
       if(username == null || username.isEmpty || password == null || password.isEmpty) return false;
@@ -228,8 +239,8 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
         NetTrace.record('${url.path} (failed)', sw.elapsedMilliseconds);
         if(!isRetry && await InstituteFailover.trySwitch()){
           final rebuilt = InstituteFailover.rebuild(url);
-          final refreshedToken = storage.DataCache.getAccessToken();
-          final refreshedCookie = storage.DataCache.getSessionCookie();
+          final refreshedToken = await storage.DataCache.getAccessToken();
+          final refreshedCookie = await storage.DataCache.getSessionCookie();
           if(rebuilt != null){
             return postRequestRaw(
               rebuilt,
@@ -272,7 +283,7 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
         // GetNewTokens authenticates with the *access* token plus the session cookie;
         // either one alone is rejected, and no 2FA code is involved.
         final accessToken = await storage.DataCache.getAccessToken();
-        final sessionCookie = storage.DataCache.getSessionCookie();
+        final sessionCookie = await storage.DataCache.getSessionCookie();
         if (accessToken == null || accessToken.isEmpty || sessionCookie == null || sessionCookie.isEmpty) {
           return false;
         }
@@ -345,7 +356,7 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
 
             if (!refreshSuccess) {
               final username = storage.DataCache.getUsername()!;
-              final password = storage.DataCache.getPassword()!;
+              final password = (await storage.DataCache.getPassword())!;
               final baseUrl = storage.DataCache.getInstituteUrl()!;
 
               await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
@@ -400,7 +411,7 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
         return <Term>[Term(70876, _demoText('DEMO Félév', 'DEMO Semester'))];
       }
       final username = storage.DataCache.getUsername();
-      final password = storage.DataCache.getPassword();
+      final password = await storage.DataCache.getPassword();
       final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.PERIODTERMS_URL);
       final request = await _APIRequest.postRequest(url, _APIRequest.getGenericPostData(username!, password!));
 
@@ -521,7 +532,7 @@ String _demoText(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu
 
           // With a stored secret the app can answer the challenge itself, so an expired
           // session does not force the user to retype a code.
-          final secret = storage.DataCache.getTotpSecret();
+          final secret = await storage.DataCache.getTotpSecret();
           if (secret != null && secret.isNotEmpty) {
             final code = Totp.generate(secret);
             if (code != null && await submitTwoFactorCode(username, password, code)) {
@@ -694,6 +705,37 @@ class CalendarRequest {
   static List<CalendarEntry>? _upcomingCache;
   static int _upcomingFetchedMs = 0;
 
+  static const String _upcomingKey = 'UpcomingCacheEntries';
+  static const String _upcomingTimeKey = 'UpcomingCacheTime';
+
+  /// Restores the last Upcoming result if it is still inside [ttlMs].
+  ///
+  /// Reuses the newline format [CalendarEntry.toString] already writes for the
+  /// weekly calendar cache rather than inventing a second one.
+  static Future<List<CalendarEntry>?> _readPersistedUpcoming(int ttlMs) async{
+    final stampedAt = await storage.getInt(_upcomingTimeKey);
+    if(stampedAt == null) return null;
+    if(DateTime.now().millisecondsSinceEpoch - stampedAt > ttlMs) return null;
+
+    final raw = await storage.getStringList(_upcomingKey);
+    if(raw == null) return null;
+
+    final restored = <CalendarEntry>[];
+    for(final line in raw){
+      try{
+        restored.add(CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(line));
+      }
+      catch(_){ }
+    }
+    _upcomingFetchedMs = stampedAt;
+    return restored;
+  }
+
+  static Future<void> _writePersistedUpcoming(List<CalendarEntry> entries) async{
+    await storage.saveStringList(_upcomingKey, [for(final e in entries) e.toString()]);
+    await storage.saveInt(_upcomingTimeKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
   /// Exams and task deadlines from the weeks ahead.
   ///
   /// The calendar view only ever holds one week, so anything further out is
@@ -707,6 +749,17 @@ class CalendarRequest {
     final bool isDemo = storage.DataCache.getIsDemoAccount() ?? false;
     if(!force && !isDemo && _upcomingCache != null && now - _upcomingFetchedMs < cacheTtlMs){
       return _upcomingCache!;
+    }
+
+    // The in-memory cache dies with the process, so a cold start used to repeat all
+    // eight week requests even when the answer was minutes old.
+    if(!force && !isDemo){
+      final persisted = await _readPersistedUpcoming(cacheTtlMs);
+      if(persisted != null){
+        _upcomingCache = persisted;
+        NetTrace.reset('fetchUpcoming served from disk');
+        return persisted;
+      }
     }
 
     final out = <CalendarEntry>[];
@@ -729,7 +782,7 @@ class CalendarRequest {
     }
     else{
       final username = storage.DataCache.getUsername() ?? '';
-      final password = storage.DataCache.getPassword() ?? '';
+      final password = await storage.DataCache.getPassword() ?? '';
 
       Future<List<CalendarEntry>> fetchWeek(int w) async {
         try{
@@ -760,6 +813,7 @@ class CalendarRequest {
     out.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
     _upcomingCache = out;
     _upcomingFetchedMs = now;
+    if(!isDemo) await _writePersistedUpcoming(out);
     NetTrace.reset('fetchUpcoming done in ${swUpcoming.elapsedMilliseconds} ms');
     return out;
   }
@@ -779,7 +833,7 @@ class CalendarRequest {
 
     try {
       // The export link carries its own token, so it keeps working with no session at all.
-      String? icsUrl = storage.DataCache.getIcsExportUrl();
+      String? icsUrl = await storage.DataCache.getIcsExportUrl();
 
       if (icsUrl == null || icsUrl.isEmpty) {
         final token = await storage.DataCache.getAccessToken();
@@ -999,7 +1053,7 @@ class CalendarRequest {
           bool reauthed = await _APIRequest.tryTokenRefresh();
           if (!reauthed) {
             final username = storage.DataCache.getUsername();
-            final password = storage.DataCache.getPassword();
+            final password = await storage.DataCache.getPassword();
             if (username == null || username.isEmpty || password == null || password.isEmpty) {
               return await fromIcsOnly();
             }
@@ -1326,28 +1380,49 @@ class MarkbookRequest{
       if(termsDecoded['data'] == null || termsDecoded['data'].isEmpty) return [];
 
       final terms = (termsDecoded['data'] as List<dynamic>);
-      final results = <SemesterResult>[];
+      final lastIndex = terms.length - 1;
+      String termIdAt(int i) => terms[i]['value'].toString();
 
+      // Terms do not depend on each other. The cached ones are read together, then
+      // whatever is missing is fetched in small parallel batches instead of walking
+      // the whole history one request chain at a time.
+      final cached = await Future.wait([
+        for(int t = 0; t < terms.length; t++)
+          (!force && t != lastIndex)
+              ? _readCachedTerm(termIdAt(t))
+              : Future<SemesterResult?>.value(null),
+      ]);
+
+      final results = List<SemesterResult?>.filled(terms.length, null);
+      final missing = <int>[];
       for(int t = 0; t < terms.length; t++){
-        final termId = terms[t]['value'].toString();
-        final termName = (terms[t]['text'] ?? termId).toString();
-        final isNewest = t == terms.length - 1;
-
-        // Only the term still in progress is allowed to go stale.
-        if(!force && !isNewest){
-          final cached = await _readCachedTerm(termId);
-          if(cached != null){
-            results.add(cached);
-            continue;
-          }
+        if(cached[t] != null){
+          results[t] = cached[t];
+          continue;
         }
-
-        final subjects = await _fetchTermSubjects(baseUrl, token, termId);
-        final result = SemesterResult(termId, termName, subjects);
-        results.add(result);
-        if(!isNewest) await _writeCachedTerm(result);
+        missing.add(t);
       }
-      return results;
+
+      // Each term already fans out to six subject requests internally, so this stays
+      // deliberately small: two terms at a time is twelve in flight at the peak.
+      const int termBatchSize = 2;
+      for(int start = 0; start < missing.length; start += termBatchSize){
+        final end = start + termBatchSize > missing.length ? missing.length : start + termBatchSize;
+        final slice = missing.sublist(start, end);
+        final fetched = await Future.wait([
+          for(final t in slice) _fetchTermSubjects(baseUrl, token, termIdAt(t)),
+        ]);
+        for(int i = 0; i < slice.length; i++){
+          final t = slice[i];
+          final termId = termIdAt(t);
+          final termName = (terms[t]['text'] ?? termId).toString();
+          final result = SemesterResult(termId, termName, fetched[i]);
+          results[t] = result;
+          if(t != lastIndex) await _writeCachedTerm(result);
+        }
+      }
+
+      return results.whereType<SemesterResult>().toList();
     }
     catch(e){
       debug.log("Hiba a félévek lekérésekor: $e");
@@ -1379,15 +1454,32 @@ class MarkbookRequest{
     return out;
   }
 
+  // Closed terms rarely change, but grades do get amended after the fact, so the
+  // cache expires instead of living forever with no way to correct itself.
+  static const int _termCacheTtlMs = 30 * 24 * 60 * 60 * 1000;
+
   static Future<SemesterResult?> _readCachedTerm(String termId) async{
     final raw = await storage.getString('TermCache_$termId');
     if(raw == null) return null;
+
+    final stampedAt = await storage.getInt('TermCacheTime_$termId');
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if(stampedAt == null){
+      // Written before this cache had a TTL. Start its clock now rather than making
+      // every existing user refetch their whole history on upgrade.
+      await storage.saveInt('TermCacheTime_$termId', now);
+    }
+    else if(now - stampedAt > _termCacheTtlMs){
+      return null;
+    }
+
     try{ return SemesterResult.fromJson(conv.json.decode(raw)); }
     catch(_){ return null; }
   }
 
   static Future<void> _writeCachedTerm(SemesterResult result) async{
     await storage.saveString('TermCache_${result.termId}', conv.json.encode(result.toJson()));
+    await storage.saveInt('TermCacheTime_${result.termId}', DateTime.now().millisecondsSinceEpoch);
   }
 
   static List<SemesterResult> _demoHistory(){
@@ -1541,7 +1633,7 @@ class MarkbookRequest{
 
   static Future<String> _getMarkbookJSon() async{
     final username = storage.DataCache.getUsername();
-    final password = storage.DataCache.getPassword();
+    final password = await storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.MARKBOOK_URL);
     final json = '{"UserLogin":"$username","Password":"$password","CurrentPage":1,"filter":{"TermID": 0},"TotalRowCount":-1}';
     return await _APIRequest.postRequest(url, json);
@@ -1645,7 +1737,7 @@ class CashinRequest{
 
 
     final username = storage.DataCache.getUsername();
-    final password = storage.DataCache.getPassword();
+    final password = await storage.DataCache.getPassword();
     final json = '{"UserLogin":"$username","Password":"$password","TotalRowCount":-1}';
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.GETCASHIN_URL);
 
@@ -1747,7 +1839,7 @@ class PeriodsRequest{
 
   static Future<String> _getPeriodJSon(int termID) async{
     final username = storage.DataCache.getUsername();
-    final password = storage.DataCache.getPassword();
+    final password = await storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.PERIODS_URL);
     final json = '{"UserLogin":"$username","Password":"$password","PeriodTermID":$termID,"TotalRowCount":-1}';
     return await _APIRequest.postRequest(url, json);
@@ -1852,7 +1944,7 @@ class MailRequest{
 
   static Future<String> _getMailJson(int page)async{
     final username = storage.DataCache.getUsername();
-    final password = storage.DataCache.getPassword();
+    final password = await storage.DataCache.getPassword();
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.MESSAGES_URL);
     final json = '{"UserLogin":"$username","Password":"$password","CurrentPage":$page,"TotalRowCount":-1,"MessageID":0,"MessageSortEnum":0}';
     return await _APIRequest.postRequest(url, json);
@@ -1886,7 +1978,7 @@ class MailRequest{
     }
     try {
       final username = storage.DataCache.getUsername();
-      final password = storage.DataCache.getPassword();
+      final password = await storage.DataCache.getPassword();
       final baseUrl = storage.DataCache.getInstituteUrl();
       if (username == null || password == null || baseUrl == null) {
         return;
@@ -2609,9 +2701,9 @@ class CashinEntry{
     }
     static Future<AppUpdateHelper?> getAppUpdateHelper() async{
       final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/appMinimumAllowedVersion.json');
-      final response = await http.get(url);
+      final response = await _tryGet(url);
 
-      if (response.statusCode != 200) {
+      if (response == null || response.statusCode != 200) {
         return null;
       }
 
@@ -2663,8 +2755,8 @@ class CashinEntry{
       }
 
       final url = Uri.parse(langUrl);
-      final response = await http.get(url);
-      if (response.statusCode != 200) {
+      final response = await _tryGet(url);
+      if (response == null || response.statusCode != 200) {
         return null;
       }
       return LanguagePack.fromJson(neededID, response.body, (){}); // auto registers itself, as its downloaded, no need for the callback, def not invalid as it has just been downloaded
@@ -2687,9 +2779,9 @@ class CashinEntry{
         return _langMapCache;
       }
       final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/Languages/supportedLanguages.json');
-      final response = await http.get(url);
+      final response = await _tryGet(url);
 
-      if (response.statusCode != 200) {
+      if (response == null || response.statusCode != 200) {
         return null;
       }
 
@@ -2729,9 +2821,9 @@ class CashinEntry{
         return _themeMapCache;
       }
       final url = Uri.parse('https://raw.githubusercontent.com/Bali0531-RC/NHNK/refs/heads/main/Themes/supportedThemes.json');
-      final response = await http.get(url);
+      final response = await _tryGet(url);
 
-      if (response.statusCode != 200) {
+      if (response == null || response.statusCode != 200) {
         return null;
       }
 
@@ -2761,8 +2853,8 @@ class CashinEntry{
       }
 
       final url = Uri.parse(themeUrl);
-      final response = await http.get(url);
-      if (response.statusCode != 200) {
+      final response = await _tryGet(url);
+      if (response == null || response.statusCode != 200) {
         return null;
       }
       return AppPalette.fromJson(response.body, (){}); // auto registers itself, as its downloaded, no need for the callback, def not invalid as it has just been downloaded

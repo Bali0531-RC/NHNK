@@ -66,9 +66,10 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
 
   Future<List<api.CalendarEntry>> _thisWeek() async {
     try {
+      final password = await DataCache.getPassword() ?? '';
       final raw = await api.CalendarRequest.makeCalendarRequest(
         api.CalendarRequest.getCalendarOneWeekJSON(
-          DataCache.getUsername() ?? '', DataCache.getPassword() ?? '', 1,
+          DataCache.getUsername() ?? '', password, 1,
         ),
       );
       return api.CalendarRequest.getCalendarEntriesFromJSON(raw);

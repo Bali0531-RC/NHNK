@@ -503,7 +503,7 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
   
   Future<void> fetchDataFromStorage() async {
     PageDTO.username = storage.DataCache.getUsername() ?? "";
-    PageDTO.password = storage.DataCache.getPassword() ?? "";
+    PageDTO.password = await storage.DataCache.getPassword() ?? "";
   }
 
   String _snackbarMessage = "";

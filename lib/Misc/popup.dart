@@ -1995,7 +1995,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
         list.add(Divider(color: AppColors.getTheme().textColor.withValues(alpha: 0.1)));
         list.add(const SizedBox(height: 10));
         list.add(Text(
-          DataCache.getTotpSecret()?.isNotEmpty ?? false
+          DataCache.hasTotpSecret()
               ? "A titkos kulcs el van mentve, az app magától jelentkezik be."
               : "Nem akarsz többet kódot begépelni? Mentsd el a 2FA titkos kulcsot (az a hosszú kód vagy QR, amit a hitelesítő alkalmazás beállításakor kaptál).",
           textAlign: TextAlign.center,
@@ -2012,7 +2012,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
           decoration: InputDecoration(
-            hintText: DataCache.getTotpSecret()?.isNotEmpty ?? false ? "Elmentve - ide írj újat a cseréhez" : "2FA titkos kulcs (nem kötelező)",
+            hintText: DataCache.hasTotpSecret() ? "Elmentve - ide írj újat a cseréhez" : "2FA titkos kulcs (nem kötelező)",
             hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.35), fontSize: 12),
             filled: true,
             fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),

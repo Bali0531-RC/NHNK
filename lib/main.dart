@@ -14,6 +14,7 @@ void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   StartupTrace.mark('binding ready');
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  DataCache.prewarmSecureStorage();
   DataCache.loadThemeOnly().whenComplete((){
     StartupTrace.mark('loadThemeOnly');
     AppColors.initialize();

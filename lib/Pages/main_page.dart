@@ -1478,7 +1478,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
   Future<List<api.CalendarEntry>> fetchCalendarToList(int offset) async{
     //final userOffset = storage.DataCache.getUserWeekOffset()!;
-    final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, storage.DataCache.getPassword()!, currentWeekOffset + offset));
+    final password = (await storage.DataCache.getPassword())!;
+    final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, password, currentWeekOffset + offset));
     final list = api.CalendarRequest.getCalendarEntriesFromJSON(request);
     //return list2;
     return list;
@@ -1522,7 +1523,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     //otherwise, just fetch again
     //final isWeekend = DateTime.now().weekday == DateTime.saturday || DateTime.now().weekday == DateTime.sunday ? 1 : 0;
     //final userOffset = storage.DataCache.getUserWeekOffset()!;
-    final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, storage.DataCache.getPassword()!, currentWeekOffset));
+    final calendarPassword = (await storage.DataCache.getPassword())!;
+    final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, calendarPassword, currentWeekOffset));
     calendarEntries.clear();
     final list = api.CalendarRequest.getCalendarEntriesFromJSON(request);
     //calendarEntries = list2;

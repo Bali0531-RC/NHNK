@@ -43,7 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
     // loading defaults
     _currentFontScale = DataCache.getFontScale();
     _themesCurrSelect = AppColors.getTheme().paletteName;
-    _hasTotpSecret = DataCache.getTotpSecret()?.isNotEmpty ?? false;
+    _hasTotpSecret = DataCache.hasTotpSecret();
 
     PowerSettings.isExempt().then((v){
       if(!mounted) return;

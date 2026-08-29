@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'startup_trace.dart';
 
 Future<void> saveString(String key, String value) async {
   final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -187,32 +188,12 @@ class DataCache{
     _instituteUrl = await getString('URL');
     _instituteFallbackUrls = await getStringList('URL_Fallbacks') ?? [];
 
-    _password = await _secureStorage.read(key: 'neptun_password');
-
-
-    if (_password == null) {
-      String? oldPassword = await getString('Password');
-      if (oldPassword != null && oldPassword.isNotEmpty) {
-        _password = oldPassword;
-        await _secureStorage.write(key: 'neptun_password', value: oldPassword);
-
-      }
-    }
-
-    _accessToken = await _secureStorage.read(key: 'neptun_jwt_token');
-
-    if (_accessToken == null) {
-      String? oldToken = await getString('AccessToken');
-      if (oldToken != null && oldToken.isNotEmpty) {
-        _accessToken = oldToken;
-        await _secureStorage.write(key: 'neptun_jwt_token', value: oldToken);
-      }
-    }
-
-    _refreshToken = await _secureStorage.read(key: 'neptun_refresh_token');
-    _sessionCookie = await _secureStorage.read(key: 'neptun_session_cookie');
-    _icsExportUrl = await _secureStorage.read(key: 'neptun_ics_url');
-    _totpSecret = await _secureStorage.read(key: 'neptun_totp_secret');
+    // The secure values are deliberately not awaited here. Reading them costs a
+    // KeyStore init that used to be 128 ms of a 251 ms cold start, and nothing on
+    // the way to a cached timetable needs a credential. prewarmSecureStorage() has
+    // already started it from main(); the async getters wait on it.
+    prewarmSecureStorage();
+    _totpSecretPresent = (await getInt('SECURE_HasTotpSecret') ?? 0) != 0;
 
     tmp = await getInt('IsModernApi');
     _isModernApi = tmp != null && tmp != 0;
@@ -337,6 +318,93 @@ class DataCache{
     _instance._themesJsonBatch = await getStringList('THEME_ThemesJsonBatch') ?? [];
   }
 
+  static Future<Map<String, String>>? _secureRead;
+
+  /// Starts the KeyStore work early.
+  ///
+  /// Startup deliberately does not wait for this. The timetable is drawn from the
+  /// SharedPreferences cache, which needs no credentials, and everything that does
+  /// need one goes through an async getter that awaits this future.
+  static void prewarmSecureStorage(){
+    _secureRead ??= _loadSecure();
+  }
+
+  static Future<Map<String, String>> secureValues(){
+    return _secureRead ??= _loadSecure();
+  }
+
+  static Future<Map<String, String>> _loadSecure() async{
+    final values = await _readAllSecure();
+
+    _instance._password = values['neptun_password'];
+    _instance._accessToken = values['neptun_jwt_token'];
+    _instance._refreshToken = values['neptun_refresh_token'];
+    _instance._sessionCookie = values['neptun_session_cookie'];
+    _instance._icsExportUrl = values['neptun_ics_url'];
+    _instance._totpSecret = values['neptun_totp_secret'];
+
+    // Installs older than the secure storage migration kept these in plain prefs.
+    if(_instance._password == null){
+      final legacy = await getString('Password');
+      if(legacy != null && legacy.isNotEmpty){
+        _instance._password = legacy;
+        await _secureStorage.write(key: 'neptun_password', value: legacy);
+      }
+    }
+    if(_instance._accessToken == null){
+      final legacy = await getString('AccessToken');
+      if(legacy != null && legacy.isNotEmpty){
+        _instance._accessToken = legacy;
+        await _secureStorage.write(key: 'neptun_jwt_token', value: legacy);
+      }
+    }
+
+    await _rememberTotpPresence((_instance._totpSecret ?? '').isNotEmpty);
+    StartupTrace.mark('secure storage ready');
+    return values;
+  }
+
+  static Future<Map<String, String>> _readAllSecure() async{
+    try{
+      return await _secureStorage.readAll();
+    }
+    catch(_){
+      // A single undecryptable entry makes readAll throw, which would sign everyone
+      // out. Fall back to per-key reads so the survivors still load.
+      const keys = [
+        'neptun_password',
+        'neptun_jwt_token',
+        'neptun_refresh_token',
+        'neptun_session_cookie',
+        'neptun_ics_url',
+        'neptun_totp_secret',
+      ];
+      final out = <String, String>{};
+      for(final key in keys){
+        try{
+          final value = await _secureStorage.read(key: key);
+          if(value != null) out[key] = value;
+        }
+        catch(_){ }
+      }
+      return out;
+    }
+  }
+
+  static bool _totpSecretPresent = false;
+
+  /// Whether a 2FA secret is stored, without reading the secret itself.
+  ///
+  /// The login popup and the settings row only need to know one exists. Asking for
+  /// the value would put a KeyStore read on the widget build path, and the secret
+  /// has no business being in a widget tree in the first place.
+  static bool hasTotpSecret() => _totpSecretPresent;
+
+  static Future<void> _rememberTotpPresence(bool present) async{
+    _totpSecretPresent = present;
+    await saveInt('SECURE_HasTotpSecret', present ? 1 : 0);
+  }
+
   static String? getUsername(){return _instance._username;}
   static Future<void> setUsername(String? value) async{
     _instance._username = value;
@@ -354,12 +422,16 @@ class DataCache{
 
 // SZINKRON GETTER! Így a többi fájl nem fog pirosodni,
   // mert azonnal a memóriából kapják meg az adatot.
-  static String? getPassword() {
+  /// Awaits the KeyStore read rather than returning a null that would silently
+  /// authenticate as nobody.
+  static Future<String?> getPassword() async {
+    await secureValues();
     return _instance._password;
   }
 
   // ASZINKRON SETTER (Ide mentjük el biztonságosan)
   static Future<void> setPassword(String? password) async {
+    await secureValues(); // so a late-resolving read cannot clobber this
     _instance._password = password; // Frissítjük a memóriában is
 
     if (password == null) {
@@ -387,6 +459,7 @@ class DataCache{
 
 // ASZINKRON SETTER
   static Future<void> setAccessToken(String? token) async {
+    await secureValues();
     _instance._accessToken = token; // Frissítjük a memóriában
 
     if (token == null) {
@@ -396,15 +469,18 @@ class DataCache{
     }
   }
 
-  static String? getAccessToken() {
+  static Future<String?> getAccessToken() async {
+    await secureValues();
     return _instance._accessToken;
   }
 
-  static String? getRefreshToken() {
+  static Future<String?> getRefreshToken() async {
+    await secureValues();
     return _instance._refreshToken;
   }
 
   static Future<void> setRefreshToken(String? token) async {
+    await secureValues();
     _instance._refreshToken = token;
     if (token == null) {
       await _secureStorage.delete(key: 'neptun_refresh_token');
@@ -414,11 +490,13 @@ class DataCache{
   }
 
   /// Full "name=value" pair; GetNewTokens rejects the request without it.
-  static String? getSessionCookie() {
+  static Future<String?> getSessionCookie() async {
+    await secureValues();
     return _instance._sessionCookie;
   }
 
   static Future<void> setSessionCookie(String? cookie) async {
+    await secureValues();
     _instance._sessionCookie = cookie;
     if (cookie == null) {
       await _secureStorage.delete(key: 'neptun_session_cookie');
@@ -428,11 +506,13 @@ class DataCache{
   }
 
   /// Self-authenticating timetable export link, so the calendar survives session loss.
-  static String? getIcsExportUrl() {
+  static Future<String?> getIcsExportUrl() async {
+    await secureValues();
     return _instance._icsExportUrl;
   }
 
   static Future<void> setIcsExportUrl(String? url) async {
+    await secureValues();
     _instance._icsExportUrl = url;
     if (url == null) {
       await _secureStorage.delete(key: 'neptun_ics_url');
@@ -442,17 +522,20 @@ class DataCache{
   }
 
   /// Opt-in: lets the app answer the 2FA prompt itself instead of asking on every re-login.
-  static String? getTotpSecret() {
+  static Future<String?> getTotpSecret() async {
+    await secureValues();
     return _instance._totpSecret;
   }
 
   static Future<void> setTotpSecret(String? secret) async {
+    await secureValues();
     _instance._totpSecret = secret;
     if (secret == null) {
       await _secureStorage.delete(key: 'neptun_totp_secret');
     } else {
       await _secureStorage.write(key: 'neptun_totp_secret', value: secret);
     }
+    await _rememberTotpPresence((secret ?? '').isNotEmpty);
   }
 
   static Future<String?> getDeviceCookie(String username) async {
@@ -468,6 +551,7 @@ class DataCache{
 
 // --- SECURE DATA clear ---
   static Future<void> clearSecureData() async {
+    await secureValues(); // otherwise an in-flight read repopulates what we just wiped
     _instance._password = null;
     _instance._accessToken = null;
     _instance._refreshToken = null;
@@ -475,6 +559,7 @@ class DataCache{
     _instance._icsExportUrl = null;
     _instance._totpSecret = null;
     await _secureStorage.deleteAll();
+    await _rememberTotpPresence(false);
   }
 
   static bool getHasNetwork(){return _instance._hasNetwork;}

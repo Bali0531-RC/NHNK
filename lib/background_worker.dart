@@ -32,7 +32,7 @@ void backgroundCallbackDispatcher(){
       if(storage.DataCache.getIsDemoAccount() ?? false) return true;
 
       final username = storage.DataCache.getUsername();
-      final password = storage.DataCache.getPassword();
+      final password = await storage.DataCache.getPassword();
       if(username == null || username.isEmpty || password == null || password.isEmpty){
         return true;
       }
