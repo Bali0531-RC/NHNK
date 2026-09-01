@@ -134,7 +134,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               _t('Az első lekérés hosszabb, utána a lezárt félévek a gyorsítótárból jönnek.',
                   'The first fetch is slow; after that closed semesters come from the cache.'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.4), fontSize: 12, height: 1.4),
+              style: TextStyle(color: AppColors.mutedText(0.4), fontSize: 12, height: 1.4),
             ),
           ),
         ],
@@ -161,7 +161,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               _t('Amint lesz jegyed, itt megjelenik a féléves átlagod és a kreditjeid alakulása.',
                   'Once you have grades, your semester averages and credit progress show up here.'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 13, height: 1.5),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 13, height: 1.5),
             ),
           ],
         ),
@@ -265,7 +265,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: theme.textColor.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
         ),
         child: Column(
           children: [
@@ -347,7 +347,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               const SizedBox(height: 4),
               Text(
                 _t('teljesített kredit', 'credits completed'),
-                style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 13),
+                style: TextStyle(color: AppColors.mutedText(0.55), fontSize: 13),
               ),
               const SizedBox(height: 10),
               Text(
@@ -389,7 +389,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
       decoration: BoxDecoration(
         color: theme.textColor.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.large),
       ),
       child: child,
     );
@@ -412,7 +412,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         child: Center(
           child: Text(
             _t('Még nincs számmal értékelt tárgyad.', 'No numerically graded subjects yet.'),
-            style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 13),
+            style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 13),
           ),
         ),
       );
@@ -442,7 +442,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             height: 22,
                             decoration: BoxDecoration(
                               color: theme.textColor.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppRadius.small),
                             ),
                           ),
                           AnimatedContainer(
@@ -452,7 +452,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             width: c.maxWidth * (dist[grade]! / max),
                             decoration: BoxDecoration(
                               color: colours[grade],
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(AppRadius.small),
                             ),
                           ),
                         ],
@@ -485,7 +485,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       child: Container(
         decoration: BoxDecoration(
           color: theme.textColor.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
         ),
         child: Column(
           children: [
@@ -496,7 +496,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   'Átlag ${avg == 0 ? "nincs" : avg.toStringAsFixed(2)}, ${sem.completedCredits} kredit',
                   'Average ${avg == 0 ? "none" : avg.toStringAsFixed(2)}, ${sem.completedCredits} credits'),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.medium),
                 onTap: () {
                   AppHaptics.lightImpact();
                   setState(() => _expanded = open ? null : index);
@@ -549,7 +549,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     Divider(color: theme.textColor.withValues(alpha: 0.08), height: 14),
                     for (final sub in sem.subjects)
                       InkWell(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.small),
                         onTap: () {
                           AppHaptics.lightImpact();
                           Navigator.push(
@@ -612,7 +612,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: colours[sub.grade]!.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.small),
       ),
       child: Text('${sub.grade}',
           style: TextStyle(
@@ -813,8 +813,8 @@ class _CreditsChartPainter extends CustomPainter {
       final cx = chart.left + slot * i + slot / 2;
       final rect = RRect.fromRectAndCorners(
         Rect.fromLTWH(cx - barWidth / 2, chart.bottom - h, barWidth, h),
-        topLeft: const Radius.circular(7),
-        topRight: const Radius.circular(7),
+        topLeft: const Radius.circular(AppRadius.small),
+        topRight: const Radius.circular(AppRadius.small),
       );
       canvas.drawRRect(rect, Paint()..color = theme.currentClassGreen.withValues(alpha: 0.85));
 

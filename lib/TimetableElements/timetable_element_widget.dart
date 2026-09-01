@@ -215,7 +215,7 @@ class TimetableElementWidget extends StatelessWidget {
                  AppColors.getTheme().currentClassGreen.withValues(alpha: .5),
           width: .75
         ),
-        borderRadius: const BorderRadius.all(Radius.circular(20.0)),
+        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
         color: isExam ? AppColors.getTheme().errorRed.withValues(alpha: .05) :
                isTask ? Colors.amber.shade600.withValues(alpha: .05) :
                AppColors.getTheme().currentClassGreen.withValues(alpha: .05)
@@ -482,13 +482,19 @@ class WeekoffseterElementWidget extends StatelessWidget{
         child: SizedBox(
           width: MediaQuery.of(context).size.width,
           child: Column(
+            // The two boxes are one panel. Without stretch the lower one shrinks to fit
+            // its text and sits narrower than the row above it.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                 margin: const EdgeInsets.only(top: 3),
                 decoration: BoxDecoration(
                   color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(21),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppRadius.large),
+                    topRight: Radius.circular(AppRadius.large),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.max,
@@ -504,7 +510,7 @@ class WeekoffseterElementWidget extends StatelessWidget{
                           AppHaptics.lightImpact();
                           onHomePressed();
                         },
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(AppRadius.medium),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
@@ -548,19 +554,24 @@ class WeekoffseterElementWidget extends StatelessWidget{
                 margin: const EdgeInsets.only(bottom: 3),
                 decoration: BoxDecoration(
                   color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.only(bottomRight: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                ),
-                child: EmojiRichText(
-                  text: displayString2,
-                  defaultStyle: TextStyle(
-                    color: AppColors.getTheme().textColor.withValues(alpha: .6),
-                    fontWeight: FontWeight.w300,
-                    fontSize: 12.0,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppRadius.large),
+                    bottomRight: Radius.circular(AppRadius.large),
                   ),
-                  emojiStyle: TextStyle(
-                      color: AppColors.getTheme().textColor,
+                ),
+                child: Center(
+                  child: EmojiRichText(
+                    text: displayString2,
+                    defaultStyle: TextStyle(
+                      color: AppColors.getTheme().textColor.withValues(alpha: .6),
+                      fontWeight: FontWeight.w300,
                       fontSize: 12.0,
-                      fontFamily: "Noto Color Emoji"
+                    ),
+                    emojiStyle: TextStyle(
+                        color: AppColors.getTheme().textColor,
+                        fontSize: 12.0,
+                        fontFamily: "Noto Color Emoji"
+                    ),
                   ),
                 ),
               ),

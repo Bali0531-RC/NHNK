@@ -117,7 +117,7 @@ class _AboutPageState extends State<AboutPage> {
           Center(
             child: Text(
               '© 2026 Bali0531',
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.4), fontSize: 12),
+              style: TextStyle(color: AppColors.mutedText(0.4), fontSize: 12),
             ),
           ),
         ],
@@ -129,7 +129,7 @@ class _AboutPageState extends State<AboutPage> {
     return Column(
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppRadius.large),
           child: Image.asset('assets/nhnk_logo.png', width: 88, height: 88),
         ),
         const SizedBox(height: 14),
@@ -149,7 +149,7 @@ class _AboutPageState extends State<AboutPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
               color: theme.textColor.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppRadius.large),
             ),
             child: Text(
               'v$_version',
@@ -166,7 +166,7 @@ class _AboutPageState extends State<AboutPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.errorRed.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
         border: Border.all(color: theme.errorRed.withValues(alpha: 0.35), width: 1),
       ),
       child: Column(
@@ -299,7 +299,7 @@ class _AboutPageState extends State<AboutPage> {
               children: [
                 Text(name, style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(role, style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 12)),
+                Text(role, style: TextStyle(color: AppColors.mutedText(0.55), fontSize: 12)),
               ],
             ),
           ),
@@ -314,7 +314,7 @@ class _AboutPageState extends State<AboutPage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: theme.textColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
       ),
       child: Text(
         'MIT License\n\n'
@@ -334,7 +334,7 @@ class _AboutPageState extends State<AboutPage> {
   Widget _linkTile(AppPalette theme, IconData icon, String label, VoidCallback onTap, {Color? tint}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.medium),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(

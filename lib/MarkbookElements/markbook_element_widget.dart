@@ -78,7 +78,7 @@ class MarkbookElementWidget extends StatelessWidget{
           width: MediaQuery.of(context).size.width,
           decoration: BoxDecoration(
               color: cardColor.withValues(alpha: 0.05), // Halvány háttér a jegy színe alapján
-              borderRadius: BorderRadius.circular(20.0),
+              borderRadius: BorderRadius.circular(AppRadius.large),
               border: Border.all(
                   color: cardColor.withValues(alpha: 0.3),
                   width: 1

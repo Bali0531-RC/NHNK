@@ -149,7 +149,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                             margin: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: AppColors.getTheme().rootBackground,
-                              borderRadius: const BorderRadius.all(Radius.circular(30)),
+                              borderRadius: const BorderRadius.all(Radius.circular(AppRadius.xlarge)),
                               border: Border.all(
                                 color: AppColors.getTheme().textColor.withValues(alpha: .3),
                                 width: 1
@@ -206,7 +206,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                             margin: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                                 color: AppColors.getTheme().rootBackground,
-                                borderRadius: const BorderRadius.all(Radius.circular(30)),
+                                borderRadius: const BorderRadius.all(Radius.circular(AppRadius.xlarge)),
                                 border: Border.all(
                                     color: AppColors.getTheme().textColor.withValues(alpha: .3),
                                     width: 1
@@ -272,7 +272,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                             margin: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                                 color: AppColors.getTheme().rootBackground,
-                                borderRadius: const BorderRadius.all(Radius.circular(30)),
+                                borderRadius: const BorderRadius.all(Radius.circular(AppRadius.xlarge)),
                                 border: Border.all(
                                     color: AppColors.getTheme().textColor.withValues(alpha: .3),
                                     width: 1
@@ -352,7 +352,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                             Container(
                               decoration: BoxDecoration(
                                   color: AppColors.getTheme().textColor.withValues(alpha: .06),
-                                  borderRadius: const BorderRadius.all(Radius.circular(90))
+                                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill))
                               ),
                               child: IconButton(
                                 onPressed: (){
@@ -671,7 +671,7 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
                                       fontWeight: FontWeight.w400
                                   ),
                                   border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                                      borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                                       borderSide: BorderSide.none
                                   ),
                                   filled: true,
@@ -711,7 +711,7 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
                             padding: const EdgeInsets.all(8),
                             child: DropdownButtonFormField<String>(
                               key: _dropdownSelectionGK,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppRadius.medium),
                               initialValue: _selectedValue, // The currently selected value.
                               icon: const SizedBox(),
                               style: TextStyle(
@@ -732,7 +732,7 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
                                       fontWeight: FontWeight.w400
                                   ),
                                   border: const OutlineInputBorder(
-                                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                                      borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                                       borderSide: BorderSide.none
                                   ),
                                   filled: true,
@@ -807,7 +807,7 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
                           Container(
                             margin: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(90)),
+                                borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                                 color: AppColors.getTheme().textColor.withValues(alpha: .06)
                             ),
                             child: IconButton(
@@ -1059,7 +1059,7 @@ class _SetupPageURLInputState extends State<SetupPageURLInput>{
                               fontWeight: FontWeight.w400
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(12)),
+                              borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                               borderSide: BorderSide.none
                             ),
                             filled: true,
@@ -1209,7 +1209,7 @@ class _SetupPageURLInputState extends State<SetupPageURLInput>{
                           Container(
                             margin: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.all(Radius.circular(90)),
+                                borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                                 color: AppColors.getTheme().textColor.withValues(alpha: .06)
                             ),
                             child: IconButton(
@@ -1557,7 +1557,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                                     fontWeight: FontWeight.w400
                                 ),
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                                    borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                                     borderSide: BorderSide.none
                                 ),
                                 filled: true,
@@ -1605,7 +1605,7 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                                     fontWeight: FontWeight.w400
                                 ),
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                                    borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                                     borderSide: BorderSide.none
                                 ),
                                 filled: true,
@@ -2097,7 +2097,7 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
                             Container(
                               margin: const EdgeInsets.all(15),
                               decoration: BoxDecoration(
-                                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
                               ),
                               child: IconButton(

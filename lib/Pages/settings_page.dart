@@ -154,10 +154,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: _t("pl. JBSWY3DPEHPK3PXP", "e.g. JBSWY3DPEHPK3PXP"),
-                    hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.3), fontSize: 12),
+                    hintStyle: TextStyle(color: AppColors.mutedText(0.3), fontSize: 12),
                     filled: true,
                     fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.medium), borderSide: BorderSide.none),
                   ),
                   onChanged: (val) => setDialogState(() => parsed = Totp.extractSecret(val)),
                 ),
@@ -274,7 +274,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                   color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12)
+                  borderRadius: BorderRadius.circular(AppRadius.medium)
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -332,7 +332,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                   color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12)
+                  borderRadius: BorderRadius.circular(AppRadius.medium)
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -581,7 +581,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption7_WeekOffset, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             trailing: Container(
               width: 120,
-              decoration: BoxDecoration(color: AppColors.getTheme().textColor.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppColors.getTheme().textColor.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.medium)),
               child: Row(
                 children: [
                   IconButton(
@@ -604,7 +604,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text(AppStrings.getLanguagePack().settings_ExportCalendar, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(
               AppStrings.getLanguagePack().settings_ExportCalendarDescription,
-              style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
             ),
             trailing: Icon(Icons.event_available_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.6)),
             onTap: () {
@@ -623,7 +623,7 @@ class _SettingsPageState extends State<SettingsPage> {
                        "Saved - the app signs in by itself when the session expires")
                   : _t("Nincs mentve - újra belépéskor kézzel kell kódot megadni",
                        "Not saved - you will have to type a code when signing in again"),
-              style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
             ),
             trailing: Icon(
               _hasTotpSecret ? Icons.verified_user_rounded : Icons.key_off_rounded,

@@ -111,7 +111,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
           if (widget.termName != null) ...[
             const SizedBox(height: 6),
             Text(widget.termName!,
-                style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 14)),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 14)),
           ],
           const SizedBox(height: 22),
           Row(
@@ -142,7 +142,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
               Text(
                 _t('Ezen a héten nincs órád ebből a tárgyból.',
                     'No classes for this subject this week.'),
-                style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 13),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 13),
               )
             else
               ..._classes.map((e) => _classRow(theme, e)),
@@ -163,7 +163,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: theme.textColor.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
         ),
         child: Column(
           children: [
@@ -172,7 +172,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
                 style: TextStyle(color: colour, fontWeight: FontWeight.w900, fontSize: 20)),
             const SizedBox(height: 4),
             Text(label,
-                style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 11.5)),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 11.5)),
           ],
         ),
       ),
@@ -191,7 +191,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: theme.textColor.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
         ),
         child: Row(
           children: [
@@ -226,7 +226,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
         decoration: BoxDecoration(
           color: colour.withValues(alpha: 0.07),
           border: Border.all(color: colour.withValues(alpha: 0.35)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
         ),
         child: Row(
           children: [

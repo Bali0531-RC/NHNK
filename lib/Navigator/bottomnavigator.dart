@@ -14,7 +14,7 @@ class BottomNavigatorWidget extends StatelessWidget {
       width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
         color: AppColors.getTheme().rootBackground,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.large), topRight: Radius.circular(AppRadius.large)),
       ),
       child: Center(
         child: GestureDetector(
@@ -48,7 +48,7 @@ class BottomNavigatorWidget extends StatelessWidget {
           },
           child: Column(
             children: [
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 _getNameOfMenu(homePage.currentView),
                 textAlign: TextAlign.center,
@@ -58,7 +58,7 @@ class BottomNavigatorWidget extends StatelessWidget {
                     fontSize: 12.0
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 6),
               SingleChildScrollView(
                 controller: homePage.bottomnavController,
                 physics: const BouncingScrollPhysics(decelerationRate: ScrollDecelerationRate.fast),
@@ -75,7 +75,7 @@ class BottomNavigatorWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
             ],
           ),
         ),
@@ -102,12 +102,12 @@ class BottomNavigatorWidget extends StatelessWidget {
 
   Widget _buildNavigationButton(int index, IconData filledIcon, IconData outlinedIcon) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
           color: homePage.currentView == index
               ? AppColors.getTheme().textColor.withValues(alpha: .15)
               : AppColors.getTheme().textColor.withValues(alpha: .05),
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(12), bottomRight: Radius.circular(16), bottomLeft: Radius.circular(12)),
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(AppRadius.medium), topRight: Radius.circular(AppRadius.medium), bottomRight: Radius.circular(AppRadius.medium), bottomLeft: Radius.circular(AppRadius.medium)),
           border: Border.all(
             width: 1,
             color: homePage.currentView == index ? AppColors.getTheme().primary : Colors.transparent

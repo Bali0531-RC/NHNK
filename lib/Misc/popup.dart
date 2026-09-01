@@ -473,7 +473,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -530,7 +530,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -589,7 +589,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -648,7 +648,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -707,7 +707,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -770,7 +770,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -823,7 +823,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -845,7 +845,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                 padding: const EdgeInsets.all(10),
                 child: DropdownButtonFormField<String>(
                     key: _languageDropdownGlobalKey,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
                     initialValue: _languageCurrSelect,
                     icon: const SizedBox(),
                     style: TextStyle(
@@ -866,7 +866,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                             fontWeight: FontWeight.w400
                         ),
                         border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                             borderSide: BorderSide.none
                         ),
                         filled: true,
@@ -984,7 +984,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             )),
             Container(
               decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(90)),
+                  borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                   color: AppColors.getTheme().textColor.withValues(alpha: .06)
               ),
               child: IconButton(
@@ -1006,7 +1006,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                 padding: const EdgeInsets.all(10),
                 child: DropdownButtonFormField<String>(
                     key: _themesDropdownGlobalKey,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.medium),
                     initialValue: _themesCurrSelect,
                     icon: const SizedBox(),
                     style: TextStyle(
@@ -1027,7 +1027,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                             fontWeight: FontWeight.w400
                         ),
                         border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderRadius: BorderRadius.all(Radius.circular(AppRadius.medium)),
                             borderSide: BorderSide.none
                         ),
                         filled: true,
@@ -1159,7 +1159,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                     )),
                     Container(
                       decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.all(Radius.circular(90)),
+                          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.pill)),
                           color: AppColors.getTheme().textColor.withValues(alpha: .06)
                       ),
                       child: IconButton(
@@ -1179,7 +1179,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                     Container(
                       decoration: BoxDecoration(
                           color: AppColors.getTheme().textColor.withValues(alpha: .05),
-                          borderRadius: const BorderRadius.all(Radius.circular(14))
+                          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.medium))
                       ),
                       padding: const EdgeInsets.all(4),
                       child: Row(
@@ -1211,7 +1211,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                                   ),
                                   border: const OutlineInputBorder(
                                       borderSide: BorderSide.none,
-                                      borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12))
+                                      borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.medium), bottomLeft: Radius.circular(AppRadius.medium))
                                   ),
                                   contentPadding: const EdgeInsets.all(6),
                                   filled: false,
@@ -1983,7 +1983,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.medium), borderSide: BorderSide.none),
           ),
           onChanged: (val) {
             if (val.length == 6) {
@@ -2013,10 +2013,10 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 13),
           decoration: InputDecoration(
             hintText: DataCache.hasTotpSecret() ? "Elmentve - ide írj újat a cseréhez" : "2FA titkos kulcs (nem kötelező)",
-            hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.35), fontSize: 12),
+            hintStyle: TextStyle(color: AppColors.mutedText(0.35), fontSize: 12),
             filled: true,
             fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.medium), borderSide: BorderSide.none),
           ),
           onChanged: (val) {
             final secret = Totp.extractSecret(val);
@@ -2135,7 +2135,7 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                       margin: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
                         color: AppColors.getTheme().rootBackground,
-                        borderRadius: const BorderRadius.all(Radius.circular(20)),
+                        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,

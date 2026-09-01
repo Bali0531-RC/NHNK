@@ -93,7 +93,7 @@ class PeriodsElementWidget extends StatelessWidget{
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
           width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
         border: Border.all(
             color: cardColor.withValues(alpha: 0.3),
             width: 1

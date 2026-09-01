@@ -50,7 +50,7 @@ class AppSnackbar extends StatelessWidget{
         margin: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           color: AppColors.getTheme().rootBackground,
-          borderRadius: const BorderRadius.only(topRight: Radius.circular(30), topLeft: Radius.circular(30), bottomRight: Radius.circular(15), bottomLeft: Radius.circular(15)),
+          borderRadius: const BorderRadius.only(topRight: Radius.circular(AppRadius.xlarge), topLeft: Radius.circular(AppRadius.xlarge), bottomRight: Radius.circular(AppRadius.medium), bottomLeft: Radius.circular(AppRadius.medium)),
           border: Border.all(
             color: AppColors.getTheme().textColor.withValues(alpha: .1),
             width: 1,

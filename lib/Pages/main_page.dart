@@ -939,7 +939,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           margin: const EdgeInsets.all(15),
           decoration: BoxDecoration(
             color: w.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -2042,7 +2042,7 @@ class CalendarPageWidget extends StatelessWidget{
                   ),
                   indicator: BoxDecoration(
                     color: AppColors.getTheme().textColor.withValues(alpha: .1),
-                    borderRadius: const BorderRadius.all(Radius.circular(26))
+                    borderRadius: const BorderRadius.all(Radius.circular(AppRadius.xlarge))
                   ),
                   onTap: (index){
                     return;
@@ -2192,7 +2192,7 @@ class MarkbookPageWidget extends StatelessWidget{
                                 width: MediaQuery.of(context).size.width,
                                 decoration: BoxDecoration(
                                   color: AppColors.getTheme().textColor.withValues(alpha: 0.03),
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(AppRadius.large),
                                   //border: Border.all(color: Colors.white.withOpacity(.2), width: 1)
                                 ),
                                 child: Column(
@@ -2247,7 +2247,7 @@ class MarkbookPageWidget extends StatelessWidget{
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(color: AppColors.getTheme().secondary.withValues(alpha: 0.4)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.medium)),
                                     ),
                                   ),
                                 ),
@@ -2257,7 +2257,7 @@ class MarkbookPageWidget extends StatelessWidget{
                               margin: const EdgeInsets.all(15),
                               decoration: BoxDecoration(
                                 color: homePage.markbookList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(AppRadius.medium),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2352,7 +2352,7 @@ class PaymentsPageWidget extends StatelessWidget{
                           width: MediaQuery.of(context).size.width,
                           decoration: BoxDecoration(
                             color: homePage.paymentsList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(AppRadius.medium),
                           ),
                           child: Column(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2429,7 +2429,7 @@ class PeriodsPageWidget extends StatelessWidget{
                             margin: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
                               color: homePage.periodList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: .03) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(AppRadius.medium),
                             ),
                             child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2497,17 +2497,17 @@ class MailsPageWidget extends StatelessWidget{
                 topnav.TopNavigatorWidget(homePage: homePage, displayString: AppStrings.getLanguagePack().view_header_Messages, smallHintText: AppStrings.getStringWithParams(AppStrings.getLanguagePack().topheader_messages_UnreadMessages, [homePage.unreadMailCount]), loggedInUsername: storage.DataCache.getUsername()!, loggedInURL: storage.DataCache.getInstituteUrl()!.replaceAll(RegExp(r'/hallgato/MobileService\.svc'), '').replaceAll("https://", '')),
                 HomePageState.getSeparatorLine(context),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
                   child: TextField(
                     style: TextStyle(color: AppColors.getTheme().textColor, fontSize: 14),
                     decoration: InputDecoration(
                       isDense: true,
                       hintText: AppStrings.getCurrentLangCode() == 'hu' ? 'Keresés tárgyra vagy feladóra' : 'Search subject or sender',
-                      hintStyle: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: 0.35), fontSize: 13),
+                      hintStyle: TextStyle(color: AppColors.mutedText(0.35), fontSize: 13),
                       prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.getTheme().textColor.withValues(alpha: 0.5)),
                       filled: true,
                       fillColor: AppColors.getTheme().textColor.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.medium), borderSide: BorderSide.none),
                     ),
                     onChanged: (v){
                       homePage.mailSearchQuery = v;
@@ -2526,7 +2526,7 @@ class MailsPageWidget extends StatelessWidget{
                             margin: const EdgeInsets.all(15),
                             decoration: BoxDecoration(
                               color: homePage.mailList.isNotEmpty ? AppColors.getTheme().textColor.withValues(alpha: 0.03) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(AppRadius.medium),
                             ),
                             child: Column(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

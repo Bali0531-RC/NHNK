@@ -138,7 +138,7 @@ class _DisclosurePageState extends State<DisclosurePage> {
                       'By continuing you accept the terms of service and the privacy policy.',
                     ),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: theme.textColor.withValues(alpha: 0.55), fontSize: 11.5, height: 1.3),
+                    style: TextStyle(color: AppColors.mutedText(0.55), fontSize: 11.5, height: 1.3),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -147,7 +147,7 @@ class _DisclosurePageState extends State<DisclosurePage> {
                       style: FilledButton.styleFrom(
                         backgroundColor: theme.primary,
                         padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.medium)),
                       ),
                       onPressed: () async {
                         await DataCache.setHasAcceptedTerms(1);

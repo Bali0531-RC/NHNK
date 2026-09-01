@@ -154,7 +154,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
               _t('Nincs vizsgád, határidőd vagy nyitott időszakod a következő hetekben.',
                   'No exams, deadlines or open periods in the coming weeks.'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 13, height: 1.5),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 13, height: 1.5),
             ),
           ],
         ),
@@ -186,7 +186,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
             padding: const EdgeInsets.only(left: 4, top: 8, bottom: 10),
             child: Text(
               entry.key,
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.55),
+              style: TextStyle(color: AppColors.mutedText(0.55),
                   fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.4),
             ),
           ),
@@ -211,7 +211,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
           decoration: BoxDecoration(
             color: colour.withValues(alpha: 0.06),
             border: Border.all(color: colour.withValues(alpha: 0.4), width: 1),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -222,7 +222,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: colour.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.medium),
                 ),
                 child: Icon(_iconFor(item.kind), color: colour, size: 22),
               ),
@@ -243,7 +243,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                           : '${_dateLabel(item.when)} · ${item.subtitle}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.5), fontSize: 12),
+                      style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
                     ),
                   ],
                 ),
@@ -255,7 +255,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                   Text(count,
                       style: TextStyle(color: colour, fontWeight: FontWeight.w900, fontSize: 15)),
                   Text(_kindLabel(item.kind),
-                      style: TextStyle(color: theme.textColor.withValues(alpha: 0.35), fontSize: 10.5)),
+                      style: TextStyle(color: AppColors.mutedText(0.35), fontSize: 10.5)),
                 ],
               ),
             ],

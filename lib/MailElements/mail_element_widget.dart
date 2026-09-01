@@ -69,7 +69,7 @@ class MailElementWidget extends StatelessWidget{
           width: MediaQuery.of(context).size.width,
           decoration: BoxDecoration(
               color: cardColor.withValues(alpha: !isRead ? 0.1 : 0.03), // Olvasatlan sötétebb háttérrel
-              borderRadius: const BorderRadius.all(Radius.circular(20)),
+              borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
               border: Border.all(
                   color: cardColor.withValues(alpha: !isRead ? 0.5 : 0.2), // Olvasatlan erősebb kerettel
                   width: !isRead ? 1.5 : 1.0 // Olvasatlan vastagabb kerettel

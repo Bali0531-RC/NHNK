@@ -7,6 +7,16 @@ import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
 import 'main.dart';
 
+/// One radius scale, because the UI had grown fifteen different corner values and
+/// cards sitting next to each other did not match.
+class AppRadius{
+  static const double small = 8;
+  static const double medium = 12;
+  static const double large = 20;
+  static const double xlarge = 30;
+  static const double pill = 90;
+}
+
 class AppColors{
   static bool _hasInit = false;
   static List<AppPalette> _appColors = [];
@@ -26,6 +36,16 @@ class AppColors{
     return getAllThemes()[_themeBatchSelectedIdx].basedOnDark;
   }
 
+  /// Dimmed body text, clamped to stay legible.
+  ///
+  /// Measured against each theme background, white text stops meeting WCAG AA below
+  /// alpha 0.5 and black text below 0.6, so anything fainter is raised to the floor.
+  static Color mutedText(double alpha){
+    final theme = getTheme();
+    final floor = theme.basedOnDark ? 0.5 : 0.6;
+    return theme.textColor.withValues(alpha: alpha < floor ? floor : alpha);
+  }
+
   static void initialize() {
     if (_hasInit) {
       return;
@@ -33,23 +53,25 @@ class AppColors{
     _appColors.add(AppPalette('Light',
         primary: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
         onPrimary: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
-        onPrimaryContainer: Color.fromRGBO(0x45, 0x6C, 0x76, 1.0),
-        secondary: Color.fromRGBO(0xA7, 0xC4, 0xC8, 1.0),
+        // Contrast measured against rootBackground. secondary was 1.43:1 as link and
+        // label text, which is barely visible; these all sit at 4.5:1 or better now.
+        onPrimaryContainer: Color.fromRGBO(0x44, 0x6B, 0x74, 1.0),
+        secondary: Color.fromRGBO(0x46, 0x6B, 0x71, 1.0),
         onSecondary: Color.fromRGBO(0x1B, 0x1B, 0x1B, 1.0),
         onSecondaryContainer: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
         grade1: Color.fromRGBO(0xBD, 0x2E, 0x2E, 1.0),
         grade2: Color.fromRGBO(0x95, 0x51, 0x51, 1.0),
-        grade3: Color.fromRGBO(0x9E, 0x97, 0x54, 1.0),
-        grade4: Color.fromRGBO(0x72, 0x88, 0x5A, 1.0),
-        grade5: Color.fromRGBO(0x56, 0x7B, 0x58, 1.0),
+        grade3: Color.fromRGBO(0x6B, 0x66, 0x39, 1.0),
+        grade4: Color.fromRGBO(0x59, 0x6A, 0x46, 1.0),
+        grade5: Color.fromRGBO(0x4C, 0x6C, 0x4D, 1.0),
         navbarStatusBarColor: Color.fromRGBO(0xF0, 0xF0, 0xF0, 1.0),
         navbarNavibarColor: Color.fromRGBO(0xE0, 0xE0, 0xE0, 1.0),
         rootBackground: Color.fromRGBO(0xE2, 0xE2, 0xE2, 1.0),
         textColor: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
         buttonEnabled: Color.fromRGBO(0xA7, 0xC4, 0xC8, 1.0),
         buttonDisabled: Color.fromRGBO(0xD3, 0xDD, 0xDD, 1.0),
-        errorRed: Color.fromRGBO(0xFF, 0x52, 0x52, 1.0),
-        currentClassGreen: Color.fromRGBO(0x46, 0x97, 0x32, 1.0),
+        errorRed: Color.fromRGBO(0xCD, 0x00, 0x00, 1.0),
+        currentClassGreen: Color.fromRGBO(0x35, 0x72, 0x26, 1.0),
         basedOnDark: false
     ));
 
@@ -57,7 +79,8 @@ class AppColors{
         primary: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
         onPrimary: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
         onPrimaryContainer: Color.fromRGBO(0x8A, 0xB6, 0xBF, 1.0),
-        secondary: Color.fromRGBO(0x4F, 0x69, 0x6E, 1.0),
+        // Was 2.71:1 against rootBackground, and it is used for link and label text.
+        secondary: Color.fromRGBO(0x6C, 0x8E, 0x95, 1.0),
         onSecondary: Color.fromRGBO(0xB6, 0xB6, 0xB6, 1.0),
         onSecondaryContainer: Color.fromRGBO(0x6C, 0x8F, 0x96, 1.0),
         grade1: Color.fromRGBO(0xFF, 0x52, 0x52, 1.0),

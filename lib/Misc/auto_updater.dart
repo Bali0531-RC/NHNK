@@ -92,7 +92,7 @@ class AppUpdater {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.getTheme().currentClassGreen,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.medium)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(_ut("Igen", "Yes"), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

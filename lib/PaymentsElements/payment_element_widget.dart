@@ -68,7 +68,7 @@ class PaymentElementWidget extends StatelessWidget{
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
           decoration: BoxDecoration(
             color: cardColor.withValues(alpha: 0.05),
-            borderRadius: const BorderRadius.all(Radius.circular(20.0)),
+            borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
             border: Border.all(
                 color: cardColor.withValues(alpha: 0.5),
                 width: 1
@@ -92,7 +92,7 @@ class PaymentElementWidget extends StatelessWidget{
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
                 color: cardColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppRadius.large),
               ),
               child: Text(
                 status,
