@@ -60,8 +60,10 @@ class MarkbookElementWidget extends StatelessWidget{
     AppColors.getTheme().textColor;
 
     return Semantics(
-      label: name,
-      value: _spokenValue,
+      container: true,
+      // Label and value are announced value-first, which buried the subject name
+      // behind its credits and status. One label keeps the name in front.
+      label: '${name.trim()}, $_spokenValue',
       button: grade < 2 && credit != 0,
       child: GestureDetector(
         onTap: grade >= 2 || credit == 0 ? null : () {

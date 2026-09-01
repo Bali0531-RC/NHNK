@@ -48,6 +48,30 @@ class PeriodsElementWidget extends StatelessWidget{
     );
   }
 
+  /// Read as one item. The state of a period is otherwise carried entirely by an
+  /// emoji, a card colour and a progress gradient.
+  String _spokenValue(int now){
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final state = expired
+        ? (hu ? 'lejárt' : 'expired')
+        : isActive
+            ? (hu ? 'folyamatban' : 'active')
+            : (hu ? 'még nem kezdődött el' : 'not started yet');
+
+    final countdown = expired
+        ? AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_ExpiredDays, [-(Duration(milliseconds: endTime - now).inDays + 1) * (Duration(milliseconds: endTime - now).inDays == 0 ? -1 : 1)])
+        : !isActive
+            ? AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_StartDays, [Duration(milliseconds: startTime - now).inDays + 1])
+            : AppStrings.getStringWithParams(AppStrings.getLanguagePack().periodPage_ActiveDays, [Duration(milliseconds: endTime - now).inDays + 1]);
+
+    return [
+      state,
+      '$formattedStartTimeYear $formattedStartTime',
+      '$formattedEndTimeYear $formattedEndTime',
+      countdown.replaceAll('(', '').replaceAll(')', ''),
+    ].where((part) => part.trim().isNotEmpty).join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     double fontScale = DataCache.getFontScale(); // ÚJ: Betűméret szorzó
@@ -60,10 +84,14 @@ class PeriodsElementWidget extends StatelessWidget{
     isActive ? AppColors.getTheme().currentClassGreen :
     AppColors.getTheme().textColor;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-      width: MediaQuery.of(context).size.width,
+    return Semantics(
+      container: true,
+      label: '${displayName.trim()}, ${_spokenValue(now)}',
+      child: ExcludeSemantics(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+          width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(20)),
         border: Border.all(
@@ -205,6 +233,8 @@ class PeriodsElementWidget extends StatelessWidget{
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+        ),
       ),
     );
   }

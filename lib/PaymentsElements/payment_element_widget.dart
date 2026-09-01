@@ -16,6 +16,33 @@ class PaymentElementWidget extends StatelessWidget{
 
   const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed, this.status = '', this.isCancelled = false});
 
+  /// Read out as one item. Without this the card is announced as a pile of
+  /// fragments starting with the emoji, so "money bag" arrives before the amount.
+  String _spokenValue(bool isMissed, bool isNonTimed, DateTime dueDate){
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final bits = <String>[
+      AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_MoneyDisplay, [ammount]),
+    ];
+
+    if(status.isNotEmpty){
+      bits.add(status);
+    }
+    else if(isCancelled){
+      bits.add(hu ? 'törölve' : 'cancelled');
+    }
+    else if(completed){
+      bits.add(hu ? 'teljesítve' : 'paid');
+    }
+
+    if(!isNonTimed){
+      bits.add('${dueDate.year}. ${Generic.monthToText(dueDate.month)} ${dueDate.day}.');
+      if(isMissed){
+        bits.add(hu ? 'határidő lejárt' : 'overdue');
+      }
+    }
+    return bits.where((part) => part.trim().isNotEmpty).join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     double fontScale = DataCache.getFontScale();
@@ -31,18 +58,22 @@ class PaymentElementWidget extends StatelessWidget{
     isMissed ? AppColors.getTheme().errorRed :
     Colors.amber.shade600;
 
-    return Container(
+    return Semantics(
+      container: true,
+      label: '${name.trim()}, ${_spokenValue(isMissed, isNonTimed, dueDate)}',
+      child: ExcludeSemantics(
+        child: Container(
 
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
-      decoration: BoxDecoration(
-        color: cardColor.withValues(alpha: 0.05),
-        borderRadius: const BorderRadius.all(Radius.circular(20.0)),
-        border: Border.all(
-            color: cardColor.withValues(alpha: 0.5),
-            width: 1
-        ),
-      ),
+          margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+          decoration: BoxDecoration(
+            color: cardColor.withValues(alpha: 0.05),
+            borderRadius: const BorderRadius.all(Radius.circular(20.0)),
+            border: Border.all(
+                color: cardColor.withValues(alpha: 0.5),
+                width: 1
+            ),
+          ),
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -145,6 +176,8 @@ class PaymentElementWidget extends StatelessWidget{
             textAlign: TextAlign.center,
           ) : const SizedBox(),
         ],
+      ),
+        ),
       ),
     );
   }

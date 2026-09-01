@@ -2,7 +2,7 @@ import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:nhnk/API/api_coms.dart';
 import 'package:nhnk/Misc/popup.dart';
-// import 'package:nhnk/language.dart';
+import 'package:nhnk/language.dart';
 
 import '../Misc/emojirich_text.dart';
 import '../colors.dart';
@@ -25,6 +25,18 @@ class MailElementWidget extends StatelessWidget{
 
   const MailElementWidget({super.key, required this.subject, required this.details, required this.sender, required this.sendTime, required this.isRead, required this.mailID, required this.callback});
 
+  /// Read as one item. The unread state is carried by an envelope emoji and a border
+  /// weight, neither of which a screen reader can convey on its own.
+  String get _spokenValue{
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final sent = DateTime.fromMillisecondsSinceEpoch(sendTime);
+    return [
+      isRead ? (hu ? 'olvasott' : 'read') : (hu ? 'olvasatlan' : 'unread'),
+      sender,
+      '${sent.year}. ${Generic.monthToText(sent.month)} ${sent.day}.',
+    ].where((part) => part.trim().isNotEmpty).join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     double fontScale = DataCache.getFontScale(); // ÚJ: Betűméret szorzó
@@ -35,17 +47,22 @@ class MailElementWidget extends StatelessWidget{
     // Kártya színe (Olvasatlan = Kiemelt / Olvasott = Halvány)
     final cardColor = !isRead ? AppColors.getTheme().secondary : AppColors.getTheme().textColor;
 
-    return GestureDetector(
-      onTap: (){
-        MailPopupDisplayTexts.title = subject;
-        MailPopupDisplayTexts.description = Generic.textToInlineSpan(details);
-        MailPopupDisplayTexts.mailID = mailID;
+    return Semantics(
+      container: true,
+      button: true,
+      label: '${subject.trim()}, $_spokenValue',
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          onTap: (){
+            MailPopupDisplayTexts.title = subject;
+            MailPopupDisplayTexts.description = Generic.textToInlineSpan(details);
+            MailPopupDisplayTexts.mailID = mailID;
 
-        PopupWidgetHandler(mode: 3, callback: (_){}, onCloseCallback: (){
-          callback(this);
-        });
-        PopupWidgetHandler.doPopup(context);
-      },
+            PopupWidgetHandler(mode: 3, callback: (_){}, onCloseCallback: (){
+              callback(this);
+            });
+            PopupWidgetHandler.doPopup(context);
+          },
       child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
@@ -133,6 +150,8 @@ class MailElementWidget extends StatelessWidget{
               )
             ],
           )
+      ),
+        ),
       ),
     );
   }

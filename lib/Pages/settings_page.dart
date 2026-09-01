@@ -103,7 +103,17 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     Fluttertoast.showToast(msg: lang.settings_ExportCalendarDone);
-    await OpenFilex.open(path);
+    // open_filex has no .ics case in its extension table and falls back to */*, which
+    // OEM ROMs hand to a generic file previewer that cannot read it.
+    var result = await OpenFilex.open(path, type: 'text/calendar');
+    if (result.type != ResultType.done) {
+      // A device with no calendar app registered has nothing to answer text/calendar,
+      // so let the old wildcard behaviour have a go before giving up.
+      result = await OpenFilex.open(path);
+    }
+    if (result.type != ResultType.done) {
+      Fluttertoast.showToast(msg: lang.settings_ExportCalendarFailed);
+    }
   }
 
   void _showTotpSecretDialog() {
@@ -368,6 +378,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   max: 1.4,
                   divisions: 6,
                   label: "${(_currentFontScale * 100).toInt()}%",
+                  // Without this the slider is announced as a bare fraction with no
+                  // hint that it is a percentage, or of what.
+                  semanticFormatterCallback: (v) =>
+                      '${_t("App betűméret", "App text size")} ${(v * 100).toInt()}%',
                   activeColor: AppColors.getTheme().secondary,
                   inactiveColor: AppColors.getTheme().textColor.withValues(alpha: 0.1),
                   onChanged: (val) {
@@ -483,6 +497,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     divisions: BackgroundWorker.intervalSteps.length - 1,
                     activeColor: AppColors.getTheme().secondary,
                     label: _backgroundIntervalLabel(BackgroundWorker.intervalSteps[_backgroundIntervalIndex()]),
+                    // The raw value is a step index, which means nothing spoken aloud.
+                    semanticFormatterCallback: (v) =>
+                        _backgroundIntervalLabel(BackgroundWorker.intervalSteps[v.round()]),
                     onChanged: !_wantsAnyAlert ? null : (v) {
                       setState(() {
                         DataCache.setBackgroundGradeCheckMinutes(BackgroundWorker.intervalSteps[v.round()]);
