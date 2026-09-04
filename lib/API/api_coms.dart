@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:convert' as conv;
 import 'dart:io';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:nhnk/API/ics_calendar.dart';
@@ -691,12 +690,6 @@ class CalendarRequest {
       final decoded = conv.json.decode(responseRaw);
 
       if (decoded['data'] != null && decoded['data'].isNotEmpty) {
-        // Temporary: what else does this response carry? Field names only, since
-        // the values name a person and their programme.
-        if (!kReleaseMode && decoded['data'][0] is Map) {
-          debugPrint('NHNK-PROBE trainings fields: '
-              '${(decoded['data'][0] as Map).keys.join(", ")}');
-        }
         for (var training in decoded['data']) {
           if (training['actualStudentTraining'] == true) {
             _cachedTrainingId = training['studentTrainingId'];
