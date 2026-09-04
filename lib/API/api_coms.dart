@@ -232,11 +232,14 @@ Future<http.Response?> _tryGet(Uri url) async {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
-        NetTrace.record(url.path, sw.elapsedMilliseconds);
+        NetTrace.record(url, sw.elapsedMilliseconds,
+            method: 'POST', status: response.statusCode,
+            bytes: response.bodyBytes.length, sentBytes: requestBody.length);
         return response;
       } catch (e) {
         client.close();
-        NetTrace.record('${url.path} (failed)', sw.elapsedMilliseconds);
+        NetTrace.record(url, sw.elapsedMilliseconds,
+            method: 'POST', failed: true, sentBytes: requestBody.length);
         if(!isRetry && await InstituteFailover.trySwitch()){
           final rebuilt = InstituteFailover.rebuild(url);
           final refreshedToken = await storage.DataCache.getAccessToken();
@@ -339,7 +342,8 @@ Future<http.Response?> _tryGet(Uri url) async {
         final streamedResponse = await client.send(request);
         final response = await http.Response.fromStream(streamedResponse);
         client.close();
-        NetTrace.record(url.path, sw.elapsedMilliseconds);
+        NetTrace.record(url, sw.elapsedMilliseconds,
+            method: 'GET', status: response.statusCode, bytes: response.bodyBytes.length);
 
         // Ha a token lejárt:
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
@@ -847,7 +851,13 @@ class CalendarRequest {
         await storage.DataCache.setIcsExportUrl(icsUrl);
       }
 
+      final icsSw = Stopwatch()..start();
       final resp = await http.get(Uri.parse(icsUrl));
+      // This link authenticates on its own, so it is a credential in URL form and
+      // never goes in the log, not even its host.
+      NetTrace.record(Uri.parse(icsUrl), icsSw.elapsedMilliseconds,
+          method: 'GET', status: resp.statusCode, bytes: resp.bodyBytes.length,
+          redactUrl: true);
       if (resp.statusCode != 200) {
         // A regenerated link invalidates the old one; drop it so the next call re-fetches.
         await storage.DataCache.setIcsExportUrl(null);

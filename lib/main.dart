@@ -5,14 +5,24 @@ import 'package:nhnk/platform_support.dart';
 import 'package:nhnk/storage.dart';
 import 'package:provider/provider.dart';
 import 'Pages/startup_page.dart';
+import 'dev/dev_mode.dart';
+import 'dev/proc_stats.dart';
 import 'language.dart';
 import 'startup_trace.dart';
 
 void main() {
   //DataCache.dataWipeNoKeep();
   StartupTrace.begin();
+  ProcStats.markLaunch();
+  // Installed before anything else so the developer log does not start halfway
+  // through the story it is meant to tell.
+  DevLog.install();
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   StartupTrace.mark('binding ready');
+  FrameStats.install();
+  NetTraceBridge.onClear = NetTrace.clear;
+  NetTrace.onNotable = DevLog.record;
+  DevMode.load();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   DataCache.prewarmSecureStorage();
   DataCache.loadThemeOnly().whenComplete((){

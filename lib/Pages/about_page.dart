@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../colors.dart';
+import '../dev/dev_mode.dart';
 import '../haptics.dart';
 import '../language.dart';
+import 'developer_page.dart';
 
 /// Legal copy lives here rather than in LanguagePack on purpose: downloaded
 /// community language packs can override any LanguagePack string, and a
@@ -24,6 +26,26 @@ class _AboutPageState extends State<AboutPage> {
   static const String repoUrl = 'https://github.com/Bali0531-RC/NHNK';
 
   String _version = '';
+  int _devTaps = 0;
+
+  void _onVersionTapped() {
+    if (DevMode.isEnabled) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const DeveloperPage()));
+      return;
+    }
+    final left = DevMode.registerTap();
+    setState(() => _devTaps = DevMode.tapsToUnlock - left);
+
+    // The badge fills as it goes, so the feedback is the thing being tapped
+    // rather than a toast covering the screen. Haptics firm up towards the end.
+    if (left == 0) {
+      AppHaptics.attentionImpact();
+    } else if (left <= 2) {
+      AppHaptics.mediumImpact();
+    } else {
+      AppHaptics.lightImpact();
+    }
+  }
 
   @override
   void initState() {
@@ -145,17 +167,55 @@ class _AboutPageState extends State<AboutPage> {
         ),
         if (_version.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.textColor.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(AppRadius.large),
-            ),
-            child: Text(
-              'v$_version',
-              style: TextStyle(color: theme.textColor.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600),
+          GestureDetector(
+            onTap: _onVersionTapped,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                // Warms toward the accent as the unlock taps land. At rest it is
+                // the same badge it always was, so nothing looks clickable until
+                // somebody is already deliberately tapping it.
+                color: Color.lerp(
+                  theme.textColor.withValues(alpha: 0.06),
+                  theme.secondary.withValues(alpha: 0.20),
+                  DevMode.isEnabled
+                      ? 1.0
+                      : (_devTaps / DevMode.tapsToUnlock).clamp(0.0, 1.0),
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.large),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (DevMode.isEnabled) ...[
+                    Icon(Icons.terminal_rounded, size: 12, color: theme.secondary),
+                    const SizedBox(width: 5),
+                  ],
+                  Text(
+                    'v$_version',
+                    style: TextStyle(
+                      color: DevMode.isEnabled
+                          ? theme.secondary
+                          : theme.textColor.withValues(alpha: 0.7),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+          if (DevMode.isEnabled) ...[
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DeveloperPage())),
+              icon: Icon(Icons.terminal_rounded, size: 16, color: theme.secondary),
+              label: Text('Developer', style: TextStyle(color: theme.secondary, fontSize: 12)),
+            ),
+          ],
         ],
       ],
     );
