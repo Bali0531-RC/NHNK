@@ -142,7 +142,7 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
                         GestureDetector(
                           onTap: (){
                             AppHaptics.lightImpact();
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => SetupPageInstitudeSelection(fetchData: _obtainFreshData, callback: changeFreshDataVal)));
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => SetupPageInstituteSelection(fetchData: _obtainFreshData, callback: changeFreshDataVal)));
                           },
                           child: Container(
                             padding: const EdgeInsets.all(20),
@@ -400,15 +400,15 @@ class _SetupPageLoginTypeSelectionState extends State<SetupPageLoginTypeSelectio
   }
 }
 
-class SetupPageInstitudeSelection extends StatefulWidget{
-  const SetupPageInstitudeSelection({super.key, required this.fetchData, required this.callback});
+class SetupPageInstituteSelection extends StatefulWidget{
+  const SetupPageInstituteSelection({super.key, required this.fetchData, required this.callback});
   final bool fetchData;
   final Function(bool) callback;
 
   @override
-  State<StatefulWidget> createState() => _SetupPageInstitudeSelectionState();
+  State<StatefulWidget> createState() => _SetupPageInstituteSelectionState();
 }
-class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelection>{
+class _SetupPageInstituteSelectionState extends State<SetupPageInstituteSelection>{
 
   void proceedToLogin(){
     if(!_canProceed){
@@ -465,12 +465,12 @@ class _SetupPageInstitudeSelectionState extends State<SetupPageInstitudeSelectio
       if(!storage.DataCache.getHasNetwork()){
         return;
       }
-      api.InstitutesRequest.fetchInstitudesJSON().then((value) {
+      api.InstitutesRequest.fetchInstitutesJSON().then((value) {
         if(value == null){
           return;
         }
         setState(() {
-          final data = api.InstitutesRequest.getDataFromInstitudesJSON(value);
+          final data = api.InstitutesRequest.getDataFromInstitutesJSON(value);
           PageDTO.institutes = data;
           _institutes = data;
 

@@ -93,9 +93,9 @@ Future<http.Response?> _tryGet(Uri url) async {
     static Future<List<String>> _lookupPool(String? currentOrigin) async{
       if(currentOrigin == null) return [];
       try{
-        final json = await InstitutesRequest.fetchInstitudesJSON();
+        final json = await InstitutesRequest.fetchInstitutesJSON();
         if(json == null) return [];
-        for(final institute in InstitutesRequest.getDataFromInstitudesJSON(json)){
+        for(final institute in InstitutesRequest.getDataFromInstitutesJSON(json)){
           if(institute.Fallbacks.isEmpty) continue;
           final pool = [institute.URL, ...institute.Fallbacks];
           if(pool.any((u) => originOf(u) == currentOrigin)){
@@ -435,7 +435,7 @@ Future<http.Response?> _tryGet(Uri url) async {
   }
   
   class InstitutesRequest{
-    static Future<List<dynamic>?> fetchInstitudesJSON() async{
+    static Future<List<dynamic>?> fetchInstitutesJSON() async{
       //return _APIRequest.postRequest(Uri.parse(URLs.INSTITUTIONS_URL), '{}');
       var json;
       try{
@@ -458,7 +458,7 @@ Future<http.Response?> _tryGet(Uri url) async {
       return jsonMap["Institutes"];
     }
   
-    static List<Institute> getDataFromInstitudesJSON(List<dynamic> jsonMap){
+    static List<Institute> getDataFromInstitutesJSON(List<dynamic> jsonMap){
       var newList = <Institute>[].toList();
       for (var item in jsonMap){
         var item2 = item as Map<String, dynamic>;
