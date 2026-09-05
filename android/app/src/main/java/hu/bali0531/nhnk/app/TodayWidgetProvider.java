@@ -92,9 +92,18 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_title, hungarian ? "Mai órák" : "Today");
 
         List<String[]> today = readToday(prefs);
+        long writtenAt = prefs.getLong(PREFIX + "CalendarCacheWrittenAt", 0);
+        String cacheTime = prefs.getString(PREFIX + "CalendarCacheTime", null);
+        // The widget cannot fetch anything itself, so an app that has not been opened
+        // for a day leaves it confidently showing yesterday. Say so rather than
+        // presenting stale data as current.
+        boolean stale = isStale(writtenAt, cacheTime);
+
         if (today.isEmpty()) {
-            views.setTextViewText(R.id.widget_body,
-                    hungarian ? "Ma nincs órád." : "No classes today.");
+            views.setTextViewText(R.id.widget_body, stale
+                    ? (hungarian ? "Nyisd meg az appot a friss\u00edt\u00e9shez."
+                                 : "Open the app to refresh.")
+                    : (hungarian ? "Ma nincs \u00f3r\u00e1d." : "No classes today."));
             views.setViewVisibility(R.id.widget_next, android.view.View.GONE);
         } else {
             String headline = buildHeadline(today, hungarian);
@@ -118,8 +127,7 @@ public class TodayWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_body, body.toString());
         }
 
-        String cacheTime = prefs.getString(PREFIX + "CalendarCacheTime", null);
-        views.setTextViewText(R.id.widget_updated, shortTime(cacheTime));
+        views.setTextViewText(R.id.widget_updated, updatedLabel(writtenAt, cacheTime, stale, hungarian));
 
         Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (launch != null) {
@@ -215,10 +223,47 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         return hours + (hungarian ? " óra " + rest + " perc" : "h " + rest + "m");
     }
 
-    private String shortTime(String iso) {
-        if (iso == null || iso.length() < 16) {
-            return "";
+    /**
+     * Installs that predate CalendarCacheWrittenAt have no real timestamp, so fall back
+     * to the cache date. Treating a missing key as stale would tell every existing user
+     * to refresh the moment they update.
+     */
+    private boolean isStale(long writtenAt, String iso) {
+        if (writtenAt > 0) {
+            return System.currentTimeMillis() - writtenAt > 24L * 60L * 60L * 1000L;
         }
-        return iso.substring(11, 16);
+        if (iso == null || iso.length() < 10) {
+            return false;
+        }
+        Calendar midnight = Calendar.getInstance();
+        midnight.set(Calendar.HOUR_OF_DAY, 0);
+        midnight.set(Calendar.MINUTE, 0);
+        midnight.set(Calendar.SECOND, 0);
+        midnight.set(Calendar.MILLISECOND, 0);
+        return !iso.substring(0, 10).equals(String.format(Locale.US, "%04d-%02d-%02d",
+                midnight.get(Calendar.YEAR), midnight.get(Calendar.MONTH) + 1,
+                midnight.get(Calendar.DAY_OF_MONTH)));
+    }
+
+    /**
+     * Older builds only stored the cache date at midnight, so there is no real time to
+     * show for them; the date is the honest answer rather than a fake 00:00.
+     */
+    private String updatedLabel(long writtenAt, String iso, boolean stale, boolean hungarian) {
+        if (writtenAt > 0) {
+            if (stale) {
+                // stale only becomes true past the 24h mark, so this is at least 1.
+                long days = (System.currentTimeMillis() - writtenAt) / (24L * 60L * 60L * 1000L);
+                return hungarian ? days + " napja" : days + "d ago";
+            }
+            Calendar c = Calendar.getInstance();
+            c.setTimeInMillis(writtenAt);
+            return String.format(Locale.getDefault(), "%02d:%02d",
+                    c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE));
+        }
+        if (iso != null && iso.length() >= 10) {
+            return iso.substring(0, 10);
+        }
+        return "";
     }
 }

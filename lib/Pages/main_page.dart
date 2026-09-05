@@ -1531,6 +1531,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     calendarEntries = list;
 
     // Only the current week is cached, so that is the only one worth restoring.
+    bool restoredFromCache = false;
     if(calendarEntries.isEmpty && currentWeekOffset == 1 && (storage.DataCache.getHasCachedCalendar() ?? false)){
       final len = await storage.getInt('CachedCalendarLength') ?? 0;
       for(int i = 0; i < len; i++){
@@ -1538,6 +1539,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         if(entry == null) continue;
         calendarEntries.add(api.CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(entry));
       }
+      restoredFromCache = calendarEntries.isNotEmpty;
     }
 
     //automatic room finder lol
@@ -1554,6 +1556,13 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
       final now = DateTime.now();
       storage.saveString('CalendarCacheTime', DateTime(now.year, now.month, now.day, 0, 0, 0).toString());
+      // CalendarCacheTime is deliberately midnight so the TTL compares whole days,
+      // which left the widget showing "00:00" as its last update. This is the real
+      // moment. Data we just restored from the cache is not new, so it keeps the
+      // timestamp it already had rather than looking freshly fetched.
+      if(!restoredFromCache) {
+        storage.saveInt('CalendarCacheWrittenAt', now.millisecondsSinceEpoch);
+      }
       Future.delayed(Duration.zero,()async{
         await _setupClassesNotifications(_classesNotificationList);
       });
