@@ -8,8 +8,8 @@ import 'package:nhnk/language.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../storage.dart';
 import '../startup_trace.dart';
-import 'disclosure_page.dart';
 import 'main_page.dart' as main_page;
+import 'onboarding/onboarding_steps.dart' as onboarding;
 import 'setup_page.dart' as setup_page;
 
 class Splitter extends StatefulWidget{
@@ -91,28 +91,19 @@ class _SplitterState extends State<Splitter>{
         );
         return;
       }
-      // Shown before the login form rather than buried in About, since that is where
-      // the credentials warning actually matters. Existing users are not re-prompted.
+      // Terms are the first step of onboarding rather than a wall in front of it.
+      // Existing users who already accepted are not re-prompted.
       if (!DataCache.getHasAcceptedTerms()) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => DisclosurePage(
-              onAccepted: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const setup_page.SetupPageLoginTypeSelection()),
-                );
-              },
-            ),
-          ),
+          MaterialPageRoute(builder: (context) => const onboarding.OnboardingTermsPage()),
         );
         return;
       }
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => const setup_page.SetupPageLoginTypeSelection()),
+            builder: (context) => const onboarding.OnboardingWelcomePage()),
       );
     });
   }

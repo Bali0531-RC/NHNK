@@ -111,6 +111,9 @@ android {
         debug {
             signingConfig signingConfigs.debug
             debuggable true
+            // Own package id so a debug build installs next to a real one instead of
+            // replacing it, which would sign the developer out of their own Neptun.
+            applicationIdSuffix ".debug"
         }
         profile {
             // Release-signed so an instrumented profile build installs over an existing
