@@ -10,7 +10,6 @@ import '../storage.dart';
 import '../startup_trace.dart';
 import 'main_page.dart' as main_page;
 import 'onboarding/onboarding_steps.dart' as onboarding;
-import 'setup_page.dart' as setup_page;
 
 class Splitter extends StatefulWidget{
   const Splitter({super.key});

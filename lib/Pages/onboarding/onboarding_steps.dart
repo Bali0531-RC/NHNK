@@ -8,7 +8,6 @@ import '../../Misc/auto_updater.dart';
 import '../../colors.dart';
 import '../../haptics.dart';
 import '../../language.dart';
-import '../../Misc/demo_notice.dart';
 import '../../storage.dart' as storage;
 import '../main_page.dart' as main_page;
 import '../setup_page.dart' as setup_page;

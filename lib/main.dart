@@ -49,14 +49,15 @@ class NhnkApp extends StatelessWidget with WidgetsBindingObserver {
 
   @override
   void didChangePlatformBrightness(){
-    //final systemTheme = MediaQuery.of(navigatorKey.currentContext!).platformBrightness == Brightness.dark;
     final isDark = MediaQuery.of(navigatorKey.currentContext!).platformBrightness == Brightness.dark;
-    //log('$systemTheme $isDark');
     AppColors.setCurrentSystemTheme(!isDark);
+    if(!AppColors.followsSystemBrightness(DataCache.getPreferredAppTheme())){
+      super.didChangePlatformBrightness();
+      return;
+    }
     final preferedTheme = !isDark ? 'Dark' : 'Light';
     AppColors.setUserThemeByName(preferedTheme, navigatorKey.currentContext!);
     DataCache.setPreferredAppTheme(preferedTheme);
-    //navigatorKey.currentContext!.read<ThemeNotifier>().createNewThemeData();
     super.didChangePlatformBrightness();
   }
 
@@ -74,7 +75,7 @@ class NhnkApp extends StatelessWidget with WidgetsBindingObserver {
         final isDark = AppColors.getTheme().basedOnDark;
         AppColors.setCurrentSystemTheme(isDark);
         final userTheme = DataCache.getPreferredAppTheme();
-        if(userTheme == null || userTheme == 'Dark' || userTheme == 'Light'){
+        if(AppColors.followsSystemBrightness(userTheme)){
           AppColors.setUserThemeByName(isDark ? 'Dark' : 'Light', navigatorKey.currentContext!);
         }
         AppColors.setUserThemeByName(userTheme!, navigatorKey.currentContext!);
@@ -120,44 +121,42 @@ class ThemeNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  ThemeData _buildTheme(bool isDark) {
-    return ThemeData(
-      colorScheme: isDark ? ColorScheme.dark(
-        primary: AppColors.getTheme().primary,
-        onPrimary: AppColors.getTheme().onPrimary,
-        onPrimaryContainer: AppColors.getTheme().onSecondaryContainer,
-        secondary: AppColors.getTheme().secondary,
-        onSecondary: AppColors.getTheme().onSecondary,
-        onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
-      ) : ColorScheme.light(
-        primary: AppColors.getTheme().primary,
-        onPrimary: AppColors.getTheme().onPrimary,
-        onPrimaryContainer: AppColors.getTheme().onSecondaryContainer,
-        secondary: AppColors.getTheme().secondary,
-        onSecondary: AppColors.getTheme().onSecondary,
-        onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
-      ),
-      useMaterial3: true,
-    );
-  }
+  ThemeData _buildTheme(bool isDark) => _themeFor(isDark);
 
-  static ThemeData _initialTheme(bool isDark){
+  static ThemeData _initialTheme(bool isDark) => _themeFor(isDark);
+
+  /// Without an explicit surface, Scaffold falls back to Material's own grey and the
+  /// palette's background never reaches the biggest area on screen. That is what
+  /// stopped the OLED theme from actually being black.
+  static ThemeData _themeFor(bool isDark) {
+    final palette = AppColors.getTheme();
+    final scheme = isDark
+        ? ColorScheme.dark(
+            primary: palette.primary,
+            onPrimary: palette.onPrimary,
+            onPrimaryContainer: palette.onSecondaryContainer,
+            secondary: palette.secondary,
+            onSecondary: palette.onSecondary,
+            onSecondaryContainer: palette.onSecondaryContainer,
+            surface: palette.rootBackground,
+            onSurface: palette.textColor,
+            surfaceTint: Colors.transparent,
+          )
+        : ColorScheme.light(
+            primary: palette.primary,
+            onPrimary: palette.onPrimary,
+            onPrimaryContainer: palette.onSecondaryContainer,
+            secondary: palette.secondary,
+            onSecondary: palette.onSecondary,
+            onSecondaryContainer: palette.onSecondaryContainer,
+            surface: palette.rootBackground,
+            onSurface: palette.textColor,
+            surfaceTint: Colors.transparent,
+          );
     return ThemeData(
-      colorScheme: isDark ? ColorScheme.dark(
-        primary: AppColors.getTheme().primary,
-        onPrimary: AppColors.getTheme().onPrimary,
-        onPrimaryContainer: AppColors.getTheme().onSecondaryContainer,
-        secondary: AppColors.getTheme().secondary,
-        onSecondary: AppColors.getTheme().onSecondary,
-        onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
-      ) : ColorScheme.light(
-        primary: AppColors.getTheme().primary,
-        onPrimary: AppColors.getTheme().onPrimary,
-        onPrimaryContainer: AppColors.getTheme().onSecondaryContainer,
-        secondary: AppColors.getTheme().secondary,
-        onSecondary: AppColors.getTheme().onSecondary,
-        onSecondaryContainer: AppColors.getTheme().onSecondaryContainer,
-      ),
+      colorScheme: scheme,
+      scaffoldBackgroundColor: palette.rootBackground,
+      canvasColor: palette.rootBackground,
       useMaterial3: true,
     );
   }

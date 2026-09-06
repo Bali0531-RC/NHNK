@@ -62,6 +62,27 @@ def palettes(source):
     return out
 
 
+def check_oled(found):
+    """A near-black OLED theme is pointless; the panel only saves power at #000000."""
+    fields = found.get("OLED")
+    if fields is None:
+        return 0
+
+    problems = []
+    if fields["rootBackground"] != (0, 0, 0):
+        problems.append(f"rootBackground is {fields['rootBackground']}, not pure black")
+    for bar in ("navbarNavibarColor", "navbarStatusBarColor"):
+        if fields.get(bar) != (0, 0, 0):
+            problems.append(f"{bar} is {fields.get(bar)}, which shows a seam against the page")
+
+    print("\n=== OLED, true black check ===")
+    for problem in problems:
+        print(f"    FAIL {problem}")
+    if not problems:
+        print("    background and system bars are all #000000")
+    return len(problems)
+
+
 def main():
     source = COLORS.read_text(encoding="utf-8")
     found = palettes(source)
@@ -100,6 +121,7 @@ def main():
             print(f"    {field:22s} {r:6.2f}:1  {'pass' if ok else 'FAIL'}")
 
     print(f"\n{failures} accent measurement(s) below {AA_BODY}:1")
+    failures += check_oled(found)
     return 1 if failures else 0
 
 

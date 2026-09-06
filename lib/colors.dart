@@ -36,6 +36,11 @@ class AppColors{
     return getAllThemes()[_themeBatchSelectedIdx].basedOnDark;
   }
 
+  /// Light and Dark track the system brightness. Anything else was chosen on
+  /// purpose, so a day/night flip must not quietly replace it.
+  static bool followsSystemBrightness(String? themeName) =>
+      themeName == null || themeName == 'Dark' || themeName == 'Light';
+
   /// Dimmed body text, clamped to stay legible.
   ///
   /// Measured against each theme background, white text stops meeting WCAG AA below
@@ -94,6 +99,31 @@ class AppColors{
         textColor: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
         buttonEnabled: Color.fromRGBO(0x31, 0x42, 0x42, 1.0),
         buttonDisabled: Color.fromRGBO(0x22, 0x2B, 0x2B, 1.0),
+        errorRed: Color.fromRGBO(0xFF, 0xB0, 0xB0, 1.0),
+        currentClassGreen: Color.fromRGBO(0x8B, 0xD4, 0x81, 1.0),
+        basedOnDark: true
+    ));
+
+    // True black so OLED panels can switch the pixels off. The accents are lifted
+    // from the Dark palette, which was tuned against #222222 and loses contrast here.
+    _appColors.add(AppPalette('OLED',
+        primary: Color.fromRGBO(0x7E, 0xA6, 0xAE, 1.0),
+        onPrimary: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
+        onPrimaryContainer: Color.fromRGBO(0x9C, 0xC7, 0xD0, 1.0),
+        secondary: Color.fromRGBO(0x8C, 0xB4, 0xBC, 1.0),
+        onSecondary: Color.fromRGBO(0xC8, 0xC8, 0xC8, 1.0),
+        onSecondaryContainer: Color.fromRGBO(0x8C, 0xB4, 0xBC, 1.0),
+        grade1: Color.fromRGBO(0xFF, 0x6B, 0x6B, 1.0),
+        grade2: Color.fromRGBO(0xEF, 0x9A, 0x9A, 1.0),
+        grade3: Color.fromRGBO(0xFF, 0xF5, 0x9D, 1.0),
+        grade4: Color.fromRGBO(0xC5, 0xE1, 0xA5, 1.0),
+        grade5: Color.fromRGBO(0xA5, 0xD6, 0xA7, 1.0),
+        navbarStatusBarColor: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
+        navbarNavibarColor: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
+        rootBackground: Color.fromRGBO(0x00, 0x00, 0x00, 1.0),
+        textColor: Color.fromRGBO(0xFF, 0xFF, 0xFF, 1.0),
+        buttonEnabled: Color.fromRGBO(0x2A, 0x3A, 0x3A, 1.0),
+        buttonDisabled: Color.fromRGBO(0x16, 0x1C, 0x1C, 1.0),
         errorRed: Color.fromRGBO(0xFF, 0xB0, 0xB0, 1.0),
         currentClassGreen: Color.fromRGBO(0x8B, 0xD4, 0x81, 1.0),
         basedOnDark: true
