@@ -152,6 +152,16 @@ class DataCache{
     await _prefs?.setInt('DegreeCreditTarget', credits);
   }
 
+  /// The requirement as Neptun reports it, kept so the ring still draws offline.
+  /// 0 means we have never had an answer from the server.
+  static int getServerDegreeCreditTarget() {
+    return _prefs?.getInt('DegreeCreditTargetServer') ?? 0;
+  }
+
+  static Future<void> setServerDegreeCreditTarget(int credits) async {
+    await _prefs?.setInt('DegreeCreditTargetServer', credits);
+  }
+
   late bool? _persistentSetting_familyFriendlyLoadingComments = false;
   late bool? _persistentSetting_showExamNotifications = true;
   late bool? _persistentSetting_showClassNotifications = true;

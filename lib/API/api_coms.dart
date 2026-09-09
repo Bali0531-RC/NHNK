@@ -37,7 +37,6 @@ Future<http.Response?> _tryGet(Uri url) async {
     static const String PERIODTERMS_URL = "/api/GetPeriodTerms";
     static const String PERIODS_URL = "/api/GetPeriods";
     static const String GETCASHIN_URL = "/api/GetCashinData";
-    static const String CURRICULUMS_URL = "/api/GetCurriculums";
     static const String MARKBOOK_URL = "/api/GetMarkbookData";
     static const String MESSAGES_URL = "/api/GetMessages";
     static const String MESSAGE_SET_READ = "/api/SetReadedMessage";
@@ -1856,8 +1855,107 @@ class PeriodsRequest{
   }
 }
 
+/// Endpoints that exist on the modern Neptun web client but not on every install.
+///
+/// Institutions run different Neptun builds, so each endpoint is tried once and the
+/// answer remembered. A miss is never fatal: callers fall back to the old path.
+class ModernApi{
+  static const String unreadMessageCount = 'Message/GetUnreadedMessagesCount';
+  static const String creditProgress = 'dashboard/creditprogress';
+
+  static final Map<String, bool> _known = {};
+
+  static String _prefKey(String path) => 'ModernSupport_${path.replaceAll('/', '_')}';
+
+  static Future<bool> _isUnsupported(String path) async{
+    final cached = _known[path];
+    if(cached != null) return !cached;
+    final stored = await storage.getInt(_prefKey(path));
+    if(stored == null || stored == 0) return false;
+    _known[path] = stored == 1;
+    return stored == 2;
+  }
+
+  static Future<void> _remember(String path, bool supported) async{
+    if(_known[path] == supported) return;
+    _known[path] = supported;
+    await storage.saveInt(_prefKey(path), supported ? 1 : 2);
+  }
+
+  /// The `data` object for [path], or null when it cannot be used.
+  ///
+  /// Null covers all of: legacy API, demo mode, no session, a transient failure, and
+  /// an institution whose Neptun build predates the endpoint.
+  static Future<dynamic> fetchData(String path) async{
+    if(!storage.DataCache.getIsModernApi()) return null;
+    if(storage.DataCache.getIsDemoAccount() ?? false) return null;
+    if(await _isUnsupported(path)) return null;
+
+    final token = await storage.DataCache.getAccessToken();
+    final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+    if(token == null || token.isEmpty || baseUrl.isEmpty) return null;
+
+    final body = await _APIRequest.getRequest(Uri.parse('$baseUrl/api/$path'), bearerToken: token);
+
+    // getRequest reports transport failures in-band. Those say nothing about whether
+    // the institution has the endpoint, so they must not be cached as a miss.
+    if(body.contains('"ErrorMessage"')) return null;
+
+    try{
+      final decoded = conv.json.decode(body);
+      if(decoded is Map && decoded['data'] != null){
+        await _remember(path, true);
+        return decoded['data'];
+      }
+      await _remember(path, false);
+      return null;
+    }
+    catch(_){
+      // An HTML error page rather than JSON: this build does not serve the route.
+      await _remember(path, false);
+      return null;
+    }
+  }
+
+  /// Lets the user re-test endpoints after an institution upgrades its Neptun.
+  static Future<void> forgetCapabilities() async{
+    for(final path in [unreadMessageCount, creditProgress]){
+      _known.remove(path);
+      await storage.saveInt(_prefKey(path), 0);
+    }
+  }
+}
+
+/// Degree progress, which Neptun does know about after all.
+class ProgressRequest{
+  /// Credits the programme requires, as Neptun reports it, or null if it will not say.
+  ///
+  /// The breakdown fields alongside it are frequently null even on institutions that
+  /// serve this endpoint, so only the headline requirement is trusted.
+  static Future<int?> getRequiredCredits() async{
+    final data = await ModernApi.fetchData(ModernApi.creditProgress);
+    if(data is! Map) return null;
+    final required = data['requiredCredit'];
+    if(required is int && required > 0){
+      await storage.DataCache.setServerDegreeCreditTarget(required);
+      return required;
+    }
+    return null;
+  }
+}
+
 class MailRequest{
   static const int _modernMailCountWindow = 200;
+  /// Unread count without downloading the message list, or null if unavailable.
+  ///
+  /// The list based count pulls up to [_modernMailCountWindow] records to work out
+  /// one number, which is wasteful anywhere, and expensive in the background worker.
+  static Future<int?> getUnreadCountFast() async{
+    if(storage.DataCache.getIsDemoAccount() ?? false) return 2;
+    final data = await ModernApi.fetchData(ModernApi.unreadMessageCount);
+    if(data is Map && data['count'] is int) return data['count'] as int;
+    return null;
+  }
 
   static Future<List<int>> getUnreadMessagesAndAllMessages()async{
     // Every other endpoint short-circuits for the demo account; this one did not,

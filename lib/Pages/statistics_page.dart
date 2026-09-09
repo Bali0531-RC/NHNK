@@ -25,6 +25,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<api.SemesterResult> _semesters = [];
   bool _loading = true;
   int? _expanded;
+  bool _editingTarget = false;
 
   @override
   void initState() {
@@ -41,6 +42,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
       _semesters = data;
       _loading = false;
     });
+
+    // Asked for after the page has drawn: the ring falls back to the last known
+    // answer, so a slow or missing response never holds up the statistics.
+    final required = await api.ProgressRequest.getRequiredCredits();
+    if (!mounted || required == null) return;
+    setState(() {});
   }
 
   bool get _hu => AppStrings.getCurrentLangCode() == 'hu';
@@ -287,13 +294,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
         style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 17));
   }
 
-  /// Neptun knows nothing about how long a programme is, so the target is the
-  /// student's own. The usual Hungarian ones are offered rather than a free number.
+  /// Neptun reports the requirement on newer installs. Where it does not, the
+  /// student's own figure is still the only source, so both paths stay.
   Widget _buildDegreeProgress(AppPalette theme) {
-    final target = DataCache.getDegreeCreditTarget();
+    final manual = DataCache.getDegreeCreditTarget();
+    final fromServer = DataCache.getServerDegreeCreditTarget();
+    final target = manual > 0 ? manual : fromServer;
     final done = _totalCompletedCredits;
 
-    if (target <= 0) {
+    if (target <= 0 || _editingTarget) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -316,7 +325,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   onPressed: () async {
                     AppHaptics.lightImpact();
                     await DataCache.setDegreeCreditTarget(option);
-                    if (mounted) setState(() {});
+                    if (mounted) setState(() => _editingTarget = false);
                   },
                 ),
             ],
@@ -349,6 +358,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 _t('teljesített kredit', 'credits completed'),
                 style: TextStyle(color: AppColors.mutedText(0.55), fontSize: 13),
               ),
+              if (manual <= 0 && fromServer > 0) ...[
+                const SizedBox(height: 2),
+                Text(
+                  _t('a Neptun szerint', 'according to Neptun'),
+                  style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 11.5),
+                ),
+              ],
               const SizedBox(height: 10),
               Text(
                 done >= target
@@ -365,7 +381,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 onTap: () async {
                   AppHaptics.lightImpact();
                   await DataCache.setDegreeCreditTarget(0);
-                  if (mounted) setState(() {});
+                  if (mounted) setState(() => _editingTarget = true);
                 },
                 child: Text(
                   _t('Módosítás', 'Change'),

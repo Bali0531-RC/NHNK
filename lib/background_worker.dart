@@ -62,8 +62,18 @@ void backgroundCallbackDispatcher(){
         if(mails != null && mails.isNotEmpty){
           final previous = await MailAlerts.readCachedMailIds();
           final fresh = MailAlerts.findNewMails(previous, mails);
-          final counts = await api.MailRequest.getUnreadMessagesAndAllMessages();
-          await MailAlerts.writeCache(mails, counts[0], counts[1]);
+
+          // The total is only needed for foreground pagination, so the periodic
+          // check asks for the unread number alone rather than pulling 200 records.
+          final fastUnread = await api.MailRequest.getUnreadCountFast();
+          if(fastUnread != null){
+            final knownTotal = (await storage.getInt('CachedMailsTotal')) ?? mails.length;
+            await MailAlerts.writeCache(mails, fastUnread, knownTotal);
+          }
+          else{
+            final counts = await api.MailRequest.getUnreadMessagesAndAllMessages();
+            await MailAlerts.writeCache(mails, counts[0], counts[1]);
+          }
 
           if(fresh.isNotEmpty){
             if(!notified){ await AppNotifications.initializeHeadless(); notified = true; }
