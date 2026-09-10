@@ -12,6 +12,7 @@ import 'package:nhnk/haptics.dart';
 import 'package:nhnk/local_file_actions.dart';
 import 'package:nhnk/language.dart';
 import '../API/api_coms.dart' as api;
+import '../API/login_diagnostics.dart';
 import '../Misc/custom_snackbar.dart';
 import '../storage.dart' as storage;
 import '../storage.dart';
@@ -1260,6 +1261,24 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                             ),
                           ),
                           const SizedBox(height: 10),
+                          if (LoginDiagnostics.enabled) ...[
+                            const Text('AUTH DEBUG — reproduce the failure, then copy diagnostics.'),
+                            TextButton.icon(
+                              icon: const Icon(Icons.copy),
+                              label: const Text('Copy login diagnostics'),
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(text: LoginDiagnostics.report()));
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Safe login diagnostics copied')),
+                                );
+                              },
+                            ),
+                            TextButton(
+                              onPressed: LoginDiagnostics.clear,
+                              child: const Text('Clear login diagnostics'),
+                            ),
+                          ],
                           Text(
                             _paintRed ? AppStrings.getLanguagePack().loginPage_setupPage_InvalidCredentialsEntered : "",
                             textAlign: TextAlign.center,

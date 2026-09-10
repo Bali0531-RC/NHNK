@@ -1,0 +1,95 @@
+name: Auth diagnostic prerelease
+
+on:
+  push:
+    branches: [copilot/find-auth-flow-bug]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.*'
+      - '.github/workflows/auth-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/copilot/find-auth-flow-bug'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.3.0
+      - uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: flutter-actions/setup-flutter@v3.0.0
+        with:
+          version: 3.44.8
+      - run: flutter pub get
+      - run: flutter analyze --no-pub --no-fatal-infos
+      - run: flutter test --no-pub
+      - run: flutter test --no-pub --dart-define=NHNK_AUTH_DIAGNOSTICS=true test/login_diagnostics_test.dart
+      - name: Build install-alongside debug APK
+        env:
+          BUILD_ID: ${{ github.sha }}
+        run: |
+          flutter build apk --debug --flavor github \
+            --dart-define=NHNK_DISTRIBUTION=github \
+            --dart-define=NHNK_AUTH_DIAGNOSTICS=true \
+            --dart-define=NHNK_DIAGNOSTIC_BUILD="$BUILD_ID"
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-github-debug.apk dist/NHNK-auth-debug.apk
+          (cd dist && sha256sum NHNK-auth-debug.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: auth-debug-apk
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          name: auth-debug-apk
+          path: dist
+      - name: Publish diagnostic prerelease (never latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          cat > "$RUNNER_TEMP/auth-debug-notes.txt" <<'NOTES'
+          Android debug build for diagnosing the Pannon login failure.
+
+          Installs alongside the stable app using the existing .debug application ID.
+          It has separate storage: complete setup and enter credentials again.
+          Debug builds are debuggable; uninstall this build after testing.
+
+          1. Install NHNK-auth-debug.apk and select Pannon.
+          2. Attempt login once and wait for the failure.
+          3. Tap "Copy login diagnostics" on the login screen.
+          4. Paste the copied report into the Copilot conversation.
+          5. If testing another server, use "Clear login diagnostics" first.
+
+          The report includes API selection, fixed server labels, login stages,
+          HTTP status, response types and known 2FA/CAPTCHA flags.
+          It excludes credentials, TOTP codes/secrets, tokens, cookie values,
+          raw URLs, response text and exception messages. No automatic upload.
+          Do not send credentials or full device logs.
+          NOTES
+          gh release create "auth-debug-${RUN_ID}-${RUN_ATTEMPT}" dist/* \
+            --target "$BUILD_SHA" --prerelease --latest=false \
+            --title "NHNK login diagnostics (${RUN_ID}.${RUN_ATTEMPT})" \
+            --notes-file "$RUNNER_TEMP/auth-debug-notes.txt"

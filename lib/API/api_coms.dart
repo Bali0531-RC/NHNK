@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:nhnk/API/ics_calendar.dart';
 import 'package:nhnk/API/totp.dart';
+import 'package:nhnk/API/login_diagnostics.dart';
 import 'package:nhnk/Misc/clickable_text_span.dart';
 import 'package:nhnk/colors.dart';
 import 'package:nhnk/language.dart';
@@ -495,6 +496,7 @@ Future<http.Response?> _tryGet(Uri url) async {
 
       String baseUrl = url.replaceAll(RegExp(r'/login(\.aspx)?$', caseSensitive: false), '');
       baseUrl = baseUrl.replaceAll(RegExp(r'/MobileService\.svc$', caseSensitive: false), '');
+      LoginDiagnostics.begin(baseUrl, legacy: containsAspx);
 
       // Path normalization for specific institutions is handled by the modern API detection below.
 
@@ -508,6 +510,8 @@ Future<http.Response?> _tryGet(Uri url) async {
     }
 
     static Future<int> _tryModernLogin(String baseUrl, String username, String password) async {
+      var stage = LoginStage.start;
+      LoginDiagnostics.stage(stage);
       try {
         final modernApiUrl = Uri.parse("$baseUrl/api/Account/Authenticate");
         final body = conv.jsonEncode({
@@ -516,6 +520,8 @@ Future<http.Response?> _tryGet(Uri url) async {
         });
 
         // Load device cookie if exists
+        stage = LoginStage.deviceCookie;
+        LoginDiagnostics.stage(stage);
         final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
         String? cookieHeader;
         if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
@@ -523,7 +529,11 @@ Future<http.Response?> _tryGet(Uri url) async {
           cookieHeader = 'devicecookie-$b64=$savedCookieVal';
         }
 
+        stage = LoginStage.request;
+        LoginDiagnostics.stage(stage);
         final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
+        stage = LoginStage.response;
+        LoginDiagnostics.response(responseRaw);
         final response = conv.jsonDecode(responseRaw.body);
 
         // Extract and save cookies/tokens
@@ -531,36 +541,50 @@ Future<http.Response?> _tryGet(Uri url) async {
 
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
         if (is2fa) {
+          stage = LoginStage.saveSession;
+          LoginDiagnostics.stage(stage);
           await storage.DataCache.setInstituteUrl(baseUrl);
 
           // With a stored secret the app can answer the challenge itself, so an expired
           // session does not force the user to retype a code.
+          stage = LoginStage.totpSecret;
+          LoginDiagnostics.stage(stage);
           final secret = await storage.DataCache.getTotpSecret();
           if (secret != null && secret.isNotEmpty) {
             final code = Totp.generate(secret);
             if (code != null && await submitTwoFactorCode(username, password, code)) {
+              LoginDiagnostics.stage(LoginStage.success);
               return 1;
             }
           }
 
           // Deliberately leaves the stored token alone: twoFactorLoginToken does not exist on
           // this API, so writing it here wiped a session that was still usable.
+          LoginDiagnostics.stage(LoginStage.twoFactor);
           return 2; // 2FA KELL
         }
 
         if (response["data"] != null && response["data"]["accessToken"] != null) {
+          stage = LoginStage.saveSession;
+          LoginDiagnostics.stage(stage);
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
           await storage.DataCache.setInstituteUrl(baseUrl);
           CalendarRequest.invalidateTrainingId();
+          LoginDiagnostics.stage(LoginStage.success);
           return 1;
         }
-      } catch (e) { }
+      } catch (e) {
+        LoginDiagnostics.failure(stage, e);
+      }
+      LoginDiagnostics.stage(LoginStage.rejected);
       return 0; // HIBA
     }
 
 
     static Future<bool> submitTwoFactorCode(String username, String password, String code) async {
+      var stage = LoginStage.twoFactor;
+      LoginDiagnostics.stage(stage);
       try {
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
@@ -575,6 +599,7 @@ Future<http.Response?> _tryGet(Uri url) async {
         });
 
         // Load device cookie if exists
+        stage = LoginStage.deviceCookie;
         final savedCookieVal = await storage.DataCache.getDeviceCookie(username);
         String? cookieHeader;
         if (savedCookieVal != null && savedCookieVal.isNotEmpty) {
@@ -582,19 +607,27 @@ Future<http.Response?> _tryGet(Uri url) async {
           cookieHeader = 'devicecookie-$b64=$savedCookieVal';
         }
 
+        stage = LoginStage.request;
         final responseRaw = await _APIRequest.postRequestRaw(url, body, cookie: cookieHeader);
+        stage = LoginStage.response;
+        LoginDiagnostics.response(responseRaw);
         final response = conv.jsonDecode(responseRaw.body);
 
         // Extract and save cookies/tokens
         _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
 
         if (response["data"] != null && response["data"]["accessToken"] != null) {
+          stage = LoginStage.saveSession;
           await storage.DataCache.setAccessToken(response["data"]["accessToken"]);
           await storage.DataCache.setIsModernApi(true);
           CalendarRequest.invalidateTrainingId();
+          LoginDiagnostics.stage(LoginStage.success);
           return true;
         }
-      } catch (e) { }
+      } catch (e) {
+        LoginDiagnostics.failure(stage, e);
+      }
+      LoginDiagnostics.stage(LoginStage.rejected);
       return false;
     }
     static Future<bool> _tryOldLogin(String baseUrl, String username, String password) async {
