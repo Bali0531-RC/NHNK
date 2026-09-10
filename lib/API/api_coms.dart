@@ -474,8 +474,42 @@ Future<http.Response?> _tryGet(Uri url) async {
       }
       return newList;
     }
-    static Future<int> validateLoginCredentials(Institute institute, String username, String password) async{
-      // Stores the primary too, so a switch away from it can later switch back.
+    /// Whatever Neptun said about the most recent login attempt, or null.
+    ///
+    /// Shown instead of guessing, because a suspended account, an expired password and
+    /// a typo all used to reach the login screen as the same red "wrong password".
+    static String? lastLoginMessage;
+
+    /// True when the attempt never got an answer, as opposed to being refused.
+    static bool lastLoginWasNetworkFailure = false;
+
+    /// Pulls the human readable part out of the `notification` envelope.
+    ///
+    /// Entries have been seen as plain strings and as objects, so both are handled.
+    static String? serverMessageFrom(dynamic decoded){
+      if(decoded is! Map) return null;
+      final notifications = decoded['notification'];
+      if(notifications is! List || notifications.isEmpty) return null;
+
+      final messages = <String>[];
+      for(final item in notifications){
+        if(item is String && item.trim().isNotEmpty){
+          messages.add(item.trim());
+        }
+        else if(item is Map){
+          for(final key in const ['message', 'Message', 'text', 'Text', 'description']){
+            final value = item[key];
+            if(value is String && value.trim().isNotEmpty){
+              messages.add(value.trim());
+              break;
+            }
+          }
+        }
+      }
+      return messages.isEmpty ? null : messages.join(' ');
+    }
+
+    static Future<int> validateLoginCredentials(Institute institute, String username, String password) async{      // Stores the primary too, so a switch away from it can later switch back.
       await storage.DataCache.setInstituteFallbackUrls(
         institute.Fallbacks.isEmpty ? [] : [institute.URL, ...institute.Fallbacks],
       );
@@ -508,6 +542,8 @@ Future<http.Response?> _tryGet(Uri url) async {
     }
 
     static Future<int> _tryModernLogin(String baseUrl, String username, String password) async {
+      lastLoginMessage = null;
+      lastLoginWasNetworkFailure = false;
       try {
         final modernApiUrl = Uri.parse("$baseUrl/api/Account/Authenticate");
         final body = conv.jsonEncode({
@@ -526,11 +562,19 @@ Future<http.Response?> _tryGet(Uri url) async {
         final responseRaw = await _APIRequest.postRequestRaw(modernApiUrl, body, cookie: cookieHeader);
         final response = conv.jsonDecode(responseRaw.body);
 
+        // Neptun explains itself in `notification`, which used to be dropped, so a
+        // locked account and a mistyped password both surfaced as "wrong password".
+        lastLoginMessage = serverMessageFrom(response);
+
         // Extract and save cookies/tokens
         _APIRequest._extractAndSaveCookiesAndTokens(responseRaw, username);
 
         final is2fa = response["data"] != null && (response["data"]["isTwoFactorRequired"] == true || response["data"]["requiresTwoFactor"] == true);
-        if (is2fa) {
+
+        // A rejected request must never open the code prompt. Asking for codes against
+        // credentials the server already refused is what burns login attempts, and
+        // enough of those suspend the Neptun account.
+        if (is2fa && responseRaw.statusCode < 400) {
           await storage.DataCache.setInstituteUrl(baseUrl);
 
           // With a stored secret the app can answer the challenge itself, so an expired
@@ -555,7 +599,11 @@ Future<http.Response?> _tryGet(Uri url) async {
           CalendarRequest.invalidateTrainingId();
           return 1;
         }
-      } catch (e) { }
+      } catch (e) {
+        // Never reached the server, or it answered with something unparseable. That is
+        // not the same as the credentials being wrong and must not be shown as such.
+        lastLoginWasNetworkFailure = true;
+      }
       return 0; // HIBA
     }
 

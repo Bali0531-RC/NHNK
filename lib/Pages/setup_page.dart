@@ -1043,6 +1043,30 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
       }
       else { // 0: HIBÁS JELSZÓ VAGY NEPTUN KÓD
         AppHaptics.attentionLightImpact();
+        _failedAttempts++;
+
+        // Neptun suspends an account after enough failed attempts, and the app used to
+        // show every failure as a wrong password, so the obvious response was to try
+        // again. Say what the server actually said, and say when to stop.
+        final serverSaid = api.InstitutesRequest.lastLoginMessage;
+        if(api.InstitutesRequest.lastLoginWasNetworkFailure){
+          _showSnackbar(
+              AppStrings.getCurrentLangCode() == 'hu'
+                  ? 'Nem sikerült elérni a Neptunt. Ez nem a jelszavadon múlik.'
+                  : 'Could not reach Neptun. This is not about your password.',
+              6);
+        }
+        else if(serverSaid != null && serverSaid.isNotEmpty){
+          _showSnackbar(serverSaid, 8);
+        }
+        else if(_failedAttempts >= 3){
+          _showSnackbar(
+              AppStrings.getCurrentLangCode() == 'hu'
+                  ? 'Több sikertelen próbálkozás. A Neptun zárolhatja a fiókodat, ellenőrizd a jelszavad a Neptun weben.'
+                  : 'Several failed attempts. Neptun can suspend your account, so check your password on the Neptun website.',
+              8);
+        }
+
         setState(() {
           _paintRed = true;
           _canProceed = true;
@@ -1063,6 +1087,9 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
   String _snackbarMessage = "";
   Duration _displayDuration = Duration.zero;
   bool _shouldShowSnackbar = false;
+
+  /// Counted so the app can warn before Neptun locks the account, rather than after.
+  int _failedAttempts = 0;
 
   void _showSnackbar(String text, int displayDurationSec){
     if(!mounted){

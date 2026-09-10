@@ -1720,7 +1720,18 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
     if(!force && !ignoreCacheAge && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       await _loadMailsFromCache();
-      return;
+
+      // Reading mail on the Neptun website tells the app nothing, so the cache would
+      // otherwise show it unread for a day. One cheap count says whether that
+      // happened; only a mismatch is worth refetching the list for.
+      if(!storage.DataCache.getHasNetwork()){
+        return;
+      }
+      final serverUnread = await api.MailRequest.getUnreadCountFast();
+      if(serverUnread == null || serverUnread == unreadMailCount){
+        return;
+      }
+      mailEntries.clear();
     }
 
     final request = await api.MailRequest.getMails(currentMailPage);
@@ -1744,11 +1755,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
     
-    final nums = await api.MailRequest.getUnreadMessagesAndAllMessages();
-    unreadMailCount = nums[0];
-    totalMailCount = nums[1];
+    // The total only exists to bound the infinite scroll, and nothing reports it but
+    // the list itself, so it is fetched the expensive way only until we have one.
+    final fastUnread = await api.MailRequest.getUnreadCountFast();
+    if(fastUnread != null && totalMailCount > 0){
+      unreadMailCount = fastUnread;
+    }
+    else{
+      final nums = await api.MailRequest.getUnreadMessagesAndAllMessages();
+      unreadMailCount = nums[0];
+      totalMailCount = nums[1];
+    }
 
-    await MailAlerts.writeCache(mailEntries, nums[0], nums[1]);
+    await MailAlerts.writeCache(mailEntries, unreadMailCount, totalMailCount);
 
     if(currentMailPage == 1){
       await MailAlerts.notify(MailAlerts.findNewMails(previousMailIds, mailEntries));
