@@ -13,6 +13,7 @@ import '../local_file_actions.dart';
 import '../notifications.dart';
 import '../power_settings.dart';
 import '../storage.dart';
+import '../timetable_sync.dart';
 import '../Misc/emojirich_text.dart';
 import '../Pages/startup_page.dart';
 
@@ -24,7 +25,7 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver {
   /// Section headers were hardcoded Hungarian, so they stayed Hungarian in every
   /// other language. Compiled in rather than taken from a downloadable pack.
   String _t(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
@@ -35,10 +36,16 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hasTotpSecret = false;
   bool _batteryExempt = true;
   bool _hasOemPowerScreen = false;
+  bool _hasWidgets = false;
+  bool _exactAlarmsAllowed = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    AppNotifications.exactAlarmsAllowed().then((value){
+      if(mounted) setState(() => _exactAlarmsAllowed = value);
+    });
 
     // loading defaults
     _currentFontScale = DataCache.getFontScale();
@@ -55,6 +62,10 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() => _hasOemPowerScreen = v);
     });
 
+    TimetableSync.hasWidgets().then((value){
+      if(mounted) setState(() => _hasWidgets = value);
+    });
+
     final lIdx = DataCache.getUserSelectedLanguage()!;
     if (lIdx <= -1) {
       final langCodeIdx = AppStrings.getAllLangCodes().indexOf(AppPlatform.localeName.split('_')[0].toLowerCase());
@@ -67,6 +78,38 @@ class _SettingsPageState extends State<SettingsPage> {
   /// The background job serves both alert types, so it stays relevant while either is on.
   bool get _wantsAnyAlert =>
       (DataCache.getNeedGradeNotifications() ?? true) || (DataCache.getNeedMailNotifications() ?? true);
+
+    bool get _needsBackgroundWork => _hasWidgets
+      || (DataCache.getNeedClassNotifications() ?? true)
+      || (DataCache.getBackgroundGradeCheckMinutes() > 0 && _wantsAnyAlert);
+
+  @override
+  void dispose(){
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state){
+    if(state == AppLifecycleState.resumed) _refreshBackgroundPermissions();
+  }
+
+  Future<void> _refreshBackgroundPermissions() async{
+    final exact = await AppNotifications.exactAlarmsAllowed();
+    final exempt = await PowerSettings.isExempt();
+    if(!mounted) return;
+    final newlyAllowed = exact && !_exactAlarmsAllowed;
+    setState((){
+      _exactAlarmsAllowed = exact;
+      _batteryExempt = exempt;
+    });
+    if(newlyAllowed){
+      if(DataCache.getNeedClassNotifications() ?? false) HomePageState.setupClassesNotifications();
+      if(DataCache.getNeedExamNotifications() ?? false) HomePageState.setupExamNotifications();
+      if(DataCache.getNeedPaymentsNotifications() ?? false) HomePageState.setupPaymentsNotifications();
+      if(DataCache.getNeedPeriodsNotifications() ?? false) HomePageState.setupPeriodsNotifications();
+    }
+  }
 
   /// The exact alarm permission sends the user to a system settings screen, so it is
   /// only worth asking at the moment they actually switch an alert on.
@@ -401,49 +444,67 @@ class _SettingsPageState extends State<SettingsPage> {
           // --- 2. notifications ---
           _buildSectionHeader(_t("Értesítések", "Notifications"), Icons.notifications_active_rounded),
 
+          if(BackgroundWorker.isSupported)
+            ListTile(
+              title: Text(_t('Pontos emlékeztetők', 'Exact reminder timing')),
+              subtitle: Text(_exactAlarmsAllowed
+                  ? _t('Engedélyezve', 'Allowed')
+                  : _t('Nincs engedélyezve; az emlékeztetők késhetnek.', 'Not allowed; reminders may arrive late.')),
+              trailing: Icon(_exactAlarmsAllowed ? Icons.alarm_on_rounded : Icons.alarm_off_rounded,
+                  color: _exactAlarmsAllowed ? AppColors.getTheme().secondary : AppColors.getTheme().errorRed),
+              onTap: _exactAlarmsAllowed ? null : () async {
+                await AppNotifications.requestExactAlarms();
+                await _refreshBackgroundPermissions();
+              },
+            ),
+
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption2_ExamNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
             value: DataCache.getNeedExamNotifications()!,
-            onChanged: (b) {
+            onChanged: (b) async {
               AppHaptics.lightImpact();
-              DataCache.setNeedExamNotifications(b ? 1 : 0);
+              await DataCache.setNeedExamNotifications(b ? 1 : 0);
+              await _ensureExactAlarms(b);
               b ? HomePageState.setupExamNotifications() : HomePageState.cancelExamNotifications();
-              setState(() {});
+              if(mounted) setState(() {});
             },
           ),
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption3_ClassNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
             value: DataCache.getNeedClassNotifications()!,
-            onChanged: (b) {
+            onChanged: (b) async {
               AppHaptics.lightImpact();
-              DataCache.setNeedClassNotifications(b ? 1 : 0);
+              await DataCache.setNeedClassNotifications(b ? 1 : 0);
+              await _ensureExactAlarms(b);
               b ? HomePageState.setupClassesNotifications() : HomePageState.cancelClassesNotifications();
-              setState(() {});
+              await BackgroundWorker.sync();
+              if(mounted) setState(() {});
             },
           ),
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
             value: DataCache.getNeedPaymentsNotifications()!,
-            onChanged: (b) {
+            onChanged: (b) async {
               AppHaptics.lightImpact();
-              DataCache.setNeedPaymentsNotifications(b ? 1 : 0);
+              await DataCache.setNeedPaymentsNotifications(b ? 1 : 0);
+              await _ensureExactAlarms(b);
               b ? HomePageState.setupPaymentsNotifications() : HomePageState.cancelPaymentsNotifications();
-              setState(() {});
+              if(mounted) setState(() {});
             },
           ),
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption5_PeriodsNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
             value: DataCache.getNeedPeriodsNotifications()!,
-            onChanged: (b) {
+            onChanged: (b) async {
               AppHaptics.lightImpact();
-              DataCache.setNeedPeriodsNotifications(b ? 1 : 0);
+              await DataCache.setNeedPeriodsNotifications(b ? 1 : 0);
+              await _ensureExactAlarms(b);
               b ? HomePageState.setupPeriodsNotifications() : HomePageState.cancelPeriodsNotifications();
-              _ensureExactAlarms(b);
-              setState(() {});
+              if(mounted) setState(() {});
             },
           ),
 
@@ -456,7 +517,6 @@ class _SettingsPageState extends State<SettingsPage> {
               AppHaptics.lightImpact();
               DataCache.setNeedGradeNotifications(b ? 1 : 0);
               BackgroundWorker.sync();
-              _ensureExactAlarms(b);
               setState(() {});
             },
           ),
@@ -469,7 +529,6 @@ class _SettingsPageState extends State<SettingsPage> {
               AppHaptics.lightImpact();
               DataCache.setNeedMailNotifications(b ? 1 : 0);
               BackgroundWorker.sync();
-              _ensureExactAlarms(b);
               setState(() {});
             },
           ),
@@ -515,7 +574,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
           // Only worth showing when a background check is actually wanted.
-          if(BackgroundWorker.isSupported && DataCache.getBackgroundGradeCheckMinutes() > 0 && _wantsAnyAlert)
+          if(BackgroundWorker.isSupported && _needsBackgroundWork)
             ListTile(
               title: Text(AppStrings.getLanguagePack().settings_BatteryOptimisation, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
               subtitle: Text(
@@ -539,7 +598,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
           // Vendor list is separate from Android's; being exempt above does not cover it.
-          if(BackgroundWorker.isSupported && _hasOemPowerScreen && DataCache.getBackgroundGradeCheckMinutes() > 0 && _wantsAnyAlert)
+          if(BackgroundWorker.isSupported && _hasOemPowerScreen && _needsBackgroundWork)
             ListTile(
               title: Text(AppStrings.getLanguagePack().settings_OemBackground, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
               subtitle: Text(

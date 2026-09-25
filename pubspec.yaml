@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.0.1+37
+version: 2.0.2+38
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -25,7 +25,7 @@ environment:
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
 # dependencies can be manually updated by changing the version numbers below to
-# the latest version available on pub.dev. To see which dependencies have newer
+# the latest version available on pub.dev. To see which dependencies have newe
 # versions available, run `flutter pub outdated`.
 dev_dependencies:
   flutter_lints: ^3.0.0
@@ -61,6 +61,7 @@ dependencies:
   open_filex: ^4.7.0
   crypto: ^3.0.0
   workmanager: ^0.10.7
+  home_widget: ^0.10.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

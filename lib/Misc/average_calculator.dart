@@ -7,6 +7,35 @@ import '../language.dart';
 
 String _t(String hu, String en) => AppStrings.getCurrentLangCode() == 'hu' ? hu : en;
 
+typedef MarkbookGrade = ({int credit, int grade, bool completed, int ghostGrade});
+
+({double arithmetic, double weighted, double creditIndex, int gradedCredits}) calculateMarkbookAverages(
+  Iterable<MarkbookGrade> subjects,
+) {
+  var gradeSum = 0;
+  var gradeCount = 0;
+  var weightedSum = 0;
+  var gradedCredits = 0;
+  for (final subject in subjects) {
+    final hasGhost = subject.grade < 2 && subject.ghostGrade >= 1 && subject.ghostGrade <= 5;
+    final grade = hasGhost ? subject.ghostGrade : subject.grade;
+    if (grade < 1 || grade > 5) continue;
+    if (!subject.completed && !hasGhost && grade != 1) continue;
+    gradeSum += grade;
+    gradeCount++;
+    if (subject.credit > 0 && ((subject.completed && subject.grade >= 2) || hasGhost)) {
+      weightedSum += grade * subject.credit;
+      gradedCredits += subject.credit;
+    }
+  }
+  return (
+    arithmetic: gradeCount == 0 ? double.nan : gradeSum / gradeCount,
+    weighted: gradedCredits == 0 ? double.nan : weightedSum / gradedCredits,
+    creditIndex: weightedSum / 30,
+    gradedCredits: gradedCredits,
+  );
+}
+
 /// Works out the average still needed over the remaining credits to reach a target.
 /// Weighted the same way the markbook page computes the displayed average.
 double? requiredAverage({

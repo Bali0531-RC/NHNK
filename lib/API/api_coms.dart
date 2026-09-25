@@ -875,8 +875,7 @@ class CalendarRequest {
 
   /// Some institutions leave GetCalendarEvents empty even though the timetable exists;
   /// the personal iCal export is populated in that case, so it is used as a fallback.
-  static Future<List<CalendarEntry>?> _fetchIcsFallback() async {
-    const int cacheTtlMs = 6 * 60 * 60 * 1000;
+  static Future<List<CalendarEntry>?> _fetchIcsFallback({int cacheTtlMs = 6 * 60 * 60 * 1000}) async {
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (_icsFallbackCache != null && now - _icsFallbackFetchedMs < cacheTtlMs) {
       return _icsFallbackCache;
@@ -911,7 +910,9 @@ class CalendarRequest {
         return null;
       }
 
-      final entries = parseIcsEntries(conv.utf8.decode(resp.bodyBytes));
+      final text = conv.utf8.decode(resp.bodyBytes);
+      if(!text.contains('BEGIN:VCALENDAR') || !text.contains('END:VCALENDAR')) return null;
+      final entries = parseIcsEntries(text);
       _icsFallbackCache = entries;
       _icsFallbackFetchedMs = now;
       return entries;
@@ -1020,7 +1021,7 @@ class CalendarRequest {
     return list;
   }
 
-  static Future<String> makeCalendarRequest(String calendarJson) async {
+  static Future<String> makeCalendarRequest(String calendarJson, {bool requireSuccess = false}) async {
     if (storage.DataCache.getIsDemoAccount()!) {
       return _demoCalendarJson(calendarJson);
     }
@@ -1039,7 +1040,10 @@ class CalendarRequest {
 
       // Used whenever the JSON endpoint yields nothing, including when the session is gone.
       Future<String> fromIcsOnly() async {
-        final fallback = await _fetchIcsFallback();
+        final fallback = await _fetchIcsFallback(cacheTtlMs: requireSuccess ? 60000 : 6 * 60 * 60 * 1000);
+        if(fallback == null && requireSuccess){
+          throw StateError('Calendar refresh unavailable');
+        }
         final List<Map<String, dynamic>> list = [];
         if (fallback != null) {
           for (var e in fallback) {
@@ -1162,6 +1166,7 @@ class CalendarRequest {
         try {
           return await fromIcsOnly();
         } catch (_) {
+          if(requireSuccess) rethrow;
           return '{"calendarData": []}';
         }
       }
@@ -1169,6 +1174,12 @@ class CalendarRequest {
 
       final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.CALENDAR_URL);
       final request = await _APIRequest.postRequest(url, calendarJson);
+      if(requireSuccess){
+        final decoded = conv.jsonDecode(request);
+        if(decoded is! Map || decoded['calendarData'] is! List || decoded['ErrorMessage'] != null){
+          throw StateError('Calendar refresh unavailable');
+        }
+      }
       return request;
     }
   }

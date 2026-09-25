@@ -47,6 +47,7 @@ class MarkbookElementWidget extends StatelessWidget{
       bits.add(hu ? 'nincs lezárva' : 'not completed');
     }
     if(isFailed) bits.add(hu ? 'megbukott' : 'failed');
+    if(ghostGrade != -1) bits.add(hu ? '$ghostGrade-es szellemjegy' : 'ghost grade $ghostGrade');
     return bits.join(', ');
   }
 
@@ -64,9 +65,9 @@ class MarkbookElementWidget extends StatelessWidget{
       // Label and value are announced value-first, which buried the subject name
       // behind its credits and status. One label keeps the name in front.
       label: '${name.trim()}, $_spokenValue',
-      button: grade < 2 && credit != 0,
+      button: grade < 2,
       child: GestureDetector(
-        onTap: grade >= 2 || credit == 0 ? null : () {
+        onTap: grade >= 2 ? null : () {
           PopupWidgetHandler(mode: 0, callback: (r){
             onPopupResult(r as int, listIndex);
           });
@@ -145,7 +146,7 @@ class MarkbookElementWidget extends StatelessWidget{
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    grade < 2 && ghostGrade == -1 || credit == 0 ?
+                    grade < 2 && ghostGrade == -1 ?
                     Icon(
                       Icons.check_rounded,
                       color: AppColors.getTheme().grade5,

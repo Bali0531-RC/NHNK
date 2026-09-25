@@ -24,6 +24,7 @@ import '../haptics.dart';
 import '../mail_alerts.dart';
 import '../storage.dart' as storage;
 import '../startup_trace.dart';
+import '../timetable_sync.dart';
 import '../TimetableElements/timetable_element_widget.dart' as t_table;
 import '../MarkbookElements/markbook_element_widget.dart' as mbook;
 import '../PeriodsElements/periods_element_widget.dart' as priods;
@@ -163,6 +164,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   int totalMoney = 0;
   double totalAvg = 0;
   double totalAvg30 = 0;
+  double arithmeticAvg = double.nan;
   /// Credits that carry a grade, which is what the average is weighted over.
   int gradedCredits = 0;
 
@@ -312,7 +314,6 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       }
     });
 
-    AppNotifications.initialize();
     BackgroundWorker.sync();
     refreshLastUpdated();
     // The banner has to react on its own; nothing else rebuilds when the radio drops.
@@ -336,9 +337,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       });
     });
 
-    Future.delayed(Duration.zero,() async{
-      await AppNotifications.cancelScheduledNotifs();
-    }).whenComplete((){
+    AppNotifications.initialize().then((_){
       Future.delayed(Duration.zero, () async{
         await fetchCalendar();
         StartupTrace.mark('fetchCalendar');
@@ -654,29 +653,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   final List<api.CalendarEntry> _classesNotificationList = <api.CalendarEntry>[].toList();
 
   Future<void> _setupClassesNotifications(List<api.CalendarEntry> items)async{
-    await _cancelClassesNotifications();
-    if(!storage.DataCache.getNeedClassNotifications()!){
-      return;
-    }
-    for(var item in items){
-      // set up notifications for today
-      final now = DateTime.now();
-      if(now.millisecondsSinceEpoch < item.startEpoch && !item.isExam){ // did not pass them in time
-
-        String finalRoom = item.location;
-        if (item.classInstanceId != null && item.classInstanceId!.isNotEmpty) {
-          String? cachedRoom = await storage.getString('room_${item.classInstanceId}');
-          if (cachedRoom != null && cachedRoom.isNotEmpty && cachedRoom != "Nincs terem") {
-            finalRoom = cachedRoom;
-          }
-        }
-        // -------------------------------------------------------------------------------
-
-        await AppNotifications.scheduleNotification('Óra', '"${item.title}" órád lesz itt: "$finalRoom" 10 perc múlva!', DateTime.fromMillisecondsSinceEpoch((Duration(milliseconds: item.startEpoch) - const Duration(minutes: 10)).inMilliseconds), 1);
-        await AppNotifications.scheduleNotification('Óra', '"${item.title}" órád lesz itt: "$finalRoom" 5 perc múlva!', DateTime.fromMillisecondsSinceEpoch((Duration(milliseconds: item.startEpoch) - const Duration(minutes: 5)).inMilliseconds), 1);
-        await AppNotifications.scheduleNotification('Óra', '"${item.title}" órád van itt: "$finalRoom"!', DateTime.fromMillisecondsSinceEpoch(item.startEpoch), 1);
-      }
-    }
+    await TimetableSync.scheduleClasses(items);
   }
   
   Future<void> _cancelClassesNotifications()async{
@@ -1108,51 +1085,29 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   void _markbookCalcAvg(){
-    if(markbookEntries.isEmpty){
-      return;
-    }
-    var currCredits = 0;
-    for(var item in markbookEntries){
-      if (!item.completed) {
-        continue;
-      }
-      if (item.grade >= 2) {
-        currCredits += item.credit;
-        totalAvg += item.grade * item.credit;
-      }
-    }
-    totalAvg30 = totalAvg / 30;
-    totalAvg /= currCredits;
-    gradedCredits = currCredits;
+    _applyMarkbookAverages(markbookEntries.map((subject) => (
+      credit: subject.credit,
+      grade: subject.grade,
+      completed: subject.completed,
+      ghostGrade: -1,
+    )));
   }
 
   void _markbookCalcGhostAvg(){
-    if(markbookEntries.isEmpty){
-      return;
-    }
-    var currCredits = 0;
-    totalAvg = 0;
-    totalAvg30 = 0;
-    for(var item in markbookList){
-      try{
-        final itm = item as mbook.MarkbookElementWidget;
-        if(!itm.completed && itm.ghostGrade == -1){
-          continue;
-        }
-        if (item.grade >= 2) {
-          currCredits += item.credit;
-          totalAvg += item.grade * item.credit;
-        }
-        else if(item.ghostGrade != -1){
-          currCredits += item.credit;
-          totalAvg += item.ghostGrade * item.credit;
-        }
-      }
-      catch(_){}
-    }
-    totalAvg30 = totalAvg / 30;
-    totalAvg /= currCredits;
-    gradedCredits = currCredits;
+    _applyMarkbookAverages(markbookList.whereType<mbook.MarkbookElementWidget>().map((subject) => (
+      credit: subject.credit,
+      grade: subject.grade,
+      completed: subject.completed,
+      ghostGrade: subject.ghostGrade,
+    )));
+  }
+
+  void _applyMarkbookAverages(Iterable<MarkbookGrade> subjects){
+    final averages = calculateMarkbookAverages(subjects);
+    arithmeticAvg = averages.arithmetic;
+    totalAvg = averages.weighted;
+    totalAvg30 = averages.creditIndex;
+    gradedCredits = averages.gradedCredits;
   }
 
   void _setupPayments(){
@@ -1492,6 +1447,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
       calendarEntries.clear();
       calendarEntries = ICSCalendar.getCalendarInterval(epochStart, epochEnd);
+      if(currentWeekOffset == 1){
+        await TimetableSync.writeCurrentWeek(calendarEntries);
+        await _setupClassesNotifications(calendarEntries);
+      }
 
       storage.DataCache.setHasCachedFirstWeekEpoch(1);
       return;
@@ -1503,7 +1462,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
     // if we had a save, and the cached value is not older than a day, we can load that up
-    if(!force && hasCachedCalendar && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
+    if(!force && currentWeekOffset == 1 && hasCachedCalendar && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds && !storage.DataCache.getIsDemoAccount()!) {
+      calendarEntries.clear();
       final len = await storage.getInt('CachedCalendarLength');
       for(int i = 0; i < len!; i++){
         final calEntry = await storage.getString('CachedCalendar_$i');
@@ -1515,32 +1475,31 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         if (mounted) setState(() {});
       });
 
-      Future.delayed(Duration.zero,()async{
-        await _setupClassesNotifications(_classesNotificationList);
-      });
+      await _setupClassesNotifications(calendarEntries);
       return;
     }
     //otherwise, just fetch again
     //final isWeekend = DateTime.now().weekday == DateTime.saturday || DateTime.now().weekday == DateTime.sunday ? 1 : 0;
     //final userOffset = storage.DataCache.getUserWeekOffset()!;
     final calendarPassword = (await storage.DataCache.getPassword())!;
-    final request = await api.CalendarRequest.makeCalendarRequest(api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, calendarPassword, currentWeekOffset));
+    String request;
+    try{
+      request = await api.CalendarRequest.makeCalendarRequest(
+        api.CalendarRequest.getCalendarOneWeekJSON(storage.DataCache.getUsername()!, calendarPassword, currentWeekOffset),
+        requireSuccess: true,
+      );
+    }
+    catch(_){
+      if(currentWeekOffset == 1){
+        calendarEntries = await TimetableSync.readCurrentWeek();
+        await _setupClassesNotifications(calendarEntries);
+      }
+      return;
+    }
     calendarEntries.clear();
     final list = api.CalendarRequest.getCalendarEntriesFromJSON(request);
     //calendarEntries = list2;
     calendarEntries = list;
-
-    // Only the current week is cached, so that is the only one worth restoring.
-    bool restoredFromCache = false;
-    if(calendarEntries.isEmpty && currentWeekOffset == 1 && (storage.DataCache.getHasCachedCalendar() ?? false)){
-      final len = await storage.getInt('CachedCalendarLength') ?? 0;
-      for(int i = 0; i < len; i++){
-        final entry = await storage.getString('CachedCalendar_$i');
-        if(entry == null) continue;
-        calendarEntries.add(api.CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(entry));
-      }
-      restoredFromCache = calendarEntries.isNotEmpty;
-    }
 
     //automatic room finder lol
     api.CalendarRequest.fillMissingDetails(calendarEntries, () {
@@ -1549,23 +1508,8 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     //autofinder end
 
     if(currentWeekOffset == 1) {
-      storage.saveInt('CachedCalendarLength', calendarEntries.length);
-      //cache calendar
-      for (int i = 0; i < calendarEntries.length; i++) {
-        storage.saveString('CachedCalendar_$i', calendarEntries[i].toString());
-      }
-      final now = DateTime.now();
-      storage.saveString('CalendarCacheTime', DateTime(now.year, now.month, now.day, 0, 0, 0).toString());
-      // CalendarCacheTime is deliberately midnight so the TTL compares whole days,
-      // which left the widget showing "00:00" as its last update. This is the real
-      // moment. Data we just restored from the cache is not new, so it keeps the
-      // timestamp it already had rather than looking freshly fetched.
-      if(!restoredFromCache) {
-        storage.saveInt('CalendarCacheWrittenAt', now.millisecondsSinceEpoch);
-      }
-      Future.delayed(Duration.zero,()async{
-        await _setupClassesNotifications(_classesNotificationList);
-      });
+      await TimetableSync.writeCurrentWeek(calendarEntries);
+      await _setupClassesNotifications(calendarEntries);
     }
     storage.DataCache.setHasCachedCalendar(1);
   }
@@ -2228,6 +2172,16 @@ class MarkbookPageWidget extends StatelessWidget{
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
+                                    Text(
+                                      '${AppStrings.getCurrentLangCode() == 'hu' ? 'Számtani átlag' : 'Arithmetic average'}: '
+                                      '${homePage.arithmeticAvg.isNaN ? AppStrings.getLanguagePack().markbookPage_NoGrades : homePage.arithmeticAvg.toStringAsFixed(2)}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: AppColors.getTheme().onPrimaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13.0,
+                                      ),
+                                    ),
                                     EmojiRichText(
                                       text: AppStrings.getStringWithParams(AppStrings.getLanguagePack().markbookPage_AverageDisplay, [totalAvg.isNaN || totalAvg <= 0 ? AppStrings.getLanguagePack().markbookPage_NoGrades : totalAvg.toStringAsFixed(2), api.Generic.reactionForAvg(totalAvg)]),                                      defaultStyle: TextStyle(
                                         color: AppColors.getTheme().onPrimaryContainer,

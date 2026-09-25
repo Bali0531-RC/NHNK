@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -11,142 +12,179 @@ import 'storage.dart' as storage;
 const String markMailReadAction = 'nhnk_mark_mail_read';
 
 /// Compiled in rather than taken from a downloadable pack, like the other warnings.
-String _markAsReadLabel() =>
-    AppStrings.getCurrentLangCode() == 'hu' ? 'Megjelölés olvasottként' : 'Mark as read';
+String _markAsReadLabel() => AppStrings.getCurrentLangCode() == 'hu'
+    ? 'Megjelölés olvasottként'
+    : 'Mark as read';
 
 /// Runs on a background isolate with none of the app's statics populated, so the
 /// stored session has to be loaded before the request can be made.
 @pragma('vm:entry-point')
-void onNotificationBackgroundResponse(NotificationResponse response){
-  if(response.actionId != markMailReadAction) return;
+void onNotificationBackgroundResponse(NotificationResponse response) {
+  if (response.actionId != markMailReadAction) return;
   final id = response.payload;
-  if(id == null || id.isEmpty) return;
+  if (id == null || id.isEmpty) return;
   () async {
-    try{
+    try {
       await storage.DataCache.loadData();
       await api.MailRequest.setMailRead(id);
-    }
-    catch(_){ }
+    } catch (_) {}
   }();
 }
 
-class AppNotifications{
-  static final FlutterLocalNotificationsPlugin _localnotifs = FlutterLocalNotificationsPlugin();
-  static Future<void> initialize()async{
-    Counter();
-    if(AppPlatform.isMobile){
-      tz.initializeTimeZones();
-      final timeZoneName = await FlutterTimezone.getLocalTimezone();
-      final String timeZone = timeZoneName.identifier;
-      tz.setLocalLocation(tz.getLocation(timeZone));
+class AppNotifications {
+  static final FlutterLocalNotificationsPlugin _localnotifs =
+      FlutterLocalNotificationsPlugin();
+  static Future<void>? _initialization;
+  static const String _scheduledPrefix = 'nhnk:scheduled:';
 
-      // Only the notification prompt belongs here. Android shows it once and then
-      // remembers the answer. requestExactAlarmsPermission throws the user out to a
-      // full system settings screen and keeps doing it on every cold start until it
-      // is granted, so it is asked for from the settings toggle instead.
-      _localnotifs.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+  static Future<void> initialize() async {
+    await initializeHeadless();
+    if (AppPlatform.isAndroid) {
+      await _localnotifs
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
     }
-    await _localnotifs.initialize(settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        linux: LinuxInitializationSettings(
-            defaultActionName: 'Dismiss'
-        )
-    ),
-      onDidReceiveBackgroundNotificationResponse: onNotificationBackgroundResponse,
-    );
   }
 
   /// Asked for at the moment the user turns background checks on, where the trip to
   /// the system settings screen makes sense to them. Returns false if it was denied.
-  static Future<bool> requestExactAlarms() async{
-    if(!AppPlatform.isAndroid) return true;
-    final android = _localnotifs.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    if(android == null) return true;
+  static Future<bool> requestExactAlarms() async {
+    if (!AppPlatform.isAndroid) return true;
+    final android = _localnotifs.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return true;
     return await android.requestExactAlarmsPermission() ?? false;
+  }
+
+  static Future<bool> exactAlarmsAllowed() async {
+    if (!AppPlatform.isAndroid) return true;
+    final android = _localnotifs.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.canScheduleExactNotifications() ?? false;
   }
 
   /// Same plugin setup minus the permission prompts: requestExactAlarmsPermission
   /// opens a settings screen, which must never happen from a background task.
-  static Future<void> initializeHeadless() async{
-    if(AppPlatform.isMobile){
+  static Future<void> initializeHeadless() async {
+    if (AppPlatform.isWeb) return;
+    try {
+      await (_initialization ??= _initializePlugin());
+    } catch (_) {
+      _initialization = null;
+      rethrow;
+    }
+  }
+
+  static Future<void> _initializePlugin() async {
+    if (AppPlatform.isMobile) {
       tz.initializeTimeZones();
       final timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName.identifier));
     }
-    await _localnotifs.initialize(settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        linux: LinuxInitializationSettings(defaultActionName: 'Dismiss')
-    ),
-      onDidReceiveBackgroundNotificationResponse: onNotificationBackgroundResponse,
+    await _localnotifs.initialize(
+      settings: const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          linux: LinuxInitializationSettings(defaultActionName: 'Dismiss')),
+      onDidReceiveBackgroundNotificationResponse:
+          onNotificationBackgroundResponse,
     );
   }
 
-  static final List<NotificationLink> _scheduledNotifLinks = <NotificationLink>[].toList();
-  static Future<void> cancelScheduledNotifs()async{
-    //log('cancle');
+  static Future<void> cancelScheduledNotifs() async {
+    if (AppPlatform.isWeb) return;
+    await initializeHeadless();
     await _localnotifs.cancelAll();
-    _scheduledNotifLinks.clear();
-    Counter.reset();
   }
 
-  static Future<void> cancelScheduledNotifsId(int id)async{
-    final matches = _scheduledNotifLinks.where((item) => item.id == id).toList();
-    for (var item in matches){
-      await _localnotifs.cancel(id: item.counter);
+  static Future<void> cancelScheduledNotifsId(int id,
+      {Set<int> keep = const {}}) async {
+    if (AppPlatform.isWeb) return;
+    await initializeHeadless();
+    final pending = await _localnotifs.pendingNotificationRequests();
+    final legacyTitle = switch (id) {
+      0 => 'Vizsga emlékeztető!',
+      1 => 'Óra',
+      2 => 'Befizetés',
+      3 => 'Időszak',
+      _ => null,
+    };
+    for (final item in pending) {
+      final legacy = legacyTitle != null &&
+          (item.payload?.isEmpty ?? true) &&
+          item.title == legacyTitle;
+      if ((item.payload == '$_scheduledPrefix$id' || legacy) &&
+          !keep.contains(item.id)) {
+        await _localnotifs.cancel(id: item.id);
+      }
     }
-    _scheduledNotifLinks.removeWhere((item) => item.id == id);
   }
 
-  static tz.TZDateTime _convert(int year, int month, int day, int hour, int minute){
-    return tz.TZDateTime(
-      tz.local,
-      year,
-      month,
-      day,
-      hour,
-      minute,
-    );
+  static int _stableId(String value) {
+    var result = 0;
+    for (final unit in value.codeUnits) {
+      result = (result * 31 + unit) & 0x3fffffff;
+    }
+    return result;
   }
 
-  static Future<void> scheduleNotification(String title, String content, DateTime time, int id) async{
-    final tzTime = _convert(time.year, time.month, time.day, time.hour, time.minute);
+  static Future<int?> scheduleNotification(
+      String title, String content, DateTime time, int id) async {
+    if (!AppPlatform.isMobile) return null;
+    await initializeHeadless();
+    final tzTime = tz.TZDateTime.from(time, tz.local);
     final now = tz.TZDateTime.now(tz.local);
 
-    if (tzTime.isBefore(now)) {
-      return;
+    if (!tzTime.isAfter(now)) {
+      return null;
     }
 
     final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-          '0',
-          'NHNK Időzített',
-          channelDescription: 'Olyan értesítések csatornája, amelyeket időzítetten, azaz a nap folyamán valamikor akar az applikáció megjeleníteni neked.',
+      android: AndroidNotificationDetails('0', 'NHNK Időzített',
+          channelDescription:
+              'Olyan értesítések csatornája, amelyeket időzítetten, azaz a nap folyamán valamikor akar az applikáció megjeleníteni neked.',
           importance: Importance.high,
           priority: Priority.high,
           ticker: 'NHNK Időzített Értesítés',
-          styleInformation: BigTextStyleInformation(content, contentTitle: title)
-      ),
+          styleInformation:
+              BigTextStyleInformation(content, contentTitle: title)),
       linux: const LinuxNotificationDetails(
         defaultActionName: 'Dismiss',
         urgency: LinuxNotificationUrgency.normal,
       ),
     );
-    final counter = Counter.getCount();
-    _scheduledNotifLinks.add(NotificationLink(id, counter));
-    if(AppPlatform.isMobile){
+    final notificationId =
+        _stableId('$id|${time.millisecondsSinceEpoch}|$title|$content');
+    final canScheduleExactly = await exactAlarmsAllowed();
+
+    Future<void> schedule(AndroidScheduleMode mode) async {
       await _localnotifs.zonedSchedule(
-        id: counter,
+        id: notificationId,
         title: title,
         body: content,
         scheduledDate: tzTime,
         notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: mode,
+        payload: '$_scheduledPrefix$id',
       );
     }
+
+    try {
+      await schedule(canScheduleExactly
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle);
+    } on PlatformException catch (error) {
+      if (error.code != 'exact_alarms_not_permitted') rethrow;
+      await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
+    }
+    return notificationId;
   }
 
   /// Same as [showNotification] but carries a mark-as-read action for a single mail.
-  static Future<void> showMailNotification(String title, String desc, String? mailId) async{
+  static Future<void> showMailNotification(
+      String title, String desc, String? mailId) async {
+    if (AppPlatform.isWeb) return;
+    await initializeHeadless();
     final actions = mailId == null || mailId.isEmpty
         ? const <AndroidNotificationAction>[]
         : <AndroidNotificationAction>[
@@ -159,23 +197,21 @@ class AppNotifications{
           ];
 
     final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-          '1',
-          'NHNK Azonnali',
-          channelDescription: 'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
+      android: AndroidNotificationDetails('1', 'NHNK Azonnali',
+          channelDescription:
+              'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
           importance: Importance.high,
           priority: Priority.high,
           ticker: 'NHNK Azonnali Értesítés',
           actions: actions,
-          styleInformation: BigTextStyleInformation(desc, contentTitle: title)
-      ),
+          styleInformation: BigTextStyleInformation(desc, contentTitle: title)),
       linux: const LinuxNotificationDetails(
         defaultActionName: 'Dismiss',
         urgency: LinuxNotificationUrgency.normal,
       ),
     );
     await _localnotifs.show(
-      id: Counter.getCount(),
+      id: 0x40000000 | _stableId('mail|${mailId ?? '$title|$desc'}'),
       title: title,
       body: desc,
       notificationDetails: details,
@@ -183,50 +219,27 @@ class AppNotifications{
     );
   }
 
-  static Future<void> showNotification(String title, String desc) async{
+  static Future<void> showNotification(String title, String desc) async {
+    if (AppPlatform.isWeb) return;
+    await initializeHeadless();
     final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-          '1',
-          'NHNK Azonnali',
-          channelDescription: 'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
+      android: AndroidNotificationDetails('1', 'NHNK Azonnali',
+          channelDescription:
+              'Olyan értesítések csatornája, amelyeket azonnal akar az applikáció megjeleníteni neked.',
           importance: Importance.high,
           priority: Priority.high,
           ticker: 'NHNK Azonnali Értesítés',
-          styleInformation: BigTextStyleInformation(desc, contentTitle: title)
-      ),
+          styleInformation: BigTextStyleInformation(desc, contentTitle: title)),
       linux: const LinuxNotificationDetails(
         defaultActionName: 'Dismiss',
         urgency: LinuxNotificationUrgency.normal,
       ),
     );
-    _localnotifs.show(
-      id: Counter.getCount(),
+    await _localnotifs.show(
+      id: 0x40000000 | _stableId('alert|$title|$desc'),
       title: title,
       body: desc,
       notificationDetails: details,
     );
   }
-}
-
-class Counter{ // using "static int counter" did not want to increment :(
-  static Counter? _instance;
-  Counter(){
-    _instance = this;
-  }
-
-  int _counter = 0;
-  static int getCount(){
-    //log('${_instance!._counter + 1}');
-    return ++_instance!._counter;
-  }
-
-  static void reset(){
-    _instance!._counter = 0;
-  }
-}
-
-class NotificationLink{
-  final int id;
-  final int counter;
-  NotificationLink(this.id, this.counter);
 }

@@ -31,6 +31,15 @@
             android:textColor="#99FFFFFF"
             android:textSize="10sp"
             android:maxLines="1" />
+
+        <ImageButton
+            android:id="@+id/widget_refresh"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_popup_sync"
+            android:tint="#FFFFFF"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Refresh timetable" />
     </LinearLayout>
 
     <TextView
@@ -44,6 +53,15 @@
         android:maxLines="2"
         android:visibility="gone"
         android:ellipsize="end" />
+
+    <Chronometer
+        android:id="@+id/widget_countdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="#E6FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/widget_body"

@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:home_widget/home_widget.dart';
+import 'platform_support.dart';
 import 'startup_trace.dart';
 
 Future<void> saveString(String key, String value) async {
@@ -49,12 +51,20 @@ class DataCache{
     await prefs.clear();
     await prefs.reload();
     _instance._localWipe();
+    await _clearWidget();
   }
 
   static Future<void> dataWipeNoKeep()async{
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await prefs.reload();
+    await _clearWidget();
+  }
+
+  static Future<void> _clearWidget() async{
+    if(!AppPlatform.isAndroid) return;
+    await HomeWidget.saveWidgetData<String>('calendar_snapshot', null);
+    await HomeWidget.updateWidget(qualifiedAndroidName: 'hu.bali0531.nhnk.app.TodayWidgetProvider');
   }
 
   void _localWipe(){
