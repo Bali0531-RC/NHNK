@@ -7,6 +7,7 @@ import 'package:nhnk/platform_support.dart';
 
 import 'API/api_coms.dart' as api;
 import 'language.dart';
+import 'mail_alerts.dart';
 import 'storage.dart' as storage;
 
 const String markMailReadAction = 'nhnk_mark_mail_read';
@@ -26,7 +27,9 @@ void onNotificationBackgroundResponse(NotificationResponse response) {
   () async {
     try {
       await storage.DataCache.loadData();
-      await api.MailRequest.setMailRead(id);
+      if(await api.MailRequest.setMailRead(id)){
+        await MailAlerts.markCachedMailRead(id);
+      }
     } catch (_) {}
   }();
 }
@@ -182,7 +185,7 @@ class AppNotifications {
 
   /// Same as [showNotification] but carries a mark-as-read action for a single mail.
   static Future<void> showMailNotification(
-      String title, String desc, String? mailId) async {
+      String title, String desc, String? mailId, {String? batchKey}) async {
     if (AppPlatform.isWeb) return;
     await initializeHeadless();
     final actions = mailId == null || mailId.isEmpty
@@ -204,6 +207,7 @@ class AppNotifications {
           priority: Priority.high,
           ticker: 'NHNK Azonnali Értesítés',
           actions: actions,
+          onlyAlertOnce: true,
           styleInformation: BigTextStyleInformation(desc, contentTitle: title)),
       linux: const LinuxNotificationDetails(
         defaultActionName: 'Dismiss',
@@ -211,7 +215,7 @@ class AppNotifications {
       ),
     );
     await _localnotifs.show(
-      id: 0x40000000 | _stableId('mail|${mailId ?? '$title|$desc'}'),
+      id: 0x40000000 | _stableId('mail|${batchKey ?? mailId ?? '$title|$desc'}'),
       title: title,
       body: desc,
       notificationDetails: details,

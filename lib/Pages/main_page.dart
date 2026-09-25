@@ -1380,22 +1380,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         prevDate = currDate;
         mailList.add(_getSeparatorLine('${currDate.year}. ${api.Generic.monthToText(date.month)}. ${date.day}.'));
       }
-      mailList.add(MailElementWidget(subject: item.subject, details: item.detail, sender: item.senderName, sendTime: item.sendDateMs, isRead: item.isRead, mailID: item.ID, callback: (element){
+      mailList.add(MailElementWidget(subject: item.subject, details: item.detail, sender: item.senderName, sendTime: item.sendDateMs, isRead: item.isRead, mailID: item.ID, callback: (element) async{
+        await MailAlerts.markCachedMailRead(element.mailID);
+        if(!mounted) return;
         setState(() {
-          if(element.isRead){
+          if(element.isRead || item.isRead){
             return;
           }
+          item.isRead = true;
           final indx = mailList.indexOf(element);
+          if(indx < 0) return;
           mailList.insert(indx, MailElementWidget(subject: element.subject, details: element.details, sender: element.sender, sendTime: element.sendTime, isRead: true, mailID: element.mailID, callback: (_){}));
           mailList.remove(element);
-          unreadMailCount--;
-          storage.saveInt('CachedMailsUnread', unreadMailCount);
-          Future.delayed(Duration.zero, ()async{
-            await api.MailRequest.setMailRead(MailPopupDisplayTexts.mailID);
-            if(currentMailPage == 1){
-              storage.DataCache.setHasCachedMail(0);
-            }
-          });
+          if(unreadMailCount > 0) unreadMailCount--;
         });
       },));
     }
@@ -1643,6 +1640,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool currentMailLoadingDebounce = false;
   late ScrollController currentMailPageController;
   Future<void> _loadMailsFromCache() async{
+    mailEntries.clear();
     final len = await storage.getInt('CachedMailsLength') ?? 0;
     unreadMailCount = (await storage.getInt('CachedMailsUnread')) ?? 0;
     totalMailCount = (await storage.getInt('CachedMailsTotal')) ?? 0;
@@ -1662,7 +1660,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       return;
     }
 
-    if(!force && !ignoreCacheAge && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
+    if(!force && currentMailPage == 1 && !ignoreCacheAge && hasCachedMails && cacheTime != null && (DateTime.now().millisecondsSinceEpoch - DateTime.parse(cacheTime).millisecondsSinceEpoch) < const Duration(hours: 24).inMilliseconds) {
       await _loadMailsFromCache();
 
       // Reading mail on the Neptun website tells the app nothing, so the cache would
@@ -1695,7 +1693,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     mailEntries = request;
     //debug.log(request!.toString());
 
-    if(force){
+    if(currentMailPage != 1){
       return;
     }
     

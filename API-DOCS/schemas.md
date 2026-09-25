@@ -77,6 +77,27 @@ Two things worth knowing:
 
 ---
 
+## Messages/{messageId}/Posts/Processed
+
+Verified in Pannon's public web-client bundle on 2026-09-25
+(`chunk-RXUH5EFX.js`, `markMessagePostsAsRead`). No authenticated read-state
+changes were performed during this investigation.
+
+    GET  Messages/{messageId}/Posts
+    POST Messages/{messageId}/Posts/Processed
+    { "postIds": ["<unread postId>"] }
+
+The client selects `posts` whose `isRead` is false and submits their `postId`
+values. Fetching the posts alone is not the read acknowledgement. NHNK previously
+assumed otherwise and made `setMailRead` a no-op for modern accounts.
+
+NHNK now uses the explicit POST and only updates its card and cached unread count
+after confirmation. Failed updates leave the content readable with an unsynced-read
+warning. The notification action uses the same endpoint. This contract is covered
+by mocked HTTP tests; end-to-end confirmation on a live account remains pending.
+
+---
+
 ## Dashboard/GetUpcomingEvents
 
     data.gridData[].courseCode    str

@@ -12,6 +12,7 @@ class MailPopupDisplayTexts{
   static String title = "";
   static List<InlineSpan> description = [];
   static String mailID = "";
+  static VoidCallback? onReadConfirmed;
 }
 
 class MailElementWidget extends StatelessWidget{
@@ -54,13 +55,13 @@ class MailElementWidget extends StatelessWidget{
       child: ExcludeSemantics(
         child: GestureDetector(
           onTap: (){
+            if(PopupWidgetHandler.isOpen) return;
             MailPopupDisplayTexts.title = subject;
             MailPopupDisplayTexts.description = Generic.textToInlineSpan(details);
             MailPopupDisplayTexts.mailID = mailID;
+            MailPopupDisplayTexts.onReadConfirmed = () => callback(this);
 
-            PopupWidgetHandler(mode: 3, callback: (_){}, onCloseCallback: (){
-              callback(this);
-            });
+            PopupWidgetHandler(mode: 3, callback: (_){});
             PopupWidgetHandler.doPopup(context);
           },
       child: Container(

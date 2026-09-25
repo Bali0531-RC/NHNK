@@ -2003,6 +2003,12 @@ class ProgressRequest{
   }
 }
 
+class MailContent{
+  final String text;
+  final bool markedRead;
+  const MailContent(this.text, this.markedRead);
+}
+
 class MailRequest{
   static const int _modernMailCountWindow = 200;
   /// Unread count without downloading the message list, or null if unavailable.
@@ -2135,67 +2141,104 @@ class MailRequest{
     return sanitised.trim();
   }
 
-  static Future<void> setMailRead(String id)async{
-    if ((storage.DataCache.getIsDemoAccount() ?? false) || (storage.DataCache.getHasICSFile() ?? false)) {
-      return;
+  static Future<List<Map<String, dynamic>>> _getPosts(String id) async{
+    final token = await storage.DataCache.getAccessToken();
+    final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+    if(token == null || token.isEmpty || baseUrl.isEmpty || id.isEmpty){
+      throw StateError('Message session unavailable');
     }
-    // On the modern API fetching the message posts already clears the unread flag server-side.
-    if (storage.DataCache.getIsModernApi()) {
-      return;
+    final url = Uri.parse('$baseUrl/api/Messages/${Uri.encodeComponent(id)}/Posts');
+    final decoded = conv.jsonDecode(await _APIRequest.getRequest(url, bearerToken: token));
+    final posts = decoded is Map && decoded['data'] is Map ? decoded['data']['posts'] : null;
+    if(posts is! List || posts.any((post) => post is! Map<String, dynamic>)){
+      throw StateError('Message content unavailable');
+    }
+    return posts.cast<Map<String, dynamic>>();
+  }
+
+  static Future<bool> _markPostsRead(String id, List<Map<String, dynamic>> posts) async{
+    if(posts.isEmpty) return false;
+    final unread = posts.where((post) => post['isRead'] != true).toList();
+    if(unread.isEmpty) return true;
+    final postIds = <String>[];
+    for(final post in unread){
+      final postId = post['postId'];
+      if(postId is! String || postId.isEmpty) return false;
+      postIds.add(postId);
+    }
+    final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+    final token = await storage.DataCache.getAccessToken();
+    if(baseUrl.isEmpty || token == null || token.isEmpty) return false;
+    final url = Uri.parse('$baseUrl/api/Messages/${Uri.encodeComponent(id)}/Posts/Processed');
+    final body = conv.jsonEncode({'postIds': postIds.toSet().toList()});
+    var response = await _APIRequest.postRequestRaw(url, body, bearerToken: token, isRetry: true);
+    if(response.statusCode == 401 && await _APIRequest.tryTokenRefresh()){
+      final refreshed = await storage.DataCache.getAccessToken();
+      if(refreshed == null || refreshed.isEmpty) return false;
+      response = await _APIRequest.postRequestRaw(url, body, bearerToken: refreshed, isRetry: true);
+    }
+    if(response.statusCode < 200 || response.statusCode >= 300) return false;
+    if(response.body.trim().isEmpty) return true;
+    final decoded = conv.jsonDecode(response.body);
+    if(decoded is! Map || decoded['ErrorMessage'] != null || decoded['data'] == false) return false;
+    if(decoded['data'] is Map && decoded['data']['isSuccessful'] == false) return false;
+    return true;
+  }
+
+  static Future<bool> setMailRead(String id)async{
+    if ((storage.DataCache.getIsDemoAccount() ?? false) || (storage.DataCache.getHasICSFile() ?? false)) {
+      return true;
     }
     try {
+      if (storage.DataCache.getIsModernApi()) {
+        return await _markPostsRead(id, await _getPosts(id));
+      }
       final username = storage.DataCache.getUsername();
       final password = await storage.DataCache.getPassword();
       final baseUrl = storage.DataCache.getInstituteUrl();
-      if (username == null || password == null || baseUrl == null) {
-        return;
+      final messageId = int.tryParse(id);
+      if (username == null || password == null || baseUrl == null || messageId == null) {
+        return false;
       }
       final url = Uri.parse(baseUrl + URLs.MESSAGE_SET_READ);
-      await _APIRequest.postRequest(url, '{"UserLogin":"$username","Password":"$password","MessageID":$id}');
+      final response = await _APIRequest.postRequestRaw(url, conv.jsonEncode({
+        'UserLogin': username, 'Password': password, 'MessageID': messageId,
+      }), isRetry: true);
+      if(response.statusCode < 200 || response.statusCode >= 300) return false;
+      final decoded = conv.jsonDecode(response.body);
+      return decoded is Map && decoded['ErrorMessage'] == null;
     } catch (e) {
-      debug.log("Nem siker\u00fclt olvasottnak jel\u00f6lni az \u00fczenetet: $e");
+      return false;
     }
   }
+
   static Future<String> getMailContent(String messageId, String oldDetails) async {
-    if (storage.DataCache.getIsDemoAccount() ?? false) {
-      return oldDetails;
+    return (await openMail(messageId, oldDetails)).text;
+  }
+
+  static Future<MailContent> openMail(String messageId, String oldDetails) async{
+    if(storage.DataCache.getIsDemoAccount() ?? false) return MailContent(oldDetails, true);
+    if(!storage.DataCache.getIsModernApi()){
+      return MailContent(oldDetails, await setMailRead(messageId));
     }
-
-    if (storage.DataCache.getIsModernApi()/* ?? false*/) {
-      try {
-        final token = await storage.DataCache.getAccessToken();
-        String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
-        final url = Uri.parse("$baseUrl/api/Messages/$messageId/Posts?messageId=$messageId");
-
-        String responseRaw = await _APIRequest.getRequest(url, bearerToken: token!);
-
-        // retry if 500 status
-        if (responseRaw.contains("Hiba történt") || responseRaw.contains('"statusCode":500')) {
-          await Future.delayed(const Duration(milliseconds: 200)); // Vár egy picit
-          responseRaw = await _APIRequest.getRequest(url, bearerToken: token); // Újra beküldi
-        }
-        // ---------------------------------------------------
-
-        final decoded = conv.json.decode(responseRaw);
-
-        if (decoded['data'] != null && decoded['data']['posts'] != null && decoded['data']['posts'].isNotEmpty) {
-          String rawHtml = decoded['data']['posts'][0]['htmlText'] ?? "";
-          String cleanText = rawHtml
-              .replaceAll(RegExp(r'<style[^>]*>[\s\S]*?</style>'), '')
-              .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
-              .replaceAll(RegExp(r'</p>'), '\n\n')
-              .replaceAll(RegExp(r'<[^>]*>'), '')
-              .replaceAll('&nbsp;', ' ')
-              .trim();
-          return cleanText;
-        } else {
-          return "Üres válasz érkezett a Neptuntól.\n\nSzerver válasza: $responseRaw";
-        }
-      } catch (e) {
-        return "Hálózati hiba a letöltés során:\n$e";
-      }
+    try{
+      final posts = await _getPosts(messageId);
+      if(posts.isEmpty) throw StateError('Empty message');
+      final text = posts.map((post) => (post['htmlText'] as String? ?? '')
+          .replaceAll(RegExp(r'<style[^>]*>[\s\S]*?</style>'), '')
+          .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'</p>'), '\n\n')
+          .replaceAll(RegExp(r'<[^>]*>'), '')
+          .replaceAll('&nbsp;', ' ').trim()).join('\n\n');
+      var markedRead = false;
+      try{
+        markedRead = await _markPostsRead(messageId, posts);
+      } catch(_) {}
+      return MailContent(text, markedRead);
+    } catch(_){
+      throw StateError(_demoText('Az üzenet nem tölthető le. Próbáld újra később.',
+          'Could not load the message. Try again later.'));
     }
-    return oldDetails;
   }
 }
   

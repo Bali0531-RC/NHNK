@@ -23,6 +23,7 @@ typedef Callback = void Function(dynamic);
 
 class PopupWidgetHandler{
   static bool _hasPopupActive = false;
+  static bool get isOpen => _hasPopupActive;
   static PopupWidgetHandler? _instance;
   bool _inUse = false;
   final linkedScroller = LinkedScrollControllerGroup();
@@ -166,10 +167,21 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
   GlobalKey _themesDropdownGlobalKey = GlobalKey();
 
   double _currentFontScale = 1.0; // ITT VAN A HELYES HELYEN
+  Future<api.MailContent>? _messageContent;
 
   @override
   void initState() {
     super.initState();
+    if(widget.mode == 3){
+      final onRead = MailPopupDisplayTexts.onReadConfirmed;
+      _messageContent = api.MailRequest.openMail(
+        MailPopupDisplayTexts.mailID,
+        MailPopupDisplayTexts.description.map((part) => part.toPlainText()).join(),
+      ).then((content){
+        if(content.markedRead) onRead?.call();
+        return content;
+      });
+    }
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarIconBrightness: AppColors.isDarktheme() ? Brightness.light : Brightness.dark,
       systemNavigationBarColor: AppColors.getTheme().navbarNavibarColor,
@@ -1419,11 +1431,8 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
           textAlign: TextAlign.start,
         ));
         list.add(const SizedBox(height: 20));
-        list.add(FutureBuilder<String>(
-          future: api.MailRequest.getMailContent(
-              MailPopupDisplayTexts.mailID,
-              MailPopupDisplayTexts.description.map((e) => e.toPlainText()).join()
-          ),
+        list.add(FutureBuilder<api.MailContent>(
+          future: _messageContent,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const SizedBox(
@@ -1435,9 +1444,12 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
               return Text("Hiba: ${snapshot.error}", style: TextStyle(color: AppColors.getTheme().errorRed));
             }
 
-            return SelectableText.rich(
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText.rich(
               TextSpan(
-                children: api.Generic.textToInlineSpan(snapshot.data ?? "Üres üzenet."),
+                children: api.Generic.textToInlineSpan(snapshot.data?.text ?? "Üres üzenet."),
                 style: TextStyle(
                     color: AppColors.getTheme().textColor,
                     fontWeight: FontWeight.w400,
@@ -1445,6 +1457,17 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                 ),
               ),
               textAlign: TextAlign.start,
+                ),
+                if(snapshot.data?.markedRead == false) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    AppStrings.getCurrentLangCode() == 'hu'
+                        ? 'Az olvasottságot nem sikerült menteni a Neptunban. Az üzenet olvasatlan maradt.'
+                        : 'Could not save the read status in Neptun. The message remains unread.',
+                    style: TextStyle(color: AppColors.getTheme().errorRed),
+                  ),
+                ],
+              ],
             );
           },
         ));
@@ -1458,9 +1481,6 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
             PopupWidgetHandler._instance!.callback(null);
             PopupWidgetHandler.closePopup(context);
             AppHaptics.lightImpact();
-            Future.delayed(Duration.zero, ()async{
-              await MailRequest.setMailRead(MailPopupDisplayTexts.mailID);
-            });
           },
           style: ButtonStyle(
             backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),

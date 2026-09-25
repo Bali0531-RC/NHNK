@@ -165,6 +165,14 @@ cancelled by navigation, not an error.
 
     GET  Message/GetUnreadedMessagesCount
 
+Additional routes verified in the public web client on 2026-09-25, outside the
+original capture:
+
+    GET  Messages/{messageId}/Posts
+    POST Messages/{messageId}/Posts/Processed  { "postIds": ["<unread postId>"] }
+
+The POST acknowledges reading; the GET alone does not. See [schemas.md](schemas.md).
+
 ## E-learning material
 
     GET  ematerial/main-types
