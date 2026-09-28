@@ -21,6 +21,7 @@ import '../Misc/auto_updater.dart';
 import '../background_worker.dart';
 import '../grade_alerts.dart';
 import '../haptics.dart';
+import '../hidden_classes.dart';
 import '../mail_alerts.dart';
 import '../storage.dart' as storage;
 import '../startup_trace.dart';
@@ -189,6 +190,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     super.initState();
 
     StartupTrace.mark('HomePage initState');
+    HiddenClasses.onChanged = _reapplyHiddenClasses;
     FlutterNativeSplash.remove();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarIconBrightness: AppColors.isDarktheme() ? Brightness.light : Brightness.dark,
@@ -342,6 +344,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         await fetchCalendar();
         StartupTrace.mark('fetchCalendar');
       }).then((value) async {
+        await HiddenClasses.load();
         if(storage.DataCache.getNeedExamNotifications()!){
           Future.delayed(Duration.zero,() async{
             if(!storage.DataCache.getHasNetwork()){
@@ -620,17 +623,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   Future<void> _setupNotificationsForSkimmedExams(api.CalendarEntry item, DateTime now)async{
-    final daysTillExam = (Duration(milliseconds: item.startEpoch) - Duration(milliseconds: now.millisecondsSinceEpoch)).inDays;
-    for(int i = 1; i <= daysTillExam + 1; i++){
-      if(i == 1){
-        await AppNotifications.scheduleNotification('Vizsga emlékeztető!', '"${item.title}" tárgyból vizsgád lesz MA!', DateTime(now.year, now.month, now.day + daysTillExam - i + 2, 06, 00), 0);
-        continue;
-      }
-      else if(i == 2){
-        await AppNotifications.scheduleNotification('Vizsga emlékeztető!', '"${item.title}" tárgyból vizsgád lesz HOLNAP!', DateTime(now.year, now.month, now.day + daysTillExam - i + 2, 09, 00), 0);
-        continue;
-      }
-      await AppNotifications.scheduleNotification('Vizsga emlékeztető!', '"${item.title}" tárgyból vizsgád lesz $i nap múlva!', DateTime(now.year, now.month, now.day + daysTillExam - i + 2, 09, 00), 0);
+    final start = DateTime.fromMillisecondsSinceEpoch(item.startEpoch);
+    final examDay = DateTime(start.year, start.month, start.day);
+    // Calendar days, not elapsed 24h blocks, so an exam later today still counts as today.
+    final daysTillExam = DateTime.utc(examDay.year, examDay.month, examDay.day)
+        .difference(DateTime.utc(now.year, now.month, now.day)).inDays;
+    for(int daysBefore = 0; daysBefore <= daysTillExam; daysBefore++){
+      final text = daysBefore == 0 ? 'MA!' : daysBefore == 1 ? 'HOLNAP!' : '$daysBefore nap múlva!';
+      await AppNotifications.scheduleNotification(
+        'Vizsga emlékeztető!',
+        '"${item.title}" tárgyból vizsgád lesz $text',
+        DateTime(examDay.year, examDay.month, examDay.day - daysBefore, daysBefore == 0 ? 06 : 09, 00),
+        0,
+      );
     }
   }
 
@@ -730,6 +735,21 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     await AppNotifications.cancelScheduledNotifsId(3);
   }
 
+  void _reapplyHiddenClasses(){
+    if(!mounted) return;
+    setState(() {
+      mondayCalendar.clear();
+      tuesdayCalendar.clear();
+      wednessdayCalendar.clear();
+      thursdayCalendar.clear();
+      fridayCalendar.clear();
+      saturdayCalendar.clear();
+      sundayCalendar.clear();
+      _setupCalendar(currentWeekOffset == 1);
+      setupCalendarController(false, false);
+    });
+  }
+
   void _setupCalendar(bool thisweekCalendar){
     if (thisweekCalendar) {
       _classesNotificationList.clear();
@@ -803,7 +823,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
 
     final now = DateTime.now();
     for(var item in calendarEntries){
-      if(item.isExam){
+      if(item.isExam || HiddenClasses.isHidden(item)){
         continue;
       }
       final wkday = DateTime.fromMillisecondsSinceEpoch(item.startEpoch).weekday;
@@ -1863,6 +1883,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   @override
   void dispose() {
     super.dispose();
+    if(HiddenClasses.onChanged == _reapplyHiddenClasses) HiddenClasses.onChanged = null;
     calendarEntries.clear();
     mondayCalendar.clear();
     tuesdayCalendar.clear();

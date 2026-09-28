@@ -91,8 +91,9 @@ class DataCache{
     setNeedFamilyFriendlyComments(_persistentSetting_familyFriendlyLoadingComments! ? 1 : 0);
     setNeedExamNotifications(_persistentSetting_showExamNotifications! ? 1 : 0);
     setNeedClassNotifications(_persistentSetting_showClassNotifications! ? 1 : 0);
-    setNeedClassNotifications(_persistentSetting_showPaymentsNotifications! ? 1 : 0);
-    setNeedClassNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
+    setNeedPaymentsNotifications(_persistentSetting_showPaymentsNotifications! ? 1 : 0);
+    setNeedPeriodsNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
+    setClassReminderMinutes(_persistentSetting_classReminderMinutes);
     setUserWeekOffset(_persistentSetting_weekOffset!);
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
     setNeedsHaptics(_persistentSetting_needBetterHaptics! ? 1 : 0);
@@ -180,6 +181,8 @@ class DataCache{
   late bool _hasAcceptedTerms = false;
   /// Minutes between background grade checks; 0 disables it.
   late int _persistentSetting_backgroundGradeCheckMinutes = 60;
+  /// Minutes before a class that get a reminder; 0 is the start itself.
+  late List<int> _persistentSetting_classReminderMinutes = [10, 0];
   late bool? _persistentSetting_showPaymentsNotifications = true;
   late bool? _persistentSetting_showPeriodsNotifications = true;
   late int? _persistentSetting_weekOffset = 0;
@@ -295,6 +298,11 @@ class DataCache{
     }
 
     _persistentSetting_backgroundGradeCheckMinutes = await getInt('SETTING_BackgroundGradeCheckMinutes') ?? 60;
+
+    final reminders = await getString('SETTING_ClassReminderMinutes');
+    if(reminders != null){
+      _persistentSetting_classReminderMinutes = reminders.split(',').map(int.tryParse).whereType<int>().toList();
+    }
 
     tmp = await getInt('SETTING_IsNeedPaymentsNotifications');
     _persistentSetting_showPaymentsNotifications = tmp != null && tmp != 0;
@@ -681,6 +689,13 @@ class DataCache{
   static Future<void> setBackgroundGradeCheckMinutes(int value) async{
     _instance._persistentSetting_backgroundGradeCheckMinutes = value;
     await saveInt('SETTING_BackgroundGradeCheckMinutes', value);
+  }
+
+  static List<int> getClassReminderMinutes(){return List.of(_instance._persistentSetting_classReminderMinutes);}
+  static Future<void> setClassReminderMinutes(List<int> value) async{
+    final sorted = value.toSet().toList()..sort((a, b) => b.compareTo(a));
+    _instance._persistentSetting_classReminderMinutes = sorted;
+    await saveString('SETTING_ClassReminderMinutes', sorted.join(','));
   }
 
   static bool? getNeedPaymentsNotifications(){return _instance._persistentSetting_showPaymentsNotifications;}

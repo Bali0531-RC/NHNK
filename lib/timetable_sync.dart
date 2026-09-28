@@ -4,6 +4,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'API/api_coms.dart' as api;
+import 'hidden_classes.dart';
 import 'language.dart';
 import 'notifications.dart';
 import 'platform_support.dart';
@@ -55,6 +56,8 @@ class TimetableSync {
   static Future<void> publish(List<api.CalendarEntry> entries,
       {required DateTime writtenAt}) async {
     if (!AppPlatform.isAndroid) return;
+    await HiddenClasses.load();
+    final visible = HiddenClasses.forWidget(entries);
     await HomeWidget.saveWidgetData(
         snapshotKey,
         jsonEncode({
@@ -62,9 +65,21 @@ class TimetableSync {
           'language': AppStrings.getCurrentLangCode(),
           'account': storage.DataCache.getUsername() ?? '',
           'institution': storage.DataCache.getInstituteUrl() ?? '',
-          'entries': [for (final entry in entries) entry.toString()],
+          'entries': [for (final entry in visible) entry.toString()],
         }));
     await HomeWidget.updateWidget(qualifiedAndroidName: provider);
+  }
+
+  /// Re-applies the hidden classes to the widget and the reminders without a network call.
+  static Future<void> reapply() async {
+    final saved = await _savedEntries();
+    if (saved.isEmpty) return;
+    final writtenAt = await storage.getInt('CalendarCacheWrittenAt');
+    await publish(saved,
+        writtenAt: writtenAt == null
+            ? DateTime.now()
+            : DateTime.fromMillisecondsSinceEpoch(writtenAt));
+    await scheduleClasses(saved);
   }
 
   static Future<List<api.CalendarEntry>> readCurrentWeek() async {
@@ -132,9 +147,12 @@ class TimetableSync {
     final keep = <int>{};
     final seen = <String>{};
     final hungarian = AppStrings.getCurrentLangCode() == 'hu';
+    final reminders = storage.DataCache.getClassReminderMinutes();
+    await HiddenClasses.load();
     for (final entry in combined) {
       if (entry.isExam ||
           entry.isTask ||
+          HiddenClasses.isHidden(entry) ||
           entry.startEpoch <= DateTime.now().millisecondsSinceEpoch) continue;
       if (!seen.add('${entry.startEpoch}|${entry.endEpoch}|${entry.title}'))
         continue;
@@ -146,7 +164,7 @@ class TimetableSync {
             cachedRoom.isNotEmpty &&
             cachedRoom != 'Nincs terem') room = cachedRoom;
       }
-      for (final minutes in [10, 5, 0]) {
+      for (final minutes in reminders) {
         final time = DateTime.fromMillisecondsSinceEpoch(entry.startEpoch)
             .subtract(Duration(minutes: minutes));
         final body = hungarian

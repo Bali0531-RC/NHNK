@@ -16,6 +16,7 @@ import '../storage.dart';
 import '../timetable_sync.dart';
 import '../Misc/emojirich_text.dart';
 import '../Pages/startup_page.dart';
+import 'hidden_classes_page.dart';
 
 
 class SettingsPage extends StatefulWidget {
@@ -483,6 +484,39 @@ class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver
               if(mounted) setState(() {});
             },
           ),
+          if(DataCache.getNeedClassNotifications() ?? true)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_t('Mennyivel az óra előtt kapj emlékeztetőt', 'When to remind you before a class'),
+                      style: TextStyle(color: AppColors.getTheme().textColor.withValues(alpha: .6), fontSize: 12)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for(final minutes in const [30, 15, 10, 5, 0])
+                        FilterChip(
+                          label: Text(minutes == 0 ? _t('Kezdéskor', 'At start') : _t('$minutes perc', '$minutes min')),
+                          selected: DataCache.getClassReminderMinutes().contains(minutes),
+                          selectedColor: AppColors.getTheme().secondary.withValues(alpha: .35),
+                          onSelected: (on) async {
+                            final current = DataCache.getClassReminderMinutes();
+                            on ? current.add(minutes) : current.remove(minutes);
+                            // With none selected the class alerts would silently stop; the switch above is for that.
+                            if(current.isEmpty) return;
+                            AppHaptics.lightImpact();
+                            await DataCache.setClassReminderMinutes(current);
+                            if(mounted) setState(() {});
+                            await TimetableSync.reapply();
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           SwitchListTile(
             title: Text(AppStrings.getLanguagePack().popup_case1_settingOption4_PaymentNotifications, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             activeThumbColor: AppColors.getTheme().secondary,
@@ -657,6 +691,20 @@ class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver
                 ],
               ),
             ),
+          ),
+
+          ListTile(
+            title: Text(_t('Elrejtett órák', 'Hidden classes'), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(
+              _t('Tárgyak óráinak elrejtése az órarendből, emlékeztetőkből és a widgetről.',
+                  'Keep a subject\'s classes out of the timetable, reminders and widget.'),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
+            ),
+            trailing: Icon(Icons.visibility_off_rounded, color: AppColors.getTheme().textColor.withValues(alpha: 0.6)),
+            onTap: () {
+              AppHaptics.lightImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HiddenClassesPage()));
+            },
           ),
 
           ListTile(

@@ -7,6 +7,7 @@ import '../Misc/popup.dart';
 import '../Pages/main_page.dart';
 import '../colors.dart';
 import '../haptics.dart';
+import '../hidden_classes.dart';
 
 typedef Callback = Future<void> Function();
 
@@ -108,6 +109,26 @@ class TimetableElementWidget extends StatelessWidget {
     button: true,
     label: _semanticsLabel,
     child: GestureDetector(
+    onLongPress: (isExam || isTask) ? null : () {
+      AppHaptics.lightImpact();
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: AppColors.getTheme().rootBackground,
+        builder: (sheetContext) => SafeArea(
+          child: ListTile(
+            leading: Icon(Icons.visibility_off_rounded, color: AppColors.getTheme().textColor),
+            title: Text(_tt('"$title" órák elrejtése', 'Hide "$title" classes'),
+                style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+            subtitle: Text(_tt('Visszaállítás: Beállítások → Elrejtett órák', 'Undo in Settings → Hidden classes'),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12)),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              HiddenClasses.hide([title]);
+            },
+          ),
+        ),
+      );
+    },
     onTap: () {
       if (isExam) {
         TimetableCurrentlySelected.entry = entry;

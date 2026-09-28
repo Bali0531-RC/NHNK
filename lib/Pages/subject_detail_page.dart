@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../API/api_coms.dart' as api;
 import '../colors.dart';
 import '../haptics.dart';
+import '../hidden_classes.dart';
 import '../language.dart';
 import '../storage.dart';
 
@@ -25,6 +26,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
   List<api.CalendarEntry> _classes = [];
   List<api.CalendarEntry> _dated = [];
   bool _loading = true;
+  bool _classesHidden = false;
 
   @override
   void initState() {
@@ -53,10 +55,12 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
   }
 
   Future<void> _load() async {
+    await HiddenClasses.load();
     final week = await _thisWeek();
     final upcoming = await api.CalendarRequest.fetchUpcoming();
     if (!mounted) return;
     setState(() {
+      _classesHidden = HiddenClasses.isTitleHidden(widget.subject.name);
       _classes = week.where((e) => _matches(e) && !e.isExam && !e.isTask).toList()
         ..sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
       _dated = upcoming.where(_matches).toList();
@@ -123,7 +127,23 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
               Expanded(child: _stat(theme, _t('Állapot', 'Status'), _statusText(s), _statusColour(theme, s))),
             ],
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(_t('Órák elrejtése az órarendből', 'Hide classes from the timetable'),
+                style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 14)),
+            subtitle: Text(
+                _t('A widgetről és az emlékeztetőkből is kimaradnak.', 'They also leave the widget and the reminders.'),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12)),
+            activeThumbColor: theme.secondary,
+            value: _classesHidden,
+            onChanged: (value) async {
+              AppHaptics.lightImpact();
+              setState(() => _classesHidden = value);
+              value ? await HiddenClasses.hide([s.name]) : await HiddenClasses.unhide(s.name);
+            },
+          ),
+          const SizedBox(height: 14),
           if (_loading)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30),

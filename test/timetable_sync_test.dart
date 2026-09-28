@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nhnk/API/api_coms.dart' as api;
 import 'package:nhnk/background_worker.dart';
+import 'package:nhnk/hidden_classes.dart';
 import 'package:nhnk/language.dart';
 import 'package:nhnk/storage.dart' as storage;
 import 'package:nhnk/timetable_sync.dart';
@@ -38,6 +39,7 @@ void main() {
     await storage.DataCache.setNeedGradeNotifications(0);
     await storage.DataCache.setNeedMailNotifications(0);
     await storage.DataCache.setBackgroundGradeCheckMinutes(60);
+    await storage.DataCache.setClassReminderMinutes([10, 0]);
     calls.clear();
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -159,10 +161,40 @@ void main() {
         await TimetableSync.refresh(
             fetchWeek: (week) async => week == 2 ? [next] : []),
         isTrue);
-    expect(calls.where((call) => call.method == 'zonedSchedule'), hasLength(3));
+    expect(calls.where((call) => call.method == 'zonedSchedule'), hasLength(2));
     expect(await storage.getInt('CachedCalendarLength'), 0);
     final saved = await storage.getStringList('BackgroundCalendarEntries');
     expect(saved, [next.toString()]);
+  });
+
+  test('chosen reminder times decide how many alerts a class gets', () async {
+    await storage.DataCache.setClassReminderMinutes([15, 5, 0]);
+    final next = lesson(
+        api.CalendarRequest.weekStartFor(2).add(const Duration(hours: 9)));
+    await TimetableSync.refresh(
+        fetchWeek: (week) async => week == 2 ? [next] : []);
+    expect(calls.where((call) => call.method == 'zonedSchedule'), hasLength(3));
+
+    calls.clear();
+    await storage.DataCache.setClassReminderMinutes([10]);
+    await TimetableSync.reapply();
+    expect(calls.where((call) => call.method == 'zonedSchedule'), hasLength(1));
+  });
+
+  test('hidden classes get no reminders and unhiding brings them back',
+      () async {
+    final next = lesson(
+        api.CalendarRequest.weekStartFor(2).add(const Duration(hours: 9)));
+    await TimetableSync.refresh(
+        fetchWeek: (week) async => week == 2 ? [next] : []);
+    calls.clear();
+
+    await HiddenClasses.hide([next.title]);
+    expect(calls.where((call) => call.method == 'zonedSchedule'), isEmpty);
+    expect(HiddenClasses.isHidden(next), isTrue);
+
+    await HiddenClasses.unhide(next.title);
+    expect(calls.where((call) => call.method == 'zonedSchedule'), hasLength(2));
   });
 
   test(

@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -30,13 +31,22 @@ public class TodayWidgetProvider extends AppWidgetProvider {
     private static final String PREFS = "FlutterSharedPreferences";
     private static final String PREFIX = "flutter.";
     private static final String BOUNDARY = "hu.bali0531.nhnk.WIDGET_BOUNDARY";
+    private static final int[] ROW_IDS = {
+        R.id.widget_row_0, R.id.widget_row_1, R.id.widget_row_2, R.id.widget_row_3, R.id.widget_row_4,
+        R.id.widget_row_5, R.id.widget_row_6, R.id.widget_row_7, R.id.widget_row_8, R.id.widget_row_9,
+    };
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) {
-            manager.updateAppWidget(id, buildViews(context));
+            manager.updateAppWidget(id, buildViews(context, manager.getAppWidgetOptions(id)));
         }
         scheduleNextBoundary(context);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
+        manager.updateAppWidget(id, buildViews(context, options));
     }
 
     @Override
@@ -142,7 +152,7 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private RemoteViews buildViews(Context context) {
+    private RemoteViews buildViews(Context context, Bundle options) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_today);
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
@@ -162,6 +172,18 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         views.setViewVisibility(R.id.widget_next, View.GONE);
         views.setViewVisibility(R.id.widget_countdown, View.GONE);
         views.setChronometer(R.id.widget_countdown, SystemClock.elapsedRealtime(), null, false);
+        views.setViewVisibility(R.id.widget_body, View.VISIBLE);
+        for (int rowId : ROW_IDS) views.setViewVisibility(rowId, View.GONE);
+        views.setViewVisibility(R.id.widget_more, View.GONE);
+
+        long nowMs = System.currentTimeMillis();
+        List<String[]> upcoming = new ArrayList<>();
+        for (String[] row : today) {
+            try {
+                if (Long.parseLong(row[4]) > nowMs) upcoming.add(row);
+            } catch (NumberFormatException ignored) {
+            }
+        }
 
         if (!signedIn(prefs)) {
             views.setTextViewText(R.id.widget_body, hungarian ? "Jelentkezz be az appban." : "Sign in to the app.");
@@ -170,21 +192,32 @@ public class TodayWidgetProvider extends AppWidgetProvider {
                 ? (hungarian ? "Nincs friss adat. Koppints a frissítésre."
                      : "No recent data. Tap refresh.")
                     : (hungarian ? "Ma nincs \u00f3r\u00e1d." : "No classes today."));
-            views.setViewVisibility(R.id.widget_next, android.view.View.GONE);
+        } else if (upcoming.isEmpty()) {
+            views.setTextViewText(R.id.widget_body,
+                hungarian ? "Mára vége az óráknak." : "No more classes today.");
         } else {
-            showCountdown(views, today, hungarian);
+            showCountdown(views, upcoming, hungarian);
+            views.setViewVisibility(R.id.widget_body, View.GONE);
 
-            StringBuilder body = new StringBuilder();
-            for (String[] row : today) {
-                if (body.length() > 0) {
-                    body.append('\n');
-                }
-                body.append(row[0]).append("  ").append(row[1]);
+            int fit = rowsThatFit(context, options);
+            int shown = upcoming.size() <= fit ? upcoming.size() : Math.max(fit - 1, 1);
+            shown = Math.min(shown, ROW_IDS.length);
+            for (int i = 0; i < shown; i++) {
+                String[] row = upcoming.get(i);
+                StringBuilder line = new StringBuilder();
+                line.append(row[0]).append("  ").append(row[1]);
                 if (row[2] != null && !row[2].isEmpty() && !"NULL".equals(row[2])) {
-                    body.append(" · ").append(row[2]);
+                    line.append(" · ").append(row[2]);
                 }
+                views.setTextViewText(ROW_IDS[i], line.toString());
+                views.setViewVisibility(ROW_IDS[i], View.VISIBLE);
             }
-            views.setTextViewText(R.id.widget_body, body.toString());
+            int hidden = upcoming.size() - shown;
+            if (hidden > 0 && shown < fit) {
+                views.setTextViewText(R.id.widget_more,
+                    hungarian ? "+" + hidden + " további" : "+" + hidden + " more");
+                views.setViewVisibility(R.id.widget_more, View.VISIBLE);
+            }
         }
 
         views.setTextViewText(R.id.widget_updated, updatedLabel(writtenAt, cacheTime, stale, hungarian));
@@ -193,10 +226,31 @@ public class TodayWidgetProvider extends AppWidgetProvider {
         if (launch != null) {
             PendingIntent pending = PendingIntent.getActivity(
                     context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            views.setOnClickPendingIntent(R.id.widget_body, pending);
+            views.setOnClickPendingIntent(R.id.widget_list, pending);
             views.setOnClickPendingIntent(R.id.widget_title, pending);
         }
         return views;
+    }
+
+    /**
+     * RemoteViews cannot measure text, so the room left under the header is estimated from the
+     * widget size and the user's font scale, erring on the side of showing one row too few.
+     */
+    private int rowsThatFit(Context context, Bundle options) {
+        float fontScale = context.getResources().getConfiguration().fontScale;
+        boolean portrait = context.getResources().getConfiguration().orientation
+                == android.content.res.Configuration.ORIENTATION_PORTRAIT;
+        int height = options == null ? 0 : options.getInt(portrait
+                ? AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
+                : AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        if (height <= 0) height = 160;
+
+        float headline = 6 + 13 * fontScale * 1.35f;
+        float countdown = 2 + 12 * fontScale * 1.35f;
+        float rowHeight = 12 * fontScale * 1.35f;
+        // padding (24) + header (40) + gap above the list (6) + safety margin (6)
+        float available = height - 24 - 40 - 6 - 6 - headline - countdown;
+        return Math.max((int) (available / rowHeight), 1);
     }
 
     /** Entries are stored as newline separated fields: start, end, location, title, ... */
