@@ -173,6 +173,18 @@ original capture:
 
 The POST acknowledges reading; the GET alone does not. See [schemas.md](schemas.md).
 
+## Subject thematics and funding (verified 2026-10-07)
+
+    GET  PrintableTemplates/GetPrintSubjectThematicsFormTypeId   -> { formTypeId, subFormTypeId, formName }
+    GET  PrintableTemplates/GetPrintableTemplatesList?formType=&subFormType=   -> [{ formsId, formsName }]
+    GET  PrintableTemplates/PrintSubjectThematics?formId=&termId=&subjectId=   -> application/pdf
+
+`GetSubjectDetails` reports `downloadSubjectThematicsEnabled`; the PDF name comes from
+Content-Disposition. `TakenSubjects` and `GetSubjectDetails` both carry `requirementType`
+("Vizsga", "Évközi jegy", ...). `dashboard/actualterm` has `financialStatus`
+("Állami ösztöndíjas" for a full state scholarship), which NHNK uses to hide the payments
+tab.
+
 ## E-learning material
 
     GET  ematerial/main-types

@@ -693,6 +693,24 @@ class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver
             ),
           ),
 
+          if(DataCache.isStateFunded())
+            SwitchListTile(
+              title: Text(_t('Fizetések fül megjelenítése', 'Show the payments tab'), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                _t('Állami ösztöndíjasként alapból rejtve van, kivéve ha van befizetnivalód.',
+                    'Hidden by default on a state scholarship, unless you have something to pay.'),
+                style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
+              ),
+              activeThumbColor: AppColors.getTheme().secondary,
+              value: DataCache.getAlwaysShowPayments(),
+              onChanged: (b) async {
+                AppHaptics.lightImpact();
+                await DataCache.setAlwaysShowPayments(b);
+                HomePageState.refreshTabs();
+                if(mounted) setState(() {});
+              },
+            ),
+
           ListTile(
             title: Text(_t('Elrejtett órák', 'Hidden classes'), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(

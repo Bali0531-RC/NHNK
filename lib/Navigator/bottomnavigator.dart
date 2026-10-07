@@ -32,14 +32,14 @@ class BottomNavigatorWidget extends StatelessWidget {
             }
             if(homePage.bottomNavSwitchValue < -50){
               homePage.bottomNavCanNavigate = false;
-              final val = homePage.currentView + 1 > HomePageState.maxBottomNavWidgets - 1 ? 0 : homePage.currentView + 1;
+              final val = homePage.stepView(1);
               homePage.switchView(val);
               AppHaptics.lightImpact();
               return;
             }
             else if(homePage.bottomNavSwitchValue > 50){
               homePage.bottomNavCanNavigate = false;
-              final val = homePage.currentView - 1 < 0 ? HomePageState.maxBottomNavWidgets - 1 : homePage.currentView - 1;
+              final val = homePage.stepView(-1);
               homePage.switchView(val);
               AppHaptics.lightImpact();
               return;
@@ -69,7 +69,8 @@ class BottomNavigatorWidget extends StatelessWidget {
                   children: <Widget>[
                     _buildNavigationButton(0, Icons.calendar_month_rounded, Icons.calendar_month_outlined),
                     _buildNavigationButton(1, Icons.backpack_rounded, Icons.backpack_outlined),
-                    _buildNavigationButton(2, Icons.price_change_rounded, Icons.price_change_outlined),
+                    if(homePage.paymentsTabVisible)
+                      _buildNavigationButton(2, Icons.price_change_rounded, Icons.price_change_outlined),
                     _buildNavigationButton(3, Icons.timer_rounded, Icons.timer_outlined),
                     _buildNavigationButton(4, Icons.email_rounded, Icons.email_outlined),
                   ],

@@ -358,6 +358,10 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       });
 
       Future.delayed(Duration.zero, () async{
+        await _refreshFinancialStatus();
+      });
+
+      Future.delayed(Duration.zero, () async{
         await fetchMarkbook();
       }).then((value) {
         setupMarkbook();
@@ -570,6 +574,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setState(() {
       _setupPayments();
     });
+    _ensureValidView();
   }
 
   void setupPeriods(){
@@ -988,6 +993,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
             onPopupResult: e.onPopupResult,
             listIndex: e.listIndex,
             ghostGrade: -1,
+            subject: e.subject,
           );
           _markbookCalcGhostAvg();
         });
@@ -1007,6 +1013,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         onPopupResult: e.onPopupResult,
         listIndex: e.listIndex,
         ghostGrade: grade,
+        subject: e.subject,
       );
       _markbookCalcGhostAvg();
     });
@@ -1072,6 +1079,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         onPopupResult: _mbookPopupResult,
         listIndex: idx,
         ghostGrade: -1,
+        subject: item,
       ));
       idx++;
     }
@@ -1096,6 +1104,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
           onPopupResult: _mbookPopupResult,
           listIndex: idx,
           ghostGrade: -1,
+          subject: item,
         ));
         idx++;
       }
@@ -1932,6 +1941,55 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     setState(() {
       currentView = to;
     });
+  }
+
+  /// Fully state-funded students have no tuition to pay, so the tab only appears for
+  /// them when something is actually owed or they ask for it in the settings.
+  bool get paymentsTabVisible{
+    if(!storage.DataCache.isStateFunded()) return true;
+    if(storage.DataCache.getAlwaysShowPayments()) return true;
+    return paymentsEntries.any((p) => !p.completed && !p.isCancelled);
+  }
+
+  bool _viewAvailable(int view) => view != 2 || paymentsTabVisible;
+
+  /// For the settings page, which changes what the tab bar should show.
+  static void refreshTabs(){
+    final page = _instance;
+    if(page == null || !page.mounted) return;
+    page.setState(() {});
+    page._ensureValidView();
+  }
+
+  /// The next tab in [direction], skipping any that are hidden.
+  int stepView(int direction){
+    var next = currentView;
+    for(var i = 0; i < maxBottomNavWidgets; i++){
+      next = (next + direction + maxBottomNavWidgets) % maxBottomNavWidgets;
+      if(_viewAvailable(next)) return next;
+    }
+    return currentView;
+  }
+
+  void _ensureValidView(){
+    if(!mounted || _viewAvailable(currentView)) return;
+    setState(() {
+      currentView = 0;
+    });
+  }
+
+  Future<void> _refreshFinancialStatus() async{
+    if(storage.DataCache.getIsDemoAccount() ?? false) return;
+    if(!storage.DataCache.getHasNetwork()) return;
+    final last = await storage.getInt('FinancialStatusTime') ?? 0;
+    final fresh = DateTime.now().millisecondsSinceEpoch - last < const Duration(hours: 12).inMilliseconds;
+    if(fresh && storage.DataCache.getFinancialStatus().isNotEmpty) return;
+    final status = await api.FinancingRequest.fetchFinancialStatus();
+    if(status == null) return;
+    await storage.DataCache.setFinancialStatus(status);
+    if(!mounted) return;
+    setState(() {});
+    _ensureValidView();
   }
 
   @override

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nhnk/Misc/popup.dart';
+import '../API/api_coms.dart' as api;
 import '../Misc/emojirich_text.dart';
+import '../Pages/subject_detail_page.dart';
 import '../colors.dart';
+import '../haptics.dart';
 import '../language.dart';
 import '../storage.dart'; // ÚJ: Betűméret lekéréséhez
 
@@ -16,8 +19,30 @@ class MarkbookElementWidget extends StatelessWidget{
   final Callback onPopupResult;
   final int listIndex;
   final int ghostGrade;
+  final api.Subject? subject;
 
-  const MarkbookElementWidget({super.key, required this.name, required this.credit, required this.completed, required this.grade, required this.isFailed, required this.onPopupResult, required this.listIndex, required this.ghostGrade});
+  const MarkbookElementWidget({super.key, required this.name, required this.credit, required this.completed, required this.grade, required this.isFailed, required this.onPopupResult, required this.listIndex, required this.ghostGrade, this.subject});
+
+  /// Only subjects without a real grade can be given one to try out.
+  bool get _canGhost => grade < 2;
+
+  void _openGhostPopup(BuildContext context){
+    AppHaptics.lightImpact();
+    PopupWidgetHandler(mode: 0, callback: (r){
+      onPopupResult(r as int, listIndex);
+    });
+    PopupWidgetHandler.doPopup(context);
+  }
+
+  void _openDetails(BuildContext context){
+    final s = subject;
+    if(s == null){
+      if(_canGhost) _openGhostPopup(context);
+      return;
+    }
+    AppHaptics.lightImpact();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => SubjectDetailPage(subject: s)));
+  }
 
   Color getGradeColor(){
     if(ghostGrade != -1){
@@ -65,14 +90,9 @@ class MarkbookElementWidget extends StatelessWidget{
       // Label and value are announced value-first, which buried the subject name
       // behind its credits and status. One label keeps the name in front.
       label: '${name.trim()}, $_spokenValue',
-      button: grade < 2,
+      button: true,
       child: GestureDetector(
-        onTap: grade >= 2 ? null : () {
-          PopupWidgetHandler(mode: 0, callback: (r){
-            onPopupResult(r as int, listIndex);
-          });
-          PopupWidgetHandler.doPopup(context);
-        },
+        onTap: () => _openDetails(context),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
@@ -108,22 +128,60 @@ class MarkbookElementWidget extends StatelessWidget{
                 flex: 2,
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(15, 0, 10, 0),
-                  child: Text.rich(
-                    TextSpan(
-                      text: name,
-                      style: TextStyle(
-                          fontSize: 14.0 * fontScale, // Skálázott
-                          decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
-                          fontWeight: completed ? FontWeight.w400 : FontWeight.w600,
-                          color: AppColors.getTheme().textColor,
-                          decorationColor: AppColors.getTheme().textColor
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        TextSpan(
+                          text: name,
+                          style: TextStyle(
+                              fontSize: 14.0 * fontScale, // Skálázott
+                              decoration: completed ? TextDecoration.lineThrough : TextDecoration.none,
+                              fontWeight: completed ? FontWeight.w400 : FontWeight.w600,
+                              color: AppColors.getTheme().textColor,
+                              decorationColor: AppColors.getTheme().textColor
+                          ),
+                        ),
                       ),
-                    ),
+                      if((subject?.requirementType ?? '').isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            subjectRequirementLabel(subject!.requirementType),
+                            style: TextStyle(
+                              fontSize: 11.5 * fontScale,
+                              color: AppColors.getTheme().textColor.withValues(alpha: .5),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
 
-              // Jobb oldali rész: Érdemjegy vagy bukás ikon
+              // Jobb oldali rész: Érdemjegy vagy bukás ikon, és a szellemjegy gombja
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _canGhost ? () => _openGhostPopup(context) : () => _openDetails(context),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if(_canGhost && ghostGrade == -1 && !completed && !isFailed && grade != 1)
+                      Tooltip(
+                        message: AppStrings.getCurrentLangCode() == 'hu' ? 'Szellemjegy' : 'Ghost grade',
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.getTheme().textColor.withValues(alpha: .06),
+                          ),
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 20.0 * fontScale,
+                            color: AppColors.getTheme().textColor.withValues(alpha: .55),
+                          ),
+                        ),
+                      ),
               Visibility(
                   visible: (!completed && isFailed || grade == 1) && ghostGrade == -1,
                   child: Column(
@@ -162,7 +220,10 @@ class MarkbookElementWidget extends StatelessWidget{
                     ),
                   ],
                 ),
-              )
+              ),
+                  ],
+                ),
+              ),
             ],
           ),
         )

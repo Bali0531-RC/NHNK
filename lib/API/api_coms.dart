@@ -328,6 +328,61 @@ Future<http.Response?> _tryGet(Uri url) async {
       return false;
     }
 
+    /// Renews the session once even when several requests hit a 401 together.
+    static Future<void> _renewSession() async {
+      if (!_isRefreshingToken) {
+        _isRefreshingToken = true;
+        debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
+
+        bool refreshSuccess = false;
+        if (storage.DataCache.getIsModernApi()) {
+          refreshSuccess = await tryTokenRefresh();
+        }
+
+        if (!refreshSuccess) {
+          final username = storage.DataCache.getUsername()!;
+          final password = (await storage.DataCache.getPassword())!;
+          final baseUrl = storage.DataCache.getInstituteUrl()!;
+
+          await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+        }
+
+        _isRefreshingToken = false;
+      } else {
+        debug.log("Egy másik fül már frissít, várakozás...");
+        while (_isRefreshingToken) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+    }
+
+    /// For binary downloads, where decoding the body as text would corrupt it.
+    static Future<http.Response?> getBytes(Uri url, {required String bearerToken, bool isRetry = false}) async {
+      if(!AppPlatform.isWeb) HttpOverrides.global = NeptunCerts.getCerts();
+      final client = http.Client();
+      final request = http.Request('GET', url);
+      request.headers['Authorization'] = 'Bearer $bearerToken';
+
+      final sw = Stopwatch()..start();
+      try {
+        final response = await http.Response.fromStream(await client.send(request));
+        client.close();
+        NetTrace.record(url, sw.elapsedMilliseconds,
+            method: 'GET', status: response.statusCode, bytes: response.bodyBytes.length);
+        if (response.statusCode == 401 && !isRetry) {
+          await _renewSession();
+          final newToken = await storage.DataCache.getAccessToken();
+          if (newToken == null) return null;
+          return await getBytes(url, bearerToken: newToken, isRetry: true);
+        }
+        return response;
+      } catch (e) {
+        client.close();
+        debug.log('Download failed: $e');
+        return null;
+      }
+    }
+
     static Future<String> getRequest(Uri url, {required String bearerToken, bool isRetry = false}) async {
       // dart:io has no web implementation; the demo build never makes these calls anyway.
       if(!AppPlatform.isWeb) HttpOverrides.global = NeptunCerts.getCerts();
@@ -347,33 +402,7 @@ Future<http.Response?> _tryGet(Uri url) async {
         // Ha a token lejárt:
         if ((response.statusCode == 401 || response.body.contains('"statusCode": 401') || response.body.contains('Authorization has been denied')) && !isRetry) {
 
-          // --- ÚJ VERSENYHELYZET GÁTLÓ LOGIKA ---
-          if (!_isRefreshingToken) {
-            _isRefreshingToken = true; // Bezárjuk a lakatot
-            debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
-
-            bool refreshSuccess = false;
-            if (storage.DataCache.getIsModernApi()) {
-              refreshSuccess = await tryTokenRefresh();
-            }
-
-            if (!refreshSuccess) {
-              final username = storage.DataCache.getUsername()!;
-              final password = (await storage.DataCache.getPassword())!;
-              final baseUrl = storage.DataCache.getInstituteUrl()!;
-
-              await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-            }
-
-            _isRefreshingToken = false; // Kinyitjuk a lakatot
-          } else {
-            // Ha egy másik fül már frissíti a tokent, várunk rá!
-            debug.log("Egy másik fül már frissít, várakozás...");
-            while (_isRefreshingToken) {
-              await Future.delayed(const Duration(milliseconds: 100));
-            }
-          }
-          // ----------------------------------------
+          await _renewSession();
 
           // Mindenki megkapja az új tokent, és újra próbálkozik
           final newToken = await storage.DataCache.getAccessToken();
@@ -1513,6 +1542,8 @@ class MarkbookRequest{
         return _fetchSubjectGrade(
           baseUrl, token, item['subjectId'], termId,
           item['subjectName'] ?? 'Ismeretlen', item['subjectCredit'] ?? 0,
+          requirementType: (item['requirementType'] ?? '').toString(),
+          code: (item['subjectCode'] ?? '').toString(),
         );
       }).toList();
       for(var res in await Future.wait(batch)){
@@ -1622,7 +1653,8 @@ class MarkbookRequest{
               String subjectId = item['subjectId'];
               String subjectName = item['subjectName'] ?? 'Ismeretlen';
               int credit = item['subjectCredit'] ?? 0;
-              return _fetchSubjectGrade(baseUrl, token, subjectId, activeTermId, subjectName, credit);
+              return _fetchSubjectGrade(baseUrl, token, subjectId, activeTermId, subjectName, credit,
+                  requirementType: (item['requirementType'] ?? '').toString(), code: (item['subjectCode'] ?? '').toString());
             }).toList();
 
             for (var res in await Future.wait(batch)) {
@@ -1660,7 +1692,7 @@ class MarkbookRequest{
   }
 
   // --- ÚJ SEGÉDFÜGGVÉNY: Egy adott tárgy érdemjegyének letöltése ---
-  static Future<Subject?> _fetchSubjectGrade(String baseUrl, String token, String subjectId, String termId, String subjectName, int credit) async {
+  static Future<Subject?> _fetchSubjectGrade(String baseUrl, String token, String subjectId, String termId, String subjectName, int credit, {String requirementType = '', String code = ''}) async {
     try {
       final url = Uri.parse("$baseUrl/api/SubjectCourse/GetSubjectDetails?subjectId=$subjectId&termId=$termId");
       final responseRaw = await _APIRequest.getRequest(url, bearerToken: token);
@@ -1691,7 +1723,8 @@ class MarkbookRequest{
           }
         }
 
-        return Subject(isCompleted, credit, subjectName, 0, grade, 0);
+        return Subject(isCompleted, credit, subjectName, 0, grade, 0,
+            subjectId: subjectId, termId: termId, requirementType: requirementType, code: code);
       }
     } catch (e) {
       debug.log("Hiba a(z) $subjectName jegyének lekérésekor: $e");
@@ -2318,13 +2351,19 @@ class MailRequest{
     String name;
     int grade = 0;
     int failState = 0;
+    /// The modern API's own ids, which detail and thematics requests need. Null for the old API.
+    String? subjectId;
+    String? termId;
+    /// How the subject is assessed, as Neptun words it ("Vizsga", "Évközi jegy", ...).
+    String requirementType;
+    String code;
   
   
-    Subject(this.completed, this.credit, this.name, this.id, this.grade, this.failState);
+    Subject(this.completed, this.credit, this.name, this.id, this.grade, this.failState, {this.subjectId, this.termId, this.requirementType = '', this.code = ''});
   
     @override
     String toString() {
-      return '$completed\n$credit\n$id\n$name\n$grade\n$failState';
+      return '$completed\n$credit\n$id\n$name\n$grade\n$failState\n${subjectId ?? ""}\n${termId ?? ""}\n$requirementType\n$code';
     }
   
     Subject fillWithExisting(String existing){
@@ -2344,7 +2383,205 @@ class MailRequest{
       name = data[3];
       grade = int.parse(data[4]);
       failState = int.parse(data[5]);
+      if(data.length >= 10){
+        subjectId = data[6].isEmpty ? null : data[6];
+        termId = data[7].isEmpty ? null : data[7];
+        requirementType = data[8];
+        code = data[9];
+      }
       return this;
+    }
+  }
+
+  /// What GetSubjectDetails says about a subject, trimmed to what the app shows.
+  class SubjectDetails{
+    final String requirementType;
+    final String resultType;
+    final String teacher;
+    final String department;
+    final String preRequirement;
+    final Map<String, int> hoursPerWeek;
+    final Map<String, int> hoursPerTerm;
+    final String description;
+    final bool thematicsAvailable;
+
+    const SubjectDetails({
+      required this.requirementType,
+      required this.resultType,
+      required this.teacher,
+      required this.department,
+      required this.preRequirement,
+      required this.hoursPerWeek,
+      required this.hoursPerTerm,
+      required this.description,
+      required this.thematicsAvailable,
+    });
+
+    /// The description is stored as HTML, which a Text widget would show as raw tags.
+    static String plainText(String html){
+      return html
+          .replaceAll(RegExp(r'<\s*br\s*/?>', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'</\s*(p|li|div|h[1-6])\s*>', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'<[^>]*>'), '')
+          .replaceAll('&nbsp;', ' ')
+          .replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&quot;', '"')
+          .replaceAll('&#39;', "'")
+          .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+          .trim();
+    }
+
+    static Map<String, int> _hours(dynamic rows, String key){
+      final out = <String, int>{};
+      if(rows is List){
+        for(final row in rows){
+          if(row is Map && row['courseType'] != null && row[key] is int){
+            out[row['courseType'].toString()] = row[key] as int;
+          }
+        }
+      }
+      return out;
+    }
+
+    factory SubjectDetails.fromJson(Map<String, dynamic> data){
+      String text(String key) => (data[key] ?? '').toString().trim();
+      return SubjectDetails(
+        requirementType: text('requirementType'),
+        resultType: ((data['subjectResult'] as Map?)?['typeName'] ?? '').toString().trim(),
+        teacher: text('ownerPrintName'),
+        department: text('interiorOrganization'),
+        preRequirement: text('preRequirement'),
+        hoursPerWeek: _hours(data['classesPerWeek'], 'classesPerWeek'),
+        hoursPerTerm: _hours(data['classesPerTerm'], 'classesPerTerm'),
+        description: plainText(text('description')),
+        thematicsAvailable: data['downloadSubjectThematicsEnabled'] == true,
+      );
+    }
+  }
+
+  class ThematicsFile{
+    final List<int> bytes;
+    final String fileName;
+    const ThematicsFile(this.bytes, this.fileName);
+  }
+
+  class SubjectDetailsRequest{
+    static String _normalise(String value){
+      var out = value.toLowerCase().trim();
+      final paren = out.indexOf('(');
+      if(paren > 0) out = out.substring(0, paren);
+      return out.replaceAll(RegExp(r'[^a-z0-9áéíóöőúüű]'), '');
+    }
+
+    static Future<Map<String, dynamic>?> _getJson(String path) async{
+      try{
+        final token = await storage.DataCache.getAccessToken();
+        final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        if(token == null) return null;
+        final raw = await _APIRequest.getRequest(Uri.parse('$baseUrl/api/$path'), bearerToken: token);
+        final decoded = conv.json.decode(raw);
+        return decoded is Map<String, dynamic> ? decoded : null;
+      }
+      catch(_){
+        return null;
+      }
+    }
+
+    /// Cached subjects from before the ids were stored carry none, so they are looked
+    /// up again by name, newest term first.
+    static Future<Subject> withIds(Subject subject) async{
+      if(subject.subjectId != null && subject.termId != null) return subject;
+      if(!storage.DataCache.getIsModernApi() || (storage.DataCache.getIsDemoAccount() ?? false)) return subject;
+      final terms = await _getJson('TakenSubjects/Terms');
+      final list = (terms?['data'] as List?) ?? const [];
+      final wanted = _normalise(subject.name);
+      for(final term in list.reversed){
+        final termId = term['value'].toString();
+        final taken = await _getJson('TakenSubjects?request.termId=$termId&sortAndPage.firstRow=0&sortAndPage.lastRow=50');
+        for(final item in (taken?['data'] as List?) ?? const []){
+          if(_normalise((item['subjectName'] ?? '').toString()) == wanted){
+            subject.subjectId = item['subjectId']?.toString();
+            subject.termId = termId;
+            subject.requirementType = (item['requirementType'] ?? '').toString();
+            subject.code = (item['subjectCode'] ?? '').toString();
+            return subject;
+          }
+        }
+      }
+      return subject;
+    }
+
+    static Future<SubjectDetails?> fetch(Subject subject) async{
+      if(storage.DataCache.getIsDemoAccount() ?? false){
+        return SubjectDetails(
+          requirementType: subject.requirementType,
+          resultType: '',
+          teacher: _demoText('DEMO Oktató', 'DEMO Lecturer'),
+          department: _demoText('DEMO Tanszék', 'DEMO Department'),
+          preRequirement: '',
+          hoursPerWeek: {_demoText('Elmélet', 'Lecture'): 2},
+          hoursPerTerm: {_demoText('Elmélet', 'Lecture'): 24},
+          description: _demoText('Ez egy bemutató tantárgy.', 'This is a sample subject.'),
+          thematicsAvailable: false,
+        );
+      }
+      if(!storage.DataCache.getIsModernApi() || subject.subjectId == null || subject.termId == null) return null;
+      final body = await _getJson('SubjectCourse/GetSubjectDetails?subjectId=${subject.subjectId}&termId=${subject.termId}');
+      final data = body?['data'];
+      return data is Map<String, dynamic> ? SubjectDetails.fromJson(data) : null;
+    }
+
+    /// Null when the server has no thematics for this subject or the download failed.
+    static Future<ThematicsFile?> downloadThematics(Subject subject) async{
+      if(subject.subjectId == null || subject.termId == null) return null;
+      final token = await storage.DataCache.getAccessToken();
+      final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+      if(token == null) return null;
+
+      final type = (await _getJson('PrintableTemplates/GetPrintSubjectThematicsFormTypeId'))?['data'];
+      if(type is! Map) return null;
+      final templates = await _getJson(
+          'PrintableTemplates/GetPrintableTemplatesList?formType=${type['formTypeId']}&subFormType=${type['subFormTypeId']}');
+      final list = (templates?['data'] as List?) ?? const [];
+      if(list.isEmpty) return null;
+
+      final response = await _APIRequest.getBytes(
+        Uri.parse('$baseUrl/api/PrintableTemplates/PrintSubjectThematics'
+            '?formId=${list.first['formsId']}&termId=${subject.termId}&subjectId=${subject.subjectId}'),
+        bearerToken: token,
+      );
+      if(response == null || response.statusCode != 200) return null;
+      final bytes = response.bodyBytes;
+      // An error body would otherwise be saved as a "PDF" the viewer cannot open.
+      if(bytes.length < 5 || String.fromCharCodes(bytes.take(4)) != '%PDF') return null;
+
+      var name = 'tematika.pdf';
+      final disposition = response.headers['content-disposition'] ?? '';
+      final match = RegExp('filename="?([^";]+)"?').firstMatch(disposition);
+      if(match != null){
+        try{ name = Uri.decodeComponent(match.group(1)!); } catch(_){ name = match.group(1)!; }
+      }
+      return ThematicsFile(bytes, name);
+    }
+  }
+
+  /// The student's funding form for the current term, which decides whether the payments tab is of use.
+  class FinancingRequest{
+    static Future<String?> fetchFinancialStatus() async{
+      if(!storage.DataCache.getIsModernApi()) return null;
+      try{
+        final token = await storage.DataCache.getAccessToken();
+        final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+        if(token == null) return null;
+        final raw = await _APIRequest.getRequest(Uri.parse('$baseUrl/api/dashboard/actualterm'), bearerToken: token);
+        final status = conv.json.decode(raw)['data']?['financialStatus'];
+        return status is String && status.trim().isNotEmpty ? status.trim() : null;
+      }
+      catch(_){
+        return null;
+      }
     }
   }
   

@@ -78,12 +78,22 @@ void main() {
       name: 'Zero-credit subject', credit: 0, completed: false, grade: 0,
       isFailed: false, onPopupResult: (_, __) {}, listIndex: 0, ghostGrade: 5,
     ))));
-    final gesture = tester.widget<GestureDetector>(find.descendant(
-      of: find.byType(MarkbookElementWidget), matching: find.byType(GestureDetector),
-    ));
-    expect(gesture.onTap, isNotNull);
+    final ghostTap = tester.widget<GestureDetector>(find.ancestor(
+      of: find.text('5'), matching: find.byType(GestureDetector),
+    ).first);
+    expect(ghostTap.onTap, isNotNull);
     expect(find.text('5'), findsOneWidget);
     expect(find.byIcon(Icons.check_rounded), findsNothing);
+  });
+
+  testWidgets('an ungraded subject offers a ghost grade button', (tester) async {
+    AppStrings.initialize();
+    AppColors.initialize();
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: MarkbookElementWidget(
+      name: 'Open subject', credit: 4, completed: false, grade: 0,
+      isFailed: false, onPopupResult: (_, __) {}, listIndex: 0, ghostGrade: -1,
+    ))));
+    expect(find.byIcon(Icons.auto_awesome_rounded), findsOneWidget);
   });
 
   testWidgets('a real zero-credit grade stays visible and cannot be overwritten', (tester) async {
@@ -93,10 +103,10 @@ void main() {
       name: 'Zero-credit subject', credit: 0, completed: true, grade: 4,
       isFailed: false, onPopupResult: (_, __) {}, listIndex: 0, ghostGrade: -1,
     ))));
-    final gesture = tester.widget<GestureDetector>(find.descendant(
-      of: find.byType(MarkbookElementWidget), matching: find.byType(GestureDetector),
-    ));
-    expect(gesture.onTap, isNull);
+    expect(find.byIcon(Icons.auto_awesome_rounded), findsNothing);
+    await tester.tap(find.text('4'));
+    await tester.pump();
+    expect(find.byType(Dialog), findsNothing);
     expect(find.text('4'), findsOneWidget);
   });
 

@@ -33,14 +33,14 @@ class TopNavigatorWidget extends StatelessWidget{
           }
           if(homePage.bottomNavSwitchValue < -50){
             homePage.bottomNavCanNavigate = false;
-            final val = homePage.currentView + 1 > HomePageState.maxBottomNavWidgets - 1 ? 0 : homePage.currentView + 1;
+            final val = homePage.stepView(1);
             homePage.switchView(val);
             AppHaptics.lightImpact();
             return;
           }
           else if(homePage.bottomNavSwitchValue > 50){
             homePage.bottomNavCanNavigate = false;
-            final val = homePage.currentView - 1 < 0 ? HomePageState.maxBottomNavWidgets - 1 : homePage.currentView - 1;
+            final val = homePage.stepView(-1);
             homePage.switchView(val);
             AppHaptics.lightImpact();
             return;
@@ -67,7 +67,6 @@ class TopNavigatorWidget extends StatelessWidget{
                       Scaffold.of(context).openDrawer();
                     },
                     style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(AppColors.getTheme().textColor.withValues(alpha: .1)),
                       padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
                     ),
                     icon: Icon(

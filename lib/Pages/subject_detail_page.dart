@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart' as path;
 
 import '../API/api_coms.dart' as api;
 import '../colors.dart';
@@ -6,6 +10,35 @@ import '../haptics.dart';
 import '../hidden_classes.dart';
 import '../language.dart';
 import '../storage.dart';
+
+/// Neptun names the assessment form in Hungarian only, so English users get a translation.
+String subjectRequirementLabel(String requirement) {
+  if (AppStrings.getCurrentLangCode() == 'hu') return requirement;
+  const english = {
+    'vizsga': 'Exam',
+    'kollokvium': 'Colloquium',
+    'évközi jegy': 'Term grade',
+    'folyamatos számonkérés': 'Continuous assessment',
+    'aláírás': 'Signature',
+    'gyakorlati jegy': 'Practical grade',
+    'szigorlat': 'Comprehensive exam',
+  };
+  return english[requirement.trim().toLowerCase()] ?? requirement;
+}
+
+String? _requirementHint(String requirement, bool hu) {
+  const hints = {
+    'vizsga': ('Vizsgával zárul, jegyet kapsz.', 'Ends with an exam; you get a grade.'),
+    'kollokvium': ('Szóbeli vagy írásbeli számonkérés a félév végén, jeggyel.', 'An end-of-term oral or written check, graded.'),
+    'évközi jegy': ('A jegyet a félév alatti teljesítményed alapján kapod, vizsga nélkül.', 'Graded on your work during the semester, no exam.'),
+    'folyamatos számonkérés': ('A félév alatt folyamatosan számon kérik, külön vizsga nélkül.', 'Assessed throughout the semester, without a separate exam.'),
+    'aláírás': ('Csak aláírást kell szerezned, jegy nincs.', 'You only need the signature; there is no grade.'),
+    'gyakorlati jegy': ('Gyakorlati munkád alapján kapsz jegyet.', 'Graded on practical work.'),
+    'szigorlat': ('Több tárgyat átfogó vizsga.', 'A comprehensive exam covering several subjects.'),
+  };
+  final hint = hints[requirement.trim().toLowerCase()];
+  return hint == null ? null : (hu ? hint.$1 : hint.$2);
+}
 
 /// Everything the app knows about one subject, gathered in one place.
 ///
@@ -27,6 +60,10 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
   List<api.CalendarEntry> _dated = [];
   bool _loading = true;
   bool _classesHidden = false;
+  api.SubjectDetails? _details;
+  bool _detailsLoading = true;
+  bool _downloading = false;
+  bool _descriptionOpen = false;
 
   @override
   void initState() {
@@ -54,7 +91,45 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
     return a == b || a.contains(b) || b.contains(a);
   }
 
+  Future<void> _loadDetails() async {
+    await api.SubjectDetailsRequest.withIds(widget.subject);
+    final details = await api.SubjectDetailsRequest.fetch(widget.subject);
+    if (!mounted) return;
+    setState(() {
+      _details = details;
+      _detailsLoading = false;
+    });
+  }
+
+  Future<void> _downloadThematics() async {
+    if (_downloading) return;
+    AppHaptics.lightImpact();
+    setState(() => _downloading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    String? failure;
+    try {
+      final file = await api.SubjectDetailsRequest.downloadThematics(widget.subject);
+      if (file == null) {
+        failure = _t('A tematika most nem tölthető le.', 'The syllabus could not be downloaded right now.');
+      } else {
+        final safeName = file.fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final target = File('${(await path.getTemporaryDirectory()).path}/$safeName');
+        await target.writeAsBytes(file.bytes, flush: true);
+        final result = await OpenFilex.open(target.path, type: 'application/pdf');
+        if (result.type != ResultType.done) {
+          failure = _t('Nincs PDF-megnyitó alkalmazás a készüléken.', 'No PDF viewer is installed on this device.');
+        }
+      }
+    } catch (_) {
+      failure = _t('A tematika most nem tölthető le.', 'The syllabus could not be downloaded right now.');
+    }
+    if (!mounted) return;
+    setState(() => _downloading = false);
+    if (failure != null) messenger.showSnackBar(SnackBar(content: Text(failure)));
+  }
+
   Future<void> _load() async {
+    _loadDetails();
     await HiddenClasses.load();
     final week = await _thisWeek();
     final upcoming = await api.CalendarRequest.fetchUpcoming();
@@ -112,9 +187,9 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
         children: [
           Text(s.name,
               style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w900, fontSize: 24, height: 1.25)),
-          if (widget.termName != null) ...[
+          if (s.code.isNotEmpty || widget.termName != null) ...[
             const SizedBox(height: 6),
-            Text(widget.termName!,
+            Text([if (s.code.isNotEmpty) s.code, if (widget.termName != null) widget.termName!].join(' · '),
                 style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 14)),
           ],
           const SizedBox(height: 22),
@@ -127,6 +202,7 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
               Expanded(child: _stat(theme, _t('Állapot', 'Status'), _statusText(s), _statusColour(theme, s))),
             ],
           ),
+          ..._aboutSections(theme),
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -174,6 +250,118 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
 
   Widget _section(AppPalette theme, String text) => Text(text,
       style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 16));
+
+  Widget _infoRow(AppPalette theme, String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 112,
+              child: Text(label, style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 13)),
+            ),
+            Expanded(
+              child: Text(value,
+                  style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w600, fontSize: 13.5)),
+            ),
+          ],
+        ),
+      );
+
+  String _hours(Map<String, int> rows, String unit) =>
+      rows.entries.map((e) => '${e.key}: ${e.value} $unit').join('\n');
+
+  /// How the subject is assessed, who runs it, and the syllabus download.
+  List<Widget> _aboutSections(AppPalette theme) {
+    final requirement = (_details?.requirementType.isNotEmpty ?? false)
+        ? _details!.requirementType
+        : widget.subject.requirementType;
+    final hint = requirement.isEmpty ? null : _requirementHint(requirement, _hu);
+    final details = _details;
+
+    return [
+      if (requirement.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: theme.secondary.withValues(alpha: 0.08),
+            border: Border.all(color: theme.secondary.withValues(alpha: 0.3)),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.fact_check_rounded, color: theme.secondary, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_t('Számonkérés', 'Assessment'),
+                        style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 11.5)),
+                    const SizedBox(height: 2),
+                    Text(subjectRequirementLabel(requirement),
+                        style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w800, fontSize: 16)),
+                    if (hint != null) ...[
+                      const SizedBox(height: 4),
+                      Text(hint, style: TextStyle(color: AppColors.mutedText(0.6), fontSize: 12.5)),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      if (_detailsLoading) ...[
+        const SizedBox(height: 22),
+        Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: theme.secondary))),
+      ] else if (details != null) ...[
+        const SizedBox(height: 22),
+        _section(theme, _t('Részletek', 'Details')),
+        const SizedBox(height: 6),
+        if (details.teacher.isNotEmpty) _infoRow(theme, _t('Oktató', 'Lecturer'), details.teacher),
+        if (details.department.isNotEmpty) _infoRow(theme, _t('Tanszék', 'Department'), details.department),
+        if (details.hoursPerWeek.isNotEmpty) _infoRow(theme, _t('Heti óraszám', 'Hours per week'), _hours(details.hoursPerWeek, _t('óra', 'h'))),
+        if (details.hoursPerTerm.isNotEmpty) _infoRow(theme, _t('Féléves óraszám', 'Hours per term'), _hours(details.hoursPerTerm, _t('óra', 'h'))),
+        if (details.resultType.isNotEmpty) _infoRow(theme, _t('Eredmény típusa', 'Result type'), details.resultType),
+        if (details.preRequirement.isNotEmpty) _infoRow(theme, _t('Előkövetelmény', 'Prerequisite'), details.preRequirement),
+        if (details.description.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            details.description,
+            maxLines: _descriptionOpen ? null : 4,
+            overflow: _descriptionOpen ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: TextStyle(color: AppColors.mutedText(0.7), fontSize: 13, height: 1.4),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36), alignment: Alignment.centerLeft),
+            onPressed: () => setState(() => _descriptionOpen = !_descriptionOpen),
+            child: Text(_descriptionOpen ? _t('Kevesebb', 'Show less') : _t('Tovább', 'Show more'),
+                style: TextStyle(color: theme.secondary)),
+          ),
+        ],
+        if (details.thematicsAvailable) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.secondary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _downloading ? null : _downloadThematics,
+              icon: _downloading
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : const Icon(Icons.picture_as_pdf_rounded),
+              label: Text(_t('Tárgytematika letöltése', 'Download syllabus')),
+            ),
+          ),
+        ],
+      ],
+    ];
+  }
 
   Widget _stat(AppPalette theme, String label, String value, Color colour) {
     return Semantics(

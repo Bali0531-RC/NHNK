@@ -94,6 +94,8 @@ class DataCache{
     setNeedPaymentsNotifications(_persistentSetting_showPaymentsNotifications! ? 1 : 0);
     setNeedPeriodsNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
     setClassReminderMinutes(_persistentSetting_classReminderMinutes);
+    setAlwaysShowPayments(_persistentSetting_alwaysShowPayments);
+    _financialStatus = '';
     setUserWeekOffset(_persistentSetting_weekOffset!);
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
     setNeedsHaptics(_persistentSetting_needBetterHaptics! ? 1 : 0);
@@ -181,6 +183,9 @@ class DataCache{
   late bool _hasAcceptedTerms = false;
   /// Minutes between background grade checks; 0 disables it.
   late int _persistentSetting_backgroundGradeCheckMinutes = 60;
+  /// Funding form for the current term as Neptun words it, empty until fetched.
+  late String _financialStatus = '';
+  late bool _persistentSetting_alwaysShowPayments = false;
   /// Minutes before a class that get a reminder; 0 is the start itself.
   late List<int> _persistentSetting_classReminderMinutes = [10, 0];
   late bool? _persistentSetting_showPaymentsNotifications = true;
@@ -298,6 +303,8 @@ class DataCache{
     }
 
     _persistentSetting_backgroundGradeCheckMinutes = await getInt('SETTING_BackgroundGradeCheckMinutes') ?? 60;
+    _financialStatus = await getString('FinancialStatus') ?? '';
+    _persistentSetting_alwaysShowPayments = (await getInt('SETTING_AlwaysShowPayments') ?? 0) != 0;
 
     final reminders = await getString('SETTING_ClassReminderMinutes');
     if(reminders != null){
@@ -689,6 +696,26 @@ class DataCache{
   static Future<void> setBackgroundGradeCheckMinutes(int value) async{
     _instance._persistentSetting_backgroundGradeCheckMinutes = value;
     await saveInt('SETTING_BackgroundGradeCheckMinutes', value);
+  }
+
+  static String getFinancialStatus(){return _instance._financialStatus;}
+  static Future<void> setFinancialStatus(String value) async{
+    _instance._financialStatus = value;
+    await saveString('FinancialStatus', value);
+    await saveInt('FinancialStatusTime', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  /// Fully state-funded students pay no tuition, so only "Állami ösztöndíjas" counts;
+  /// partial ("részösztöndíjas") and self-funded students still pay.
+  static bool isStateFunded(){
+    final status = _instance._financialStatus.toLowerCase();
+    return status.contains('állami') && status.contains('ösztöndíjas') && !status.contains('rész');
+  }
+
+  static bool getAlwaysShowPayments(){return _instance._persistentSetting_alwaysShowPayments;}
+  static Future<void> setAlwaysShowPayments(bool value) async{
+    _instance._persistentSetting_alwaysShowPayments = value;
+    await saveInt('SETTING_AlwaysShowPayments', value ? 1 : 0);
   }
 
   static List<int> getClassReminderMinutes(){return List.of(_instance._persistentSetting_classReminderMinutes);}
