@@ -18,14 +18,13 @@ class LocalFileActions{
   }
 
   static Future<String?> openFilePicker(String dialogTitle)async{
-    final result = await FilePicker.pickFiles(
+    final result = await FilePicker.pickFile(
       dialogTitle: dialogTitle,
       initialDirectory: await _getDownloadsFolder(),
       type: FileType.custom,
       allowedExtensions: ['ics', 'ICS'],
-      allowMultiple: false,
     );
-    return result?.xFiles[0].path;
+    return result?.path;
   }
 
   static Future<String> cloneFileToTemp(String path, String filename)async{
