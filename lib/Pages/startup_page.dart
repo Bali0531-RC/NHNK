@@ -6,6 +6,7 @@ import 'package:nhnk/colors.dart';
 import 'package:nhnk/haptics.dart';
 import 'package:nhnk/language.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../biometric_lock.dart';
 import '../storage.dart';
 import '../startup_trace.dart';
 import 'main_page.dart' as main_page;
@@ -86,7 +87,7 @@ class _SplitterState extends State<Splitter>{
         StartupTrace.mark('push HomePage');
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+          MaterialPageRoute(builder: (context) => const BiometricLockGate()),
         );
         return;
       }

@@ -95,6 +95,7 @@ class DataCache{
     setNeedPeriodsNotifications(_persistentSetting_showPeriodsNotifications! ? 1 : 0);
     setClassReminderMinutes(_persistentSetting_classReminderMinutes);
     setAlwaysShowPayments(_persistentSetting_alwaysShowPayments);
+    setBiometricLockEnabled(_persistentSetting_biometricLock);
     _financialStatus = '';
     setUserWeekOffset(_persistentSetting_weekOffset!);
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
@@ -186,6 +187,7 @@ class DataCache{
   /// Funding form for the current term as Neptun words it, empty until fetched.
   late String _financialStatus = '';
   late bool _persistentSetting_alwaysShowPayments = false;
+  late bool _persistentSetting_biometricLock = true;
   /// Minutes before a class that get a reminder; 0 is the start itself.
   late List<int> _persistentSetting_classReminderMinutes = [10, 0];
   late bool? _persistentSetting_showPaymentsNotifications = true;
@@ -305,6 +307,7 @@ class DataCache{
     _persistentSetting_backgroundGradeCheckMinutes = await getInt('SETTING_BackgroundGradeCheckMinutes') ?? 60;
     _financialStatus = await getString('FinancialStatus') ?? '';
     _persistentSetting_alwaysShowPayments = (await getInt('SETTING_AlwaysShowPayments') ?? 0) != 0;
+    _persistentSetting_biometricLock = (await getInt('SETTING_BiometricLock') ?? 1) != 0;
 
     final reminders = await getString('SETTING_ClassReminderMinutes');
     if(reminders != null){
@@ -721,6 +724,12 @@ class DataCache{
   static Future<void> setAlwaysShowPayments(bool value) async{
     _instance._persistentSetting_alwaysShowPayments = value;
     await saveInt('SETTING_AlwaysShowPayments', value ? 1 : 0);
+  }
+
+  static bool getBiometricLockEnabled(){return _instance._persistentSetting_biometricLock;}
+  static Future<void> setBiometricLockEnabled(bool value) async{
+    _instance._persistentSetting_biometricLock = value;
+    await saveInt('SETTING_BiometricLock', value ? 1 : 0);
   }
 
   static List<int> getClassReminderMinutes(){return List.of(_instance._persistentSetting_classReminderMinutes);}

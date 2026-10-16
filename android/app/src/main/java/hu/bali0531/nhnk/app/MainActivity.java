@@ -1,15 +1,22 @@
 package hu.bali0531.nhnk.app;
 
+import android.app.Activity;
+import android.app.KeyguardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.biometrics.BiometricManager;
+import android.hardware.biometrics.BiometricPrompt;
 import android.net.Uri;
 import android.os.Build;
+import android.os.CancellationSignal;
 import android.os.PowerManager;
 import android.provider.Settings;
 
 import androidx.annotation.NonNull;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -17,6 +24,10 @@ import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
     private static final String CHANNEL = "hu.bali0531.nhnk/power";
+    private static final String BIOMETRIC_CHANNEL = "hu.bali0531.nhnk/biometrics";
+    private static final int REQ_CONFIRM_CREDENTIAL = 4102;
+
+    private MethodChannel.Result pendingAuthResult;
 
     /**
      * Vendor "protected apps" screens. These sit outside Android's own battery
@@ -74,6 +85,110 @@ public class MainActivity extends FlutterActivity {
                             result.notImplemented();
                     }
                 });
+
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), BIOMETRIC_CHANNEL)
+                .setMethodCallHandler((call, result) -> {
+                    switch (call.method) {
+                        case "isDeviceSupported":
+                            result.success(isDeviceSecure());
+                            break;
+                        case "authenticate":
+                            String title = call.argument("title");
+                            String subtitle = call.argument("subtitle");
+                            authenticateUser(
+                                    title != null ? title : "NHNK",
+                                    subtitle != null ? subtitle : "",
+                                    result
+                            );
+                            break;
+                        default:
+                            result.notImplemented();
+                    }
+                });
+    }
+
+    private boolean isDeviceSecure() {
+        KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        return km != null && km.isDeviceSecure();
+    }
+
+    private void authenticateUser(String title, String subtitle, MethodChannel.Result result) {
+        if (!isDeviceSecure()) {
+            result.success(true);
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                final AtomicBoolean completed = new AtomicBoolean(false);
+                BiometricPrompt prompt = new BiometricPrompt.Builder(this)
+                        .setTitle(title)
+                        .setSubtitle(subtitle)
+                        .setAllowedAuthenticators(
+                                BiometricManager.Authenticators.BIOMETRIC_STRONG
+                                        | BiometricManager.Authenticators.BIOMETRIC_WEAK
+                                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        )
+                        .build();
+
+                prompt.authenticate(
+                        new CancellationSignal(),
+                        getMainExecutor(),
+                        new BiometricPrompt.AuthenticationCallback() {
+                            @Override
+                            public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult authResult) {
+                                if (completed.compareAndSet(false, true)) {
+                                    result.success(true);
+                                }
+                            }
+
+                            @Override
+                            public void onAuthenticationError(int errorCode, CharSequence errString) {
+                                if (completed.compareAndSet(false, true)) {
+                                    result.success(false);
+                                }
+                            }
+                        }
+                );
+                return;
+            } catch (Exception ignored) {
+                // Fall back to Keyguard credential intent below if BiometricPrompt fails on custom OEM ROMs.
+            }
+        }
+        launchConfirmDeviceCredential(title, subtitle, result);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void launchConfirmDeviceCredential(String title, String subtitle, MethodChannel.Result result) {
+        KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        if (km == null) {
+            result.success(true);
+            return;
+        }
+        Intent intent = km.createConfirmDeviceCredentialIntent(title, subtitle);
+        if (intent == null) {
+            result.success(true);
+            return;
+        }
+        if (pendingAuthResult != null) {
+            pendingAuthResult.success(false);
+        }
+        pendingAuthResult = result;
+        try {
+            startActivityForResult(intent, REQ_CONFIRM_CREDENTIAL);
+        } catch (Exception e) {
+            pendingAuthResult = null;
+            result.success(false);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CONFIRM_CREDENTIAL && pendingAuthResult != null) {
+            MethodChannel.Result res = pendingAuthResult;
+            pendingAuthResult = null;
+            res.success(resultCode == Activity.RESULT_OK);
+        }
     }
 
     private boolean isIgnoringBatteryOptimizations() {

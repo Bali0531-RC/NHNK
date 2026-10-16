@@ -6,6 +6,7 @@ import 'package:open_filex/open_filex.dart';
 import '../API/api_coms.dart';
 import '../API/totp.dart';
 import '../background_worker.dart';
+import '../biometric_lock.dart';
 import '../colors.dart';
 import '../haptics.dart';
 import '../language.dart';
@@ -740,6 +741,32 @@ class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver
 
           // --- 4. security ---
           _buildSectionHeader(_t("Biztonság", "Security"), Icons.lock_rounded),
+          SwitchListTile(
+            title: Text(
+              _t("Biometrikus / PIN zárolás", "Biometric / PIN lock"),
+              style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              _t(
+                "Ujjlenyomat, arcfelismerés vagy képernyőzár kérése az alkalmazás megnyitásakor",
+                "Require fingerprint, face unlock or screen lock when opening the app",
+              ),
+              style: TextStyle(color: AppColors.mutedText(0.5), fontSize: 12),
+            ),
+            activeThumbColor: AppColors.getTheme().secondary,
+            value: DataCache.getBiometricLockEnabled(),
+            onChanged: (b) async {
+              AppHaptics.lightImpact();
+              if (!b) {
+                final ok = await BiometricLock.authenticate();
+                if (!ok) return;
+              } else {
+                BiometricLock.markSessionUnlocked();
+              }
+              await DataCache.setBiometricLockEnabled(b);
+              if (mounted) setState(() {});
+            },
+          ),
           ListTile(
             title: Text(_t("2FA titkos kulcs", "Two-factor secret key"), style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
             subtitle: Text(

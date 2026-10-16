@@ -322,6 +322,49 @@ class _OnboardingWelcomePageState extends State<OnboardingWelcomePage> {
               'There is no middleman service. The app talks to your institution directly.',
             ),
           ),
+          const SizedBox(height: 6),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.getTheme().textColor.withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.all(Radius.circular(AppRadius.medium)),
+              border: Border.all(
+                color: AppColors.getTheme().textColor.withValues(alpha: 0.12),
+              ),
+            ),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              secondary: Icon(
+                Icons.fingerprint_rounded,
+                color: AppColors.getTheme().secondary,
+              ),
+              title: Text(
+                _t('Biometrikus / PIN védelem', 'Biometric / PIN lock'),
+                style: TextStyle(
+                  color: AppColors.getTheme().textColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14.5,
+                ),
+              ),
+              subtitle: Text(
+                _t(
+                  'Képernyőzár vagy ujjlenyomat kérése indításkor. Itt vagy a Beállításokban bármikor kikapcsolhatod.',
+                  'Ask for your screen lock or fingerprint on launch. You can turn this off here or in Settings.',
+                ),
+                style: TextStyle(
+                  color: AppColors.mutedText(0.68),
+                  fontSize: 12.5,
+                  height: 1.35,
+                ),
+              ),
+              activeThumbColor: AppColors.getTheme().secondary,
+              value: storage.DataCache.getBiometricLockEnabled(),
+              onChanged: (v) async {
+                AppHaptics.lightImpact();
+                await storage.DataCache.setBiometricLockEnabled(v);
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
         ],
       ),
     );
