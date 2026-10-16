@@ -183,10 +183,18 @@ jobs:
           printf '\n---\n\n' >> "$NOTES_FILE"
           cat .github/release-body.md >> "$NOTES_FILE"
 
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "NHNK $GITHUB_REF_NAME" \
-            --notes-file "$NOTES_FILE"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "NHNK $GITHUB_REF_NAME" \
+              --notes-file "$NOTES_FILE"
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "NHNK $GITHUB_REF_NAME" \
+              --notes-file "$NOTES_FILE"
+          fi
 
       - name: Prepare Google Play release notes
         id: play_notes
