@@ -53,3 +53,6 @@ key.properties
 
 # Packaged release artifacts, produced locally and by the release workflow.
 /dist/
+
+# Private thesis roadmap and notes
+/SZAKDOLGOZAT_TERV.md
