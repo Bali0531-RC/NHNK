@@ -76,7 +76,8 @@ Azóta a kódbázis több mint fele már saját fejlesztés: teljesen új 2.0-s 
 
 Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-RC/NHNK/releases**
 
-- **2.0 (2.0.0 – 2.0.7):**
+- **2.0 (2.0.0 – 2.0.8):**
+  - **2.0.8:** Automatikus natív kulcsmigráció (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`), valamint a Statisztika és Közelgő fül tokenfrissítési és gyorsítótár-fallback javítása.
   - **2.0.7:** Biometrikus / képernyőzáras alkalmazászár (alapból bekapcsolva, első indításkor és a Beállításokban kapcsolható), teljes stack frissítés (Flutter 3.47, AGP 9.4, Gradle 9.8, Kotlin 2.4), R8 erőforrás-optimalizálás és automatizált Google Play kiadási pipeline.
   - **2.0.6:** Új, saját NHNK alkalmazásikon és indítóképernyő minden platformon.
   - **2.0.5:** Részletes tárgyoldal PDF tematika-letöltéssel, Fizetések fül automatikus elrejtése állami ösztöndíjasoknak, külön szellemjegy gomb.
@@ -175,6 +176,23 @@ Since then, over half of the codebase has been rewritten or newly built: full mo
 - **Two-factor authentication (2FA / TOTP):** Optional stored TOTP secret in hardware-backed `flutter_secure_storage` (AES-GCM + RSA-OAEP) for automatic session renewal.
 - **Smart Payments tab:** Automatically stays hidden for full state-scholarship students unless there is an active balance due.
 - **True black OLED theme (`#000000`)**, multiple colour palettes, adjustable font scaling, and full Hungarian/English support (including translated demo mode fixtures).
+
+## Version History
+
+Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
+
+- **2.0 (2.0.0 – 2.0.8):**
+  - **2.0.8:** Native legacy-to-v11 credential migration (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`) and token-refresh / cache fallback fixes for Statistics and Upcoming views.
+  - **2.0.7:** Default biometric / screen-lock protection (with onboarding opt-out and settings toggle), full stack upgrade (Flutter 3.47, AGP 9.4, Gradle 9.8, Kotlin 2.4), R8 resource shrinking, and automated Google Play production release pipeline.
+  - **2.0.6:** Redesigned custom NHNK app icon and splash assets across all platforms.
+  - **2.0.5:** Subject detail page with PDF syllabus downloads, automatic hiding of the Payments tab for full state-scholarship students, dedicated ghost-grade button.
+  - **2.0.4:** Hide courses from timetable/widget/reminders, custom class reminder offsets.
+  - **2.0.2 – 2.0.3:** Background home-screen widget refresh, 0-credit ghost grades, persistent notification history and deduplication.
+  - **2.0.0:** Full modern Neptun REST API map (`API-DOCS/`), capability discovery (`ModernApi`), automatic degree credit requirement (`dashboard/creditprogress`), and lightweight unread message count polling.
+- **1.3 (1.3.0 – 1.3.1):** 4-step onboarding with accent-insensitive institution search and true black (`#000000`) OLED theme.
+- **1.2 (1.2.0 – 1.2.10):** Android home-screen widget, Upcoming events page, semester statistics & degree progress, web demo build, PII-redacted diagnostics tab, startup optimization, and screen-reader accessibility.
+- **1.1:** Background grade & message notifications, `.ics` calendar export, multi-server failover, and OEM battery helper.
+- **1.0:** Initial stabilization of the fork: fixed `MainActivity`, TLS certificate validation, session renewal, 2FA support, and Google Play build flavors.
 
 ## Building & Testing
 
