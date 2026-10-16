@@ -406,7 +406,9 @@ Future<http.Response?> _tryGet(Uri url) async {
 
           // Mindenki megkapja az új tokent, és újra próbálkozik
           final newToken = await storage.DataCache.getAccessToken();
-          return await getRequest(url, bearerToken: newToken!, isRetry: true);
+          if (newToken != null && newToken.isNotEmpty) {
+            return await getRequest(url, bearerToken: newToken, isRetry: true);
+          }
         }
 
         return response.body;
@@ -807,6 +809,7 @@ class CalendarRequest {
       }
       catch(_){ }
     }
+    if(restored.isEmpty) return null;
     _upcomingFetchedMs = stampedAt;
     return restored;
   }
@@ -827,7 +830,7 @@ class CalendarRequest {
     // Demo fixtures are generated in the current language, so caching them would
     // strand the list in whichever language it was first opened with.
     final bool isDemo = storage.DataCache.getIsDemoAccount() ?? false;
-    if(!force && !isDemo && _upcomingCache != null && now - _upcomingFetchedMs < cacheTtlMs){
+    if(!force && !isDemo && _upcomingCache != null && _upcomingCache!.isNotEmpty && now - _upcomingFetchedMs < cacheTtlMs){
       return _upcomingCache!;
     }
 
@@ -888,12 +891,28 @@ class CalendarRequest {
           take(entries);
         }
       }
+
+      if(out.isEmpty && (storage.DataCache.getHasCachedCalendar() ?? false)){
+        final len = await storage.getInt('CachedCalendarLength') ?? 0;
+        final cached = <CalendarEntry>[];
+        for(int i = 0; i < len; i++){
+          final line = await storage.getString('CachedCalendar_$i');
+          if(line == null) continue;
+          try{
+            cached.add(CalendarEntry('0', '0', 'NULL', 'NULL', false).fillWithExisting(line));
+          }
+          catch(_){ }
+        }
+        take(cached);
+      }
     }
 
     out.sort((a, b) => a.startEpoch.compareTo(b.startEpoch));
-    _upcomingCache = out;
-    _upcomingFetchedMs = now;
-    if(!isDemo) await _writePersistedUpcoming(out);
+    if(out.isNotEmpty){
+      _upcomingCache = out;
+      _upcomingFetchedMs = now;
+      if(!isDemo) await _writePersistedUpcoming(out);
+    }
     NetTrace.reset('fetchUpcoming done in ${swUpcoming.elapsedMilliseconds} ms');
     return out;
   }
@@ -1461,24 +1480,34 @@ class MarkbookRequest{
     if(!storage.DataCache.getIsModernApi()){
       // The legacy markbook endpoint returns everything at once with no term on it,
       // so the best that can be offered is a single combined bucket.
-      final all = await getMarkbookSubjects();
-      if(all == null || all.isEmpty) return [];
+      var all = await getMarkbookSubjects();
+      if(all == null || all.isEmpty){
+        all = await _readCachedMarkbookSubjects();
+      }
+      if(all.isEmpty) return [];
       final label = AppStrings.getCurrentLangCode() == 'hu' ? 'Összes tárgy' : 'All subjects';
       return [SemesterResult('legacy', label, all)];
     }
 
     try{
-      final token = await storage.DataCache.getAccessToken();
+      final token = await storage.DataCache.getAccessToken() ?? '';
       final baseUrl = storage.DataCache.getInstituteUrl() ?? '';
+      if(baseUrl.isEmpty) return await _fallbackSemesterHistory();
 
       final termsUrl = Uri.parse("$baseUrl/api/TakenSubjects/Terms");
-      final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token!);
+      final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token);
       final termsDecoded = conv.json.decode(termsResponse);
-      if(termsDecoded['data'] == null || termsDecoded['data'].isEmpty) return [];
+      if(termsDecoded['data'] == null || termsDecoded['data'].isEmpty){
+        return await _fallbackSemesterHistory();
+      }
 
       final terms = (termsDecoded['data'] as List<dynamic>);
       final lastIndex = terms.length - 1;
       String termIdAt(int i) => terms[i]['value'].toString();
+      String termNameAt(int i) => (terms[i]['text'] ?? termIdAt(i)).toString();
+
+      await storage.saveStringList('TermHistoryIds', [for(int i = 0; i < terms.length; i++) termIdAt(i)]);
+      await storage.saveStringList('TermHistoryNames', [for(int i = 0; i < terms.length; i++) termNameAt(i)]);
 
       // Terms do not depend on each other. The cached ones are read together, then
       // whatever is missing is fetched in small parallel batches instead of walking
@@ -1493,7 +1522,7 @@ class MarkbookRequest{
       final results = List<SemesterResult?>.filled(terms.length, null);
       final missing = <int>[];
       for(int t = 0; t < terms.length; t++){
-        if(cached[t] != null){
+        if(cached[t] != null && cached[t]!.subjects.isNotEmpty){
           results[t] = cached[t];
           continue;
         }
@@ -1507,27 +1536,88 @@ class MarkbookRequest{
         final end = start + termBatchSize > missing.length ? missing.length : start + termBatchSize;
         final slice = missing.sublist(start, end);
         final fetched = await Future.wait([
-          for(final t in slice) _fetchTermSubjects(baseUrl, token, termIdAt(t)),
+          for(final t in slice) _fetchTermSubjects(baseUrl, termIdAt(t)),
         ]);
         for(int i = 0; i < slice.length; i++){
           final t = slice[i];
           final termId = termIdAt(t);
-          final termName = (terms[t]['text'] ?? termId).toString();
-          final result = SemesterResult(termId, termName, fetched[i]);
+          final termName = termNameAt(t);
+          var subjects = fetched[i];
+          if(subjects.isEmpty){
+            final fallbackTerm = await _readCachedTerm(termId);
+            if(fallbackTerm != null && fallbackTerm.subjects.isNotEmpty){
+              subjects = fallbackTerm.subjects;
+            }
+            else if(t == lastIndex){
+              subjects = await _readCachedMarkbookSubjects();
+            }
+          }
+          final result = SemesterResult(termId, termName, subjects);
           results[t] = result;
-          if(t != lastIndex) await _writeCachedTerm(result);
+          if(subjects.isNotEmpty) await _writeCachedTerm(result);
         }
       }
 
-      return results.whereType<SemesterResult>().toList();
+      final nonNull = results.whereType<SemesterResult>().toList();
+      if(nonNull.isEmpty || nonNull.every((s) => s.subjects.isEmpty)){
+        final fallback = await _fallbackSemesterHistory();
+        if(fallback.isNotEmpty) return fallback;
+      }
+      return nonNull;
     }
     catch(e){
       debug.log("Hiba a félévek lekérésekor: $e");
-      return [];
+      return await _fallbackSemesterHistory();
     }
   }
 
-  static Future<List<Subject>> _fetchTermSubjects(String baseUrl, String token, String termId) async{
+  static Future<List<Subject>> _readCachedMarkbookSubjects() async{
+    final len = await storage.getInt('CachedMarkbookLength') ?? 0;
+    final out = <Subject>[];
+    for(int i = 0; i < len; i++){
+      final raw = await storage.getString('CachedMarkbook_$i');
+      if(raw == null) continue;
+      try{
+        out.add(Subject(false, 0, 'NULL', 0, 0, 0).fillWithExisting(raw));
+      }
+      catch(_){ }
+    }
+    return out;
+  }
+
+  static Future<List<SemesterResult>> _fallbackSemesterHistory() async{
+    final ids = await storage.getStringList('TermHistoryIds') ?? const <String>[];
+    final names = await storage.getStringList('TermHistoryNames') ?? const <String>[];
+    final out = <SemesterResult>[];
+    for(int i = 0; i < ids.length; i++){
+      final cached = await _readCachedTerm(ids[i]);
+      if(cached != null && cached.subjects.isNotEmpty){
+        out.add(cached);
+      }
+      else if(i == ids.length - 1){
+        final markbook = await _readCachedMarkbookSubjects();
+        if(markbook.isNotEmpty){
+          final name = i < names.length ? names[i] : ids[i];
+          out.add(SemesterResult(ids[i], name, markbook));
+        }
+      }
+    }
+    if(out.isNotEmpty) return out;
+
+    final markbook = await _readCachedMarkbookSubjects();
+    if(markbook.isNotEmpty){
+      final rawTermId = markbook.first.termId ?? '';
+      final termId = rawTermId.isNotEmpty ? rawTermId : 'current';
+      final label = rawTermId.isNotEmpty
+          ? rawTermId
+          : (AppStrings.getCurrentLangCode() == 'hu' ? 'Aktuális félév' : 'Current semester');
+      return [SemesterResult(termId, label, markbook)];
+    }
+    return [];
+  }
+
+  static Future<List<Subject>> _fetchTermSubjects(String baseUrl, String termId) async{
+    final token = await storage.DataCache.getAccessToken() ?? '';
     final subjectsUrl = Uri.parse("$baseUrl/api/TakenSubjects?request.termId=$termId&sortAndPage.firstRow=0&sortAndPage.lastRow=50");
     final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: token);
     final subjectsDecoded = conv.json.decode(subjectsResponse);
@@ -1538,9 +1628,10 @@ class MarkbookRequest{
 
     const int batchSize = 6;
     for(int i = 0; i < entries.length; i += batchSize){
+      final activeToken = await storage.DataCache.getAccessToken() ?? token;
       final batch = entries.skip(i).take(batchSize).map((item){
         return _fetchSubjectGrade(
-          baseUrl, token, item['subjectId'], termId,
+          baseUrl, activeToken, item['subjectId'], termId,
           item['subjectName'] ?? 'Ismeretlen', item['subjectCredit'] ?? 0,
           requirementType: (item['requirementType'] ?? '').toString(),
           code: (item['subjectCode'] ?? '').toString(),
@@ -1624,12 +1715,12 @@ class MarkbookRequest{
     // --- MODERN API ÁG (Párhuzamos lekéréssel!) ---
     if (storage.DataCache.getIsModernApi() /*?? false*/) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = await storage.DataCache.getAccessToken() ?? '';
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         // 1. Félévek lekérése
         final termsUrl = Uri.parse("$baseUrl/api/TakenSubjects/Terms");
-        final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token!);
+        final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token);
         final termsDecoded = conv.json.decode(termsResponse);
         if (termsDecoded['data'] == null || termsDecoded['data'].isEmpty) return [];
 
@@ -1637,8 +1728,9 @@ class MarkbookRequest{
         String activeTermId = termsDecoded['data'].last['value'];
 
         // 2. Felvett tárgyak listájának lekérése
+        final subjectsToken = await storage.DataCache.getAccessToken() ?? token;
         final subjectsUrl = Uri.parse("$baseUrl/api/TakenSubjects?request.termId=$activeTermId&sortAndPage.firstRow=0&sortAndPage.lastRow=50");
-        final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: token);
+        final subjectsResponse = await _APIRequest.getRequest(subjectsUrl, bearerToken: subjectsToken);
         final subjectsDecoded = conv.json.decode(subjectsResponse);
 
         List<Subject> modernSubjects = [];
@@ -1649,11 +1741,12 @@ class MarkbookRequest{
           // Fetched in small batches: firing every subject at once gets throttled by Neptun.
           const int batchSize = 6;
           for (int i = 0; i < entries.length; i += batchSize) {
+            final activeToken = await storage.DataCache.getAccessToken() ?? subjectsToken;
             final batch = entries.skip(i).take(batchSize).map((item) {
               String subjectId = item['subjectId'];
               String subjectName = item['subjectName'] ?? 'Ismeretlen';
               int credit = item['subjectCredit'] ?? 0;
-              return _fetchSubjectGrade(baseUrl, token, subjectId, activeTermId, subjectName, credit,
+              return _fetchSubjectGrade(baseUrl, activeToken, subjectId, activeTermId, subjectName, credit,
                   requirementType: (item['requirementType'] ?? '').toString(), code: (item['subjectCode'] ?? '').toString());
             }).toList();
 
@@ -1883,22 +1976,25 @@ class PeriodsRequest{
     // --- MODERN API ÁG ---
     if (storage.DataCache.getIsModernApi()/* ?? false*/) {
       try {
-        final token = await storage.DataCache.getAccessToken();
+        final token = await storage.DataCache.getAccessToken() ?? '';
         String baseUrl = storage.DataCache.getInstituteUrl() ?? '';
 
         // 1. Félévek (Terms) lekérése
         final termsUrl = Uri.parse("$baseUrl/api/Periods/GetTerms");
-        final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token!);
+        final termsResponse = await _APIRequest.getRequest(termsUrl, bearerToken: token);
         final termsDecoded = conv.json.decode(termsResponse);
 
-        if (termsDecoded['data'] == null || termsDecoded['data'].isEmpty) return [];
+        if (termsDecoded['data'] == null || termsDecoded['data'].isEmpty) {
+          return await _readCachedPeriods();
+        }
 
         // 2. Legutolsó félév (pl. "2025/26/2") kiválasztása
         String activeTermId = termsDecoded['data'].last['value'];
 
         // 3. Időszakok lekérése az adott félévhez
+        final periodsToken = await storage.DataCache.getAccessToken() ?? token;
         final periodsUrl = Uri.parse("$baseUrl/api/Periods/GetPeriods?request.termId=$activeTermId&sortAndPage.firstRow=0&sortAndPage.lastRow=50&sortAndPage.fromDate=asc");
-        final periodsResponse = await _APIRequest.getRequest(periodsUrl, bearerToken: token);
+        final periodsResponse = await _APIRequest.getRequest(periodsUrl, bearerToken: periodsToken);
         final periodsDecoded = conv.json.decode(periodsResponse);
 
         List<PeriodEntry> modernPeriods = [];
@@ -1912,11 +2008,14 @@ class PeriodsRequest{
             ));
           }
         }
+        if (modernPeriods.isEmpty) {
+          return await _readCachedPeriods();
+        }
         return modernPeriods;
 
       } catch (e) {
         debug.log("Hiba a modern időszakok lekérésekor: $e");
-        return [];
+        return await _readCachedPeriods();
       }
     }
 
@@ -1944,6 +2043,20 @@ class PeriodsRequest{
     final url = Uri.parse(storage.DataCache.getInstituteUrl()! + URLs.PERIODS_URL);
     final json = '{"UserLogin":"$username","Password":"$password","PeriodTermID":$termID,"TotalRowCount":-1}';
     return await _APIRequest.postRequest(url, json);
+  }
+
+  static Future<List<PeriodEntry>> _readCachedPeriods() async{
+    final len = await storage.getInt('CachedPeriodsLength') ?? 0;
+    final out = <PeriodEntry>[];
+    for(int i = 0; i < len; i++){
+      final raw = await storage.getString('CachedPeriods_$i');
+      if(raw == null) continue;
+      try{
+        out.add(PeriodEntry('ERROR', 0, 0, 0).fillWithExisting(raw));
+      }
+      catch(_){ }
+    }
+    return out;
   }
 }
 

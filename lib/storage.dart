@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -402,9 +403,44 @@ class DataCache{
     return values;
   }
 
+  static const MethodChannel _legacySecureChannel =
+      MethodChannel('hu.bali0531.nhnk/biometrics');
+
+  /// Migrates credentials written by flutter_secure_storage v9 (RSA/ECB/PKCS1Padding +
+  /// AES/CBC/PKCS7Padding) into v11 (RSA_OAEP + AES_GCM). v11 removed the v9 cipher
+  /// classes, so MainActivity decrypts any leftover v9 entries and hands them back to
+  /// be re-encrypted with v11.
+  static Future<Map<String, String>> _migrateLegacyV9SecureStorage() async {
+    if (!AppPlatform.isAndroid) return const {};
+    try {
+      final raw = await _legacySecureChannel
+          .invokeMethod<Map<Object?, Object?>>('readLegacySecureStorage');
+      if (raw == null || raw.isEmpty) return const {};
+      final migrated = <String, String>{};
+      for (final entry in raw.entries) {
+        final k = entry.key;
+        final v = entry.value;
+        if (k is String && v is String && k.isNotEmpty) {
+          migrated[k] = v;
+          try {
+            await _secureStorage.write(key: k, value: v);
+          } catch (_) {}
+        }
+      }
+      if (migrated.isNotEmpty) {
+        await _legacySecureChannel.invokeMethod<bool>('clearLegacySecureStorage');
+      }
+      return migrated;
+    } catch (_) {
+      return const {};
+    }
+  }
+
   static Future<Map<String, String>> _readAllSecure() async{
+    final migrated = await _migrateLegacyV9SecureStorage();
     try{
-      return await _secureStorage.readAll();
+      final all = await _secureStorage.readAll();
+      return {...migrated, ...all};
     }
     catch(_){
       // A single undecryptable entry makes readAll throw, which would sign everyone
@@ -417,7 +453,7 @@ class DataCache{
         'neptun_ics_url',
         'neptun_totp_secret',
       ];
-      final out = <String, String>{};
+      final out = <String, String>{...migrated};
       for(final key in keys){
         try{
           final value = await _secureStorage.read(key: key);
@@ -613,8 +649,10 @@ class DataCache{
     await saveInt('HasAcceptedTerms', value ?? 0);
   }
 
-  static bool _isOnline(List<ConnectivityResult> results) =>
+  static bool isOnline(List<ConnectivityResult> results) =>
       results.any((r) => r != ConnectivityResult.none);
+
+  static bool _isOnline(List<ConnectivityResult> results) => isOnline(results);
 
   static bool? getHasLogin(){return _instance._hasLogin;}
   static Future<void> setHasLogin(int? value) async {

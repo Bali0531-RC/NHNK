@@ -5,6 +5,7 @@ import android.app.KeyguardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.biometrics.BiometricManager;
 import android.hardware.biometrics.BiometricPrompt;
@@ -13,10 +14,19 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.util.Base64;
 
 import androidx.annotation.NonNull;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.security.KeyStore;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -101,10 +111,93 @@ public class MainActivity extends FlutterActivity {
                                     result
                             );
                             break;
+                        case "readLegacySecureStorage":
+                            result.success(readLegacyV9SecureStorage());
+                            break;
+                        case "clearLegacySecureStorage":
+                            clearLegacyV9SecureStorageKey();
+                            result.success(true);
+                            break;
                         default:
                             result.notImplemented();
                     }
                 });
+    }
+
+    /**
+     * Decrypts entries written by flutter_secure_storage v9 (RSA/ECB/PKCS1Padding +
+     * AES/CBC/PKCS7Padding) so we can jump straight from v9 to v11 without losing
+     * credentials on upgrade.
+     */
+    private Map<String, String> readLegacyV9SecureStorage() {
+        Map<String, String> out = new HashMap<>();
+        try {
+            SharedPreferences keyPrefs = getSharedPreferences("FlutterSecureKeyStorage", Context.MODE_PRIVATE);
+            String wrappedAesB64 = keyPrefs.getString(
+                    "VGhpcyBpcyB0aGUga2V5IGZvciBhIHNlY3VyZSBzdG9yYWdlIEFFUyBLZXkK",
+                    null
+            );
+            if (wrappedAesB64 == null || wrappedAesB64.isEmpty()) {
+                return out;
+            }
+
+            KeyStore ks = KeyStore.getInstance("AndroidKeyStore");
+            ks.load(null);
+            String rsaAlias = getPackageName() + ".FlutterSecureStoragePluginKey";
+            Key privateKey = ks.getKey(rsaAlias, null);
+            if (privateKey == null) {
+                return out;
+            }
+
+            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidKeyStoreBCWorkaround");
+            rsaCipher.init(Cipher.UNWRAP_MODE, privateKey);
+            Key aesKey = rsaCipher.unwrap(
+                    Base64.decode(wrappedAesB64, Base64.DEFAULT),
+                    "AES",
+                    Cipher.SECRET_KEY
+            );
+
+            SharedPreferences dataPrefs = getSharedPreferences("FlutterSecureStorage", Context.MODE_PRIVATE);
+            String prefix = "VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIHNlY3VyZSBzdG9yYWdlCg_";
+            Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+
+            for (Map.Entry<String, ?> entry : dataPrefs.getAll().entrySet()) {
+                String rawKey = entry.getKey();
+                Object rawVal = entry.getValue();
+                if (!(rawVal instanceof String) || !rawKey.startsWith(prefix) || rawKey.endsWith("_BACKUP")) {
+                    continue;
+                }
+                try {
+                    byte[] decoded = Base64.decode((String) rawVal, Base64.DEFAULT);
+                    if (decoded.length <= 16) {
+                        continue;
+                    }
+                    byte[] iv = new byte[16];
+                    System.arraycopy(decoded, 0, iv, 0, 16);
+                    int payloadSize = decoded.length - 16;
+                    byte[] payload = new byte[payloadSize];
+                    System.arraycopy(decoded, 16, payload, 0, payloadSize);
+
+                    aesCipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+                    String cleartext = new String(aesCipher.doFinal(payload), StandardCharsets.UTF_8);
+                    out.put(rawKey.substring(prefix.length()), cleartext);
+                } catch (Exception ignored) {
+                    // Entry is already encrypted with v11 AES-GCM; skip it.
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    private void clearLegacyV9SecureStorageKey() {
+        try {
+            SharedPreferences keyPrefs = getSharedPreferences("FlutterSecureKeyStorage", Context.MODE_PRIVATE);
+            keyPrefs.edit()
+                    .remove("VGhpcyBpcyB0aGUga2V5IGZvciBhIHNlY3VyZSBzdG9yYWdlIEFFUyBLZXkK")
+                    .apply();
+        } catch (Exception ignored) {
+        }
     }
 
     private boolean isDeviceSecure() {
