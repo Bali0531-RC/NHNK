@@ -450,7 +450,12 @@ class DataCache{
   static SharedPreferences? _prefs;
 
   // A kritikus dolgoknak (jelszó, token) létrehozzuk a Secure Storage-ot
-  static const _secureStorage = FlutterSecureStorage();
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      migrateOnAlgorithmChange: true,
+      migrateWithBackup: true,
+    ),
+  );
   // PASSWORD HANDLING:
 
 

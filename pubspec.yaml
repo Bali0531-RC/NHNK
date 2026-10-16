@@ -28,7 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newe
 # versions available, run `flutter pub outdated`.
 dev_dependencies:
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
 
@@ -37,15 +37,15 @@ dependencies:
     sdk: flutter
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^2.0.0
   linked_scroll_controller: ^0.2.0
-  fluttertoast: ^9.0.0
+  fluttertoast: ^10.0.2
   url_launcher: ^6.3.0
   package_info_plus: ^10.1.0
   flutter_timezone: ^5.0.2
-  flutter_local_notifications: ^21.0.0
+  flutter_local_notifications: ^22.3.2
   timezone: ^0.11.0
-  in_app_update: ^4.2.3
+  in_app_update: ^5.0.0
   device_info_plus: ^13.1.0
   vibration: ^3.1.8
   flutter_native_splash: ^2.3.10
@@ -53,12 +53,12 @@ dependencies:
   shared_preferences: ^2.2.3
   connectivity_plus: ^7.1.1
   provider: ^6.1.2
-  file_picker: ^12.3.0
+  file_picker: ^13.1.0
   path_provider: ^2.1.5
-  flutter_secure_storage: ^8.1.0
+  flutter_secure_storage: ^11.2.0
   change_app_package_name: ^1.5.0
   dio: ^5.9.2
-  open_filex: ^4.7.0
+  open_filex: ^5.0.0
   crypto: ^3.0.0
   workmanager: ^0.10.7
   home_widget: ^0.10.0

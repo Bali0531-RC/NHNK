@@ -3,7 +3,6 @@ import java.io.FileInputStream
 
 plugins {
     id "com.android.application"
-    id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -54,9 +53,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
 
     defaultConfig {
         applicationId "hu.bali0531.nhnk.app"
@@ -67,7 +63,6 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        setProperty("archivesBaseName", "NHNK")
     }
 
     // Play forbids self-updating APKs, so the store build drops the updater and the
@@ -122,39 +117,11 @@ android {
             signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
-
-    applicationVariants.all { variant ->
-        variant.outputs.all { output ->
-            // Csak a release buildeket nevezzük át
-            if (variant.buildType.name == "release") {
-                // Megnézzük, melyik ABI (architektúra) épp a soros
-                def abiFilter = output.getFilter(com.android.build.OutputFile.ABI)
-                def customName = ""
-
-                if (abiFilter == "armeabi-v7a") {
-                    customName = "NHNK_ARM7.apk"
-                } else if (abiFilter == "arm64-v8a") {
-                    customName = "NHNK_ARM8.apk"
-                } else if (abiFilter == "x86_64") {
-                    customName = "NHNK_x86_64.apk" // Ha esetleg ezt is buildelnéd
-                } else {
-                    // Fallback, ha valami más jönne ki (pl. universal apk)
-                    customName = "NHNK_Universal.apk"
-                }
-
-                // Csak akkor nevezzük át, ha meg tudtuk határozni az ABI-t
-                if (abiFilter != null) {
-                    outputFileName = customName
-                }
-            }
-        }
-    }
-
 }
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
-    implementation 'androidx.window:window:1.0.0'
-    implementation 'androidx.window:window-java:1.0.0'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    implementation 'androidx.window:window:1.5.1'
+    implementation 'androidx.window:window-java:1.5.1'
 }
 
 flutter {

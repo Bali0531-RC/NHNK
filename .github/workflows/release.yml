@@ -24,7 +24,7 @@ jobs:
       - name: Setup Flutter SDK
         uses: flutter-actions/setup-flutter@v3
         with:
-          version: 3.44.8
+          version: 3.47.7
 
       - name: Install dependencies
         run: flutter pub get
@@ -61,13 +61,13 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Flutter SDK
         uses: flutter-actions/setup-flutter@v3
         with:
-          version: 3.44.8
+          version: 3.47.7
 
       - name: Install dependencies
         run: flutter pub get
