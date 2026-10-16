@@ -187,3 +187,41 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "NHNK $GITHUB_REF_NAME" \
             --notes-file "$NOTES_FILE"
+
+      - name: Prepare Google Play release notes
+        id: play_notes
+        env:
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PLAY_STORE_SERVICE_ACCOUNT_JSON is not set; skipping automatic Google Play upload."
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/whatsnew"
+          CUSTOM=".github/release-notes/${GITHUB_REF_NAME}.md"
+          python3 - "$CUSTOM" "$RUNNER_TEMP/whatsnew" "${GITHUB_REF_NAME}" <<'PY'
+          import os, re, sys
+          custom_path, out_dir, tag = sys.argv[1], sys.argv[2], sys.argv[3]
+          text = open(custom_path, encoding="utf-8").read() if os.path.exists(custom_path) else ""
+          for locale, fallback in [
+              ("hu-HU", f"NHNK {tag} hibajavítások és fejlesztések."),
+              ("en-US", f"NHNK {tag} bug fixes and improvements."),
+          ]:
+              m = re.search(rf"<{locale}>\s*(.*?)\s*</{locale}>", text, re.DOTALL)
+              body = (m.group(1).strip() if m else fallback)[:500]
+              with open(os.path.join(out_dir, f"whatsnew-{locale}"), "w", encoding="utf-8") as f:
+                  f.write(body + "\n")
+          PY
+
+      - name: Upload to Google Play Production
+        if: steps.play_notes.outputs.enabled == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: hu.bali0531.nhnk.app
+          releaseFiles: dist/NHNK-*-playstore.aab
+          track: production
+          status: completed
+          whatsNewDirectory: ${{ runner.temp }}/whatsnew
