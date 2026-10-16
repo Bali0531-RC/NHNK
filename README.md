@@ -1,184 +1,199 @@
 # NHNK
 
-**Nem Hivatalos Neptun Kliens** / Unofficial Neptun Client. A Flutter app for Hungarian university students who have to use Neptun and would rather not suffer.
+**Nem Hivatalos Neptun Kliens** / Unofficial Neptun Client. Flutter alkalmazás magyar egyetemistáknak, akiknek muszáj Neptunt használniuk, de nem akarnak szenvedni vele.
 
-[![Downloads](https://img.shields.io/github/downloads/Bali0531-RC/NHNK/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/NHNK/releases)
-[![Latest release](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
+[![Letöltések](https://img.shields.io/github/downloads/Bali0531-RC/NHNK/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/NHNK/releases)
+[![Legújabb kiadás](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
+[![Google Play](https://img.shields.io/badge/Google_Play-Elérhető-34A853?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app)
 
-Website: **https://nhnk.bali0531.hu**
+Weboldal (élő böngészős demóval): **https://nhnk.bali0531.hu**
 
 > [!IMPORTANT]
-> This is an independent, unofficial app. It has nothing to do with Campus Codeworks Zrt. (formerly SDA Informatika Zrt., who make Neptun) or with any university, and none of them have endorsed it. The "Neptun" name belongs to its owner and I only use it here to describe what the app talks to. Your login goes straight to your university's own Neptun server. I don't run a server and I don't collect anything. If the app and the Neptun website disagree, the website is right.
+> Ez egy független, nem hivatalos alkalmazás. Semmilyen kapcsolatban nem áll a Campus Codeworks Zrt.-vel (korábban SDA Informatika Zrt., a Neptun fejlesztője), sem egyetemekkel, és egyikük sem hagyta jóvá. A „Neptun” név a jogosultja tulajdona, itt kizárólag leíró jelleggel szerepel. A belépési adatok közvetlenül az intézményed Neptun-szerverére mennek, én nem üzemeltetek köztes szervert és nem gyűjtök adatot. Ha az app és a webes Neptun mást mond, mindig a webes felület a mérvadó.
 >
-> Ez egy független, nem hivatalos alkalmazás. Semmilyen kapcsolatban nem áll a Campus Codeworks Zrt.-vel (korábban SDA Informatika Zrt.), sem egyetemekkel, és egyikük sem hagyta jóvá. A belépési adatok közvetlenül az intézmény Neptun-szerverére mennek, én nem üzemeltetek szervert és nem gyűjtök adatot. Ha az app és a webes Neptun mást mond, a web a mérvadó.
+> This is an independent, unofficial app. It has nothing to do with Campus Codeworks Zrt. (formerly SDA Informatika Zrt., who make Neptun) or with any university, and none of them have endorsed it. Your login goes straight to your university's own Neptun server. I don't run a server and I don't collect anything. If the app and the Neptun website disagree, the website is right.
 
 ---
 
 <details open>
+<summary><b>Magyar</b></summary>
+
+## Miért ezt forkoltam (és miért nem nulláról kezdtem)
+
+18 évesen, az egyetemet kezdve tudtam, hogy minden nap nyitogatnom kell majd a Neptunt. A hivatalos app évek óta használhatatlan, a webes felület mobilon meg kész szenvedés.
+
+Nem akartam heteket elpazarolni egy üres `flutter create`-tel meg az alap dizájnolással. Régen volt a domedav-féle Neptun 2, de az megállt, amikor a Neptun API-t váltott. Zoligamer forkolta és elkezdte áthozni az új végpontokra, én pedig innen vettem át. Így volt egy kiindulási alapom, amire építve a valódi problémákra és az új funkciókra tudtam fókuszálni.
+
+Viszont az a kód, amit letöltöttem, az első napon elég komoly javításra szorult:
+- A `MainActivity` el volt törve, így az app indításkor azonnal összeomlott.
+- A háttérben frissülő tokenek egy beragadt képzés-azonosítót kérdezgettek, ezért az órarend teljesen üres maradt.
+- A naptármatematika annyira el volt csúszva, hogy a hétfőket 8 nappal a múltba rakta.
+- **A legdurvább:** A biztonság gyakorlatilag nulla volt. Egy globális override *minden* TLS tanúsítványt vakon elfogadott, vagyis a Neptun jelszavad egyetlen nyilvános wifire volt attól, hogy olvashatóan kilopják. Ezt azonnal kukáztam, és rendes, 20 másodperces timeouttal védett platform-szintű TLS validációra cseréltem.
+
+Azóta a kódbázis több mint fele már saját fejlesztés: teljesen új 2.0-s Neptun API-integráció (`API-DOCS/`), biometrikus / PIN zárolás, 2FA elmenthető TOTP kulccsal, háttérértesítések, offline mód, szerver failover, Android kezdőképernyő-widget, tárgyoldal tematika-letöltéssel, valódi `#000000` OLED téma, automatizált tesztcsomag és Google Play kiadás. Minden nap ezt használom, így a legtöbb hibába én futok bele először.
+
+## Ami a legtöbb időmet elvitte (Android & Google Play)
+
+**Háttérértesítések.** Az Android utálja, ha az appok felébrednek a háttérben. A Doze, az akku-optimalizáció és a gyártók (Xiaomi, Huawei, Honor, Samsung, OnePlus) saját háttérfolyamat-gyilkosai miatt ez külön művészet. Magát az oprendszert nem tudom átírni, de a Beállításokban csináltam egy gombot (`lib/power_settings.dart`), ami felismeri a telefonod gyártóját, megmondja mi blokkolja a háttérfutást, és egy érintéssel odadob a megfelelő rendszermenübe.
+
+**Google Play.** A Play Áruház tiltja az önmagukat frissítő APK-kat, viszont a GitHubról (sideload) telepítőknek pont erre van szükségük — ezért két külön build flavor (`playstore` és `github`) készül. A Play emellett visszadobja az olyan jogosultságokat is, amiket egy-egy külső függőség húz be a háttérben, úgyhogy a manifestből ezeket kifejezetten ki kellett gyomlálni, a CI pedig minden kiadásnál ellenőrzi az aláírást és az engedélyeket.
+
+## Letöltés
+
+- **Google Play Áruház (ajánlott):** [**NHNK Kliens Neptunhoz a Google Play-en**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatikus áruházi frissítésekkel)*.
+- **GitHub Releases (Android APK sideload):** [**Legújabb kiadás letöltése**](https://github.com/Bali0531-RC/NHNK/releases/latest). A legtöbb mai telefonra az `arm64-v8a` APK kell. Beépített frissítéskezelőt tartalmaz, vagy bekötheted [Obtainium](https://github.com/ImranR98/Obtainium)-ba is.
+- **Webes kipróbálás (telepítés nélkül):** [**https://nhnk.bali0531.hu**](https://nhnk.bali0531.hu) — a nyitóoldalon lévő telefonban maga a valódi Flutter app fut demó módban.
+- **iPhone (`.ipa`):** Minden kiadásnál ott az `unsigned.ipa`. Fizetős Apple Developer fiók híján [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy [Sideloadly](https://sideloadly.io/) segítségével tudod aláírni a saját Apple ID-ddal.
+
+## Funkciók
+
+**Órarend és Kezdőképernyő-widget**
+- Heti nézet, tetszőleges hétre lapozva; a hét neve mellől egy koppintással vissza a mai hétre.
+- **Kezdőképernyő-widget (Android):** A mai óráid közvetlenül a főképernyőn, háttérbeli automatikus frissítéssel és kézi frissítés gombbal.
+- **Órák elrejtése:** Ha egy tárgy előadására nem jársz be, elrejtheted az órarendből, a widgetről és az emlékeztetőkből is.
+- **Közelgő események (Upcoming):** A következő 8 hét vizsgái, számonkérései és bejelentkezési/regisztrációs időszakai egyetlen átlátható listában.
+- **Naptárexport és fallback:** Ha a Neptun API üres hetet ad vissza, az app a naptár-exportból pótolja az órákat; az órarendedet szabványos `.ics` fájlként bármikor ki is exportálhatod a telefonod naptárába.
+
+**Jegyek, Tárgyoldal és Statisztika**
+- **Tárgyak részletes oldala (2.0.5+):** Egy tárgyra koppintva megnyílik a számonkérés típusa, oktató, tanszék, heti óraszámok, leírás, és **PDF-ben letölthető a tárgytematika (szillabusz)**.
+- **Szellemjegyek (Ghost grades):** Írj be előre egy még meg nem szerzett jegyet (akár 0 kredites tárgyra is), és azonnal látod, hogyan változna a súlyozott átlagod és a kreditindexed.
+- **Statisztika és Diplomahaladás:** Féléves és halmozott átlagok, jegymegoszlás, valamint kredithaladás a képzésed – Neptunból automatikusan kiolvasott – kreditkövetelményéhez képest.
+- **Átlagszámító:** Kiszámolja, milyen átlagot kell hoznod a hátralévő kreditekből a célod eléréséhez.
+
+**Értesítések (Push-szerver nélkül, közvetlenül a készüléken)**
+- **Háttérbeli jegy- és üzenetfigyelés:** Állítható gyakorisággal (15 perc – 12 óra) ellenőrzi az új jegyeket és üzeneteket, ismétlődő riasztások nélkül, visszanézhető értesítési előzményekkel.
+- **Testreszabható óra-emlékeztetők:** Te választhatod ki, hány perccel az órák előtt szóljon (pl. 30, 15, 10 perc vagy kezdéskor), plusz emlékeztetők vizsgák, befizetések és időszakok előtt.
+- **Üzenet olvasottnak jelölése:** Amit az appban (vagy közvetlenül az értesítés gombjával) elolvasol, azt a hivatalos Neptun végponton keresztül a webes Neptunban is olvasottnak jelöli.
+
+**Biztonság, Pénzügyek és Megjelenés**
+- **Biometrikus / PIN zárolás (2.0.7+):** Megnyitáskor alapértelmezetten ujjlenyomatot, arcfelismerést vagy képernyőzárat kér (első indításkor és a Beállítások → Biztonság menüben bármikor kikapcsolható).
+- **Kétlépcsős azonosítás (2FA / TOTP):** Opcionálisan elmenthető titkos kulcs (`flutter_secure_storage` hardveres AES-GCM + RSA-OAEP tárolóban), amivel a lejáró munkamenetet az app magától megújítja.
+- **Okos Fizetések fül:** Állami ösztöndíjas hallgatóknál a Fizetések fül alapból rejtve marad, hacsak nincs tényleges befizetnivaló (Beállításokban visszakapcsolható), a törölt tételeket pedig nem számolja bele a költésekbe.
+- **Valódi fekete OLED téma:** `#000000` háttér OLED kijelzőkhöz (WCAG AA kontraszt-ellenőrzéssel), több beépített színpaletta, állítható betűméret, magyar és angol nyelv.
+- **Offline mód és Szerver Failover:** Hálózat nélkül a legutóbb letöltött adatok megmaradnak; többkiszolgálós egyetemeknél pedig automatikusan átvált a tartalék szerverre, ha az elsődleges nem válaszol.
+
+## Főbb verziók
+
+Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-RC/NHNK/releases**
+
+- **2.0 (2.0.0 – 2.0.7):**
+  - **2.0.7:** Biometrikus / képernyőzáras alkalmazászár (alapból bekapcsolva, első indításkor és a Beállításokban kapcsolható), teljes stack frissítés (Flutter 3.47, AGP 9.4, Gradle 9.8, Kotlin 2.4), R8 erőforrás-optimalizálás és automatizált Google Play kiadási pipeline.
+  - **2.0.6:** Új, saját NHNK alkalmazásikon és indítóképernyő minden platformon.
+  - **2.0.5:** Részletes tárgyoldal PDF tematika-letöltéssel, Fizetések fül automatikus elrejtése állami ösztöndíjasoknak, külön szellemjegy gomb.
+  - **2.0.4:** Órák elrejtése, szabadon választható óra-emlékeztető időpontok, pontosított widget-méretezés.
+  - **2.0.2 – 2.0.3:** Háttérbeli widget-frissítés, 0 kredites szellemjegyek, értesítési előzmények és duplikáció-szűrés.
+  - **2.0.0:** Teljes modern Neptun REST API térkép (`API-DOCS/`, 180 végpont), képességalapú végpont-felismerés (`ModernApi`), automatikus kreditkövetelmény-lekérés (`dashboard/creditprogress`) és adatforgalom-kímélő olvasatlanüzenet-számláló.
+- **1.3 (1.3.0 – 1.3.1):** Új, négylépéses első indítás (onboarding) ékezetfüggetlen intézménykeresővel és valódi fekete (`#000000`) OLED témával.
+- **1.2 (1.2.0 – 1.2.10):** Kezdőképernyő-widget, Közelgő események oldal, féléves statisztika és diplomahaladás, webes demó build, fejlesztői diagnosztikai fül PII-redakcióval, indítási gyorsítás és akadálymentesítés (screen reader támogatás).
+- **1.1:** Háttérbeli jegy- és üzenetértesítések, `.ics` naptárexport, szerver failover és gyártói akkumulátor-beállítás irányító.
+- **1.0:** A fork talpra állítása: `MainActivity`, TLS tanúsítvány-ellenőrzés, munkamenet-frissítés, 2FA alapok és Google Play build szétválasztás.
+
+## Hibabejelentés
+
+**https://github.com/Bali0531-RC/NHNK/issues/new/choose**
+Kérlek, írd bele a telefon típusát, az Android verziót és az app verzióját.
+
+## Fordítás és Fejlesztés
+
+Két build flavor van a Google Play szabályai miatt:
+
+| Flavor | Terjesztés | Beépített frissítő | `REQUEST_INSTALL_PACKAGES` |
+| --- | --- | --- | --- |
+| `github` | Sideload / Obtainium | van | van |
+| `playstore` | Google Play | nincs | nincs |
+
+```sh
+flutter pub get
+
+# GitHub / Sideload APK
+flutter build apk --release --split-per-abi --flavor github --dart-define=NHNK_DISTRIBUTION=github
+
+# Google Play App Bundle (.aab)
+flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
+```
+
+Tesztek futtatása: `flutter test`
+
+### Intézmények hozzáadása
+
+Az intézménylistát a `universityNameUrlPairs.json` tartalmazza, és az app **futásidőben** tölti le a `main` ágról. Régi bejegyzést átnevezni vagy törölni nem szabad, csak bővíteni. Több szerveres egyetemnél a tartalék kiszolgálók a `Fallbacks` tömbbe vehetők fel.
+
+## Származás és Licenc
+
+A projekt a [Neptun 2](https://github.com/domedav/Neptun-2) (domedav) forkja, a [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (zoligamer) forkon keresztül.
+**MIT licenc** — lásd a [LICENSE](LICENSE) fájlt.
+
+</details>
+
+<details>
 <summary><b>English</b></summary>
 
 ## Why I forked this (and didn't start from scratch)
 
-Yo, I'm just an 18-year-old starting uni soon, and I know I'll have to open Neptun every day. The official app has been dead for years, leaving us with just a terrible mobile web view. 
+Starting university in Hungary means opening Neptun every single day. The official mobile app has been abandoned for years, and the desktop web UI on a phone screen is painful to use.
 
-I didn't want to start with an empty `flutter create` and waste weeks on basic project layout and theming. There used to be a community app called Neptun 2 by domedav, but it died when Neptun changed their API. Another dev, zoligamer, forked it to connect the new routes, which is where I stepped in and forked it myself. It gave me a base so I could actually focus on features instead of rebuilding the wheel.
+Rather than spending weeks on an empty `flutter create`, I built on top of existing open-source community work: domedav's original Neptun 2 (which stopped working when Neptun switched APIs) and zoligamer's Neptun Mobile fork (which began wiring up the newer endpoints).
 
-But honestly, the code I pulled was a mess on day one:
-- `MainActivity` was broken, so the app literally died on launch.
-- The app would query a dead training ID after silent token refreshes, leaving the timetable totally empty.
-- The calendar math was so busted it thought Mondays were eight days in the past.
-- **The worst part:** Security was practically non-existent. A global override was accepting *any* TLS certificate, meaning your Neptun password was one sketchy cafe wifi away from being read in plaintext. I immediately scrapped that and added proper 20-second timeout platform validation.
+When I pulled the repository, several core parts were broken:
+- `MainActivity` was missing/broken, crashing the app immediately on launch.
+- Silent token refreshes queried a stale training ID, leaving the timetable empty.
+- The calendar week math placed Mondays eight days in the past.
+- **Security:** A global `HttpOverrides` accepted *any* TLS certificate without validation. I replaced this immediately with proper platform TLS validation and 20-second request timeouts.
 
-Everything after that is my own work from the last three weeks: 2FA with a saved secret, background notifications for grades/messages, offline mode, server failover, an Android home screen widget, stats page, `.ics` calendar export, and setting up the Google Play builds. I use it every day for my own stuff, which is how I find the bugs.
-
-## The absolute nightmare parts (Android & Google Play)
-
-**Background notifications.** Android literally hates apps waking up in the background. Between Doze, battery optimization, and every phone brand having its own random process killer, notifications are a pain. I can't fix your phone's OS, so I made the settings screen detect what's blocking it and give you a one-tap shortcut to fix it (`lib/power_settings.dart`). You can set the interval from 15 mins to 12 hours.
-
-**Google Play.** Play bans apps that update themselves, but sideloaded users need exactly that. So now I have to maintain two separate build flavors. Play also flagged me for photo and video permissions I never even asked for (some random dependency dragged them in). Plus, since I'm a new dev, I had to do a 14-day closed test with 12 people before I could even apply for production. That part is finally done and it's in review now.
+Since then, over half of the codebase has been rewritten or newly built: full modern Neptun REST API mapping (`API-DOCS/`), default biometric / PIN lock, 2FA with hardware-backed TOTP secret storage, background grade and message alerts, offline resilience, multi-server failover, an Android home screen widget, subject detail pages with PDF syllabus downloads, a true `#000000` OLED theme, an automated test suite (`test/`), and Google Play production builds.
 
 ## Download
 
-Latest release: **https://github.com/Bali0531-RC/NHNK/releases/latest**
-
-**Google Play.** Production release is in review (takes about a week). Until then, you can still sign up for the closed test at **https://nhnk.bali0531.hu/zart-teszt/**. Note: The Play Store version doesn't have the built-in updater.
-
-**Android sideload.** Grab the `arm64-v8a` APK. If you want it to auto-update, use [Obtainium](https://github.com/ImranR98/Obtainium) and point it at this repo.
-
-**iPhone.** There's an `unsigned.ipa` in the releases. I don't have a paid Apple Dev account (I'm a student bro), so you have to sign it yourself using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) or [Sideloadly](https://sideloadly.io/). You'll have to re-sign it every 7 days because of Apple's rules, not mine. If that's too much work, just subscribe to the `.ics` calendar export for your timetable.
+- **Google Play (recommended):** [**NHNK on Google Play**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatic updates via Play Store)*.
+- **GitHub Releases (Android sideload):** [**Latest release**](https://github.com/Bali0531-RC/NHNK/releases/latest). Most current phones need the `arm64-v8a` APK. Includes an in-app updater and works with [Obtainium](https://github.com/ImranR98/Obtainium).
+- **Try in browser (no install):** [**https://nhnk.bali0531.hu**](https://nhnk.bali0531.hu) — runs the real Flutter app compiled to Web in demo mode.
+- **iPhone (`.ipa`):** Each release attaches an `unsigned.ipa` that you can sign with your own Apple ID using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [Sideloadly](https://sideloadly.io/).
 
 ## Features
 
-**Timetable**
-- Weekly view, swipe through weeks, tap to return to today.
-- Falls back to `.ics` export if the main API drops an empty timetable.
-- Android home screen widget.
-- Export to `.ics` for your phone's calendar.
+**Timetable & Home Screen Widget**
+- Weekly view with swipe navigation and one-tap return to the current week.
+- **Android Home Screen Widget** with automatic background refreshes and a manual refresh button.
+- **Hide classes:** Hide specific courses from the timetable, widget, and reminders.
+- **Upcoming view:** Unified 8-week lookahead for exams, task deadlines, and registration periods.
+- **`.ics` fallback & export:** Automatically fills in missing timetable weeks from the calendar export, and exports your timetable as a standard `.ics` file.
 
-**Notifications**
-- Alerts for classes, exams, payments, and periods.
-- Background alerts for new grades and messages.
-- Shortcut in settings to fix OS battery killers blocking the app.
+**Grades, Subjects & Statistics**
+- **Subject details (2.0.5+):** Tap any subject to view its assessment type, lecturer, department, weekly hours, description, and download the **course syllabus as a PDF**.
+- **Ghost grades:** Pencil in hypothetical marks (including on 0-credit courses) to see how they affect your weighted average and credit index.
+- **Statistics & Degree Progress:** Semester and cumulative averages, grade distribution, and credit progress against your degree requirement (fetched automatically from Neptun).
+- **Target average calculator:** Calculates the exact average needed on your remaining credits to hit your target GPA.
 
-**Grades, stats and money**
-- View grades, averages, credits, messages, and payments.
-- **Stats page:** See your cumulative average, grade distribution, and track your degree progress against a credit goal.
-- **Ghost grades:** Test how a hypothetical grade will affect your average before you actually get it.
-- **Average calculator:** See what grades you need to hit your target GPA.
+**Notifications (On-device, no push server)**
+- **Background grade & message checks:** Configurable polling interval (15 min – 12 hours) with deduplication and persistent notification history.
+- **Configurable class reminders:** Choose your own reminder offsets before classes, plus alerts for exams, payments, and periods.
+- **Mark messages as read:** Reading a message in the app (or tapping "Mark as read" on the notification) marks its unread posts as read in Neptun (`Posts/Processed`).
+- **OEM battery helper:** Detects manufacturer-specific background killers (`lib/power_settings.dart`) and links directly to the relevant system screen.
 
-**Everything else**
-- Offline mode (shows a bar telling you how old the cached data is).
-- Auto-failover if your uni's main server crashes.
-- 2FA with auto-login.
-- Dark mode/themes and language toggles.
+**Security & Appearance**
+- **Biometric / PIN lock (2.0.7+):** Prompts for fingerprint, face unlock, or device screen lock on launch by default (with an opt-out toggle during first-run setup and under Settings → Security).
+- **Two-factor authentication (2FA / TOTP):** Optional stored TOTP secret in hardware-backed `flutter_secure_storage` (AES-GCM + RSA-OAEP) for automatic session renewal.
+- **Smart Payments tab:** Automatically stays hidden for full state-scholarship students unless there is an active balance due.
+- **True black OLED theme (`#000000`)**, multiple colour palettes, adjustable font scaling, and full Hungarian/English support (including translated demo mode fixtures).
 
-## Reporting bugs
-
-**https://github.com/Bali0531-RC/NHNK/issues/new/choose**
-Include your phone model, Android version, and app version, otherwise I can't help you.
-
-## Version history
-
-Full logs at **https://github.com/Bali0531-RC/NHNK/releases**. 
-- **1.2:** Added the widget, stats and fixed offline mode (it used to wipe everything when you lost signal because I messed up the connectivity check, lol). Also fixed 2FA bugs.
-- **1.1:** Added background notifications, `.ics` export, and server failover.
-- **1.0:** Mostly repair work from the fork. Fixed the token refresh and removed the bad permissions blocking the Google Play release.
-
-## Building it
-
-Two flavors to deal with Google Play's annoying rules:
-
-| Flavor | Distribution | Built-in updater | `REQUEST_INSTALL_PACKAGES` |
-| --- | --- | --- | --- |
-| `github` | sideload / Obtainium | yes | yes |
-| `playstore` | Google Play | no | no |
+## Building & Testing
 
 ```sh
 flutter pub get
 
 # Sideload release
-flutter build apk --release --split-per-abi   --flavor github --dart-define=NHNK_DISTRIBUTION=github
+flutter build apk --release --split-per-abi --flavor github --dart-define=NHNK_DISTRIBUTION=github
 
 # Google Play release
-flutter build appbundle --release   --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
+flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore
+
+# Run unit & widget test suite
+flutter test
 ```
-(Always pass `--flavor` and `--dart-define` together or it will break). You need a signing key for release builds, otherwise it uses a debug key.
 
-Tests: `flutter test`
+## Credits & License
 
-### Adding a university
+Forked from [Neptun 2](https://github.com/domedav/Neptun-2) by domedav, via [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) by zoligamer.
+Released under the **MIT License** — see [LICENSE](LICENSE).
 
-The uni list is in `universityNameUrlPairs.json` and fetches at **runtime**. Don't rename or delete old ones or you'll break the app for people who haven't updated. Check if a server actually uses the mobile API (it should return `405` and JSON on `/api/Account/Authenticate`) before adding it.
-
-## Credit
-Forked from Neptun 2 by domedav, via Neptun Mobile by zoligamer. MIT license, copyright notices are intact.
-
-## License
-MIT, see the [LICENSE](LICENSE) file.
-</details>
-
-<details>
-<summary><b>Magyar</b></summary>
-
-## Miért ezt forkoltam (és miért nem nulláról kezdtem)
-
-Na szóval, 18 éves vagyok, nemsokára kezdem az egyetemet, és tudom, hogy minden nap nyitogatnom kell majd a Neptunt. A hivatalos app évek óta kuka, a webes felület mobilon meg kész szenvedés. 
-
-Nem akartam heteket elcseszni egy üres `flutter create`-tel meg az alap dizájnolással. Régen volt a domedav-féle Neptun 2, de az megállt, amikor a Neptun API-t váltott. Zoligamer forkolta és áthozta az új végpontokra, én meg innen vettem át az egészet. Így legalább az alapok megvoltak, és a funkciókra tudtam fókuszálni.
-
-Viszont az a kód, amit letöltöttem, első nap egy elég durva katasztrófa volt:
-- A `MainActivity` el volt törve, konkrétan crashelt az app indításkor.
-- A háttérben frissülő tokenek egy halott azonosítót kérdezgettek, úgyhogy az órarend teljesen üres maradt.
-- A naptármatematika annyira szét volt csúszva, hogy a hétfőket 8 nappal a múltba rakta.
-- **A legdurvább:** A biztonság kb. nulla volt. Egy globális override *minden* TLS tanúsítványt elfogadott. A Neptun jelszavad egyetlen kávézós wifire volt attól, hogy simán, olvashatóan kilopják. Ezt azonnal kukáztam és beraktam a rendes, 20 másodperces platform szintű validációt.
-
-Onnantól minden az én melóm az elmúlt 3 hétből: 2FA elmenthető kulccsal, háttérértesítések, offline mód, szerver failover, Android widget, statisztika, naptárexport, meg a Google Play dolgok. Minden nap használom, szóval a legtöbb bugba én futok bele először.
-
-## Ami a legtöbb időmet elvitte (és kikészített)
-
-**Háttérértesítések.** Az Android konkrétan utálja, ha az appok felébrednek a háttérben. A Doze, az akku-optimalizáció és a gyártók saját app-gyilkosai miatt ez egy rémálom. A telefonod oprendszerét nem tudom megjavítani, de a beállításoknál csináltam egy gombot, ami kitalálja, mi blokkolja, és rögtön oda is dob a megfelelő menübe (`lib/power_settings.dart`).
-
-**Google Play.** A Play kitiltja azokat az appokat, amik frissítik magukat, de a sideloadolt usereknek pont ez kell. Szóval most két külön build flavor van. A Play amúgy visszadobott egyszer, mert állítólag fotó meg videó jogokat kértem, amiket amúgy soha (egy függőség húzta be suttyomban). Plusz új fejlesztőként 14 napig kellett zárt tesztelnem 12 emberrel, hogy egyáltalán jelentkezhessek. Ez most végre megvan, a review folyamatban van.
-
-## Letöltés
-
-Legfrissebb verzió: **https://github.com/Bali0531-RC/NHNK/releases/latest**
-
-**Google Play.** A produkciós kiadás review alatt van. Addig is a zárt tesztre itt tudsz jelentkezni: **https://nhnk.bali0531.hu/zart-teszt/**. A Play-es verzióban nincs beépített app frissítő.
-
-**Android sideload.** Szedd le az `arm64-v8a` APK-t. Ha automatikus frissítést akarsz, használd az [Obtainium](https://github.com/ImranR98/Obtainium)-ot.
-
-**iPhone.** Van egy `unsigned.ipa` a releseeknél. Nincs fizetős Apple Dev fiókom (csóró diák vagyok), úgyhogy magadnak kell aláírnod pl. [AltStore](https://altstore.io/)-ral vagy [Sideloadly](https://sideloadly.io/)-val. 7 naponta lejár, ezt az Apple találta ki, nem én. Ha ez túl sok macera, legalább húzd be az `.ics` naptárexportot az Apple Naptárba.
-
-## Funkciók
-
-**Órarend**
-- Heti nézet, lapozható, egy gombnyomásra visszadob a maira.
-- Ha az API behal és üres az órarend, fallbackel a naptárexportra.
-- Kezdőképernyő-widget Androidra.
-- `.ics` exportálás.
-
-**Értesítések**
-- Órák, vizsgák, befizetések.
-- Új jegyek és üzenetek (akkor is, ha be van zárva az app).
-- Gyorsgomb a beállításokban a háttérfutást gyilkoló oprendszeri beállításokhoz.
-
-**Jegyek és egyebek**
-- Jegyek, átlagok, kreditek, befizetések.
-- **Statisztika oldal:** Halmozott átlag, kredit haladás.
-- **Szellemjegyek:** Megnézheted, mit csinálna az átlagoddal egy még be nem írt jegy.
-- **Átlagszámító:** Kiszámolja, mi kell a célodhoz.
-- Offline mód (mutatja, mennyire régi a letöltött adat).
-- Ha az egyetemed fő szervere lehal, automatikusan átvált a tartalékra.
-- 2FA mentett kulccsal.
-
-## Hibabejelentés
-**https://github.com/Bali0531-RC/NHNK/issues/new/choose**
-Telefon típusa, Android verzió, App verzió kötelező, különben nem tudok mit kezdeni vele.
-
-## Származás
-A Neptun 2 (domedav) forkja, a Neptun Mobile (zoligamer) forkján keresztül. MIT licenc, a korábbi szerzői jogi megjelölések maradnak.
-
-## Licenc
-MIT, lásd a [LICENSE](LICENSE) fájlt.
 </details>
