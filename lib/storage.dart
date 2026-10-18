@@ -48,6 +48,9 @@ Future<List<String>?> getStringList(String key) async {
 
 class DataCache{
   static Future<void> dataWipe() async{
+    try {
+      await clearSecureData();
+    } catch (_) {}
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await prefs.reload();
@@ -56,6 +59,9 @@ class DataCache{
   }
 
   static Future<void> dataWipeNoKeep()async{
+    try {
+      await clearSecureData();
+    } catch (_) {}
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await prefs.reload();
@@ -491,6 +497,7 @@ class DataCache{
   // A kritikus dolgoknak (jelszó, token) létrehozzuk a Secure Storage-ot
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(
+      resetOnError: true,
       migrateOnAlgorithmChange: true,
       migrateWithBackup: true,
     ),

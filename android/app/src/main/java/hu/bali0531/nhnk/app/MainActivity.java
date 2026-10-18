@@ -160,10 +160,17 @@ public class MainActivity extends FlutterActivity {
             SharedPreferences dataPrefs = getSharedPreferences("FlutterSecureStorage", Context.MODE_PRIVATE);
             String prefix = "VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIHNlY3VyZSBzdG9yYWdlCg_";
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+            SharedPreferences.Editor dataEditor = dataPrefs.edit();
+            boolean modifiedDataPrefs = false;
 
             for (Map.Entry<String, ?> entry : dataPrefs.getAll().entrySet()) {
                 String rawKey = entry.getKey();
                 Object rawVal = entry.getValue();
+                if (rawKey.startsWith("FlutterSecureSAlgorithm")) {
+                    dataEditor.remove(rawKey);
+                    modifiedDataPrefs = true;
+                    continue;
+                }
                 if (!(rawVal instanceof String) || !rawKey.startsWith(prefix) || rawKey.endsWith("_BACKUP")) {
                     continue;
                 }
@@ -181,9 +188,15 @@ public class MainActivity extends FlutterActivity {
                     aesCipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
                     String cleartext = new String(aesCipher.doFinal(payload), StandardCharsets.UTF_8);
                     out.put(rawKey.substring(prefix.length()), cleartext);
+                    // Remove the v9 ciphertext entry so v11 starts with a clean store.
+                    dataEditor.remove(rawKey);
+                    modifiedDataPrefs = true;
                 } catch (Exception ignored) {
-                    // Entry is already encrypted with v11 AES-GCM; skip it.
+                    // Entry is already encrypted with v11 AES-GCM; leave it in place.
                 }
+            }
+            if (modifiedDataPrefs) {
+                dataEditor.commit();
             }
         } catch (Exception ignored) {
         }
@@ -195,7 +208,12 @@ public class MainActivity extends FlutterActivity {
             SharedPreferences keyPrefs = getSharedPreferences("FlutterSecureKeyStorage", Context.MODE_PRIVATE);
             keyPrefs.edit()
                     .remove("VGhpcyBpcyB0aGUga2V5IGZvciBhIHNlY3VyZSBzdG9yYWdlIEFFUyBLZXkK")
-                    .apply();
+                    .commit();
+            SharedPreferences dataPrefs = getSharedPreferences("FlutterSecureStorage", Context.MODE_PRIVATE);
+            dataPrefs.edit()
+                    .remove("FlutterSecureSAlgorithmKey")
+                    .remove("FlutterSecureSAlgorithmStorage")
+                    .commit();
         } catch (Exception ignored) {
         }
     }
