@@ -89,6 +89,14 @@ Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-R
 - **1.1:** Háttérbeli jegy- és üzenetértesítések, `.ics` naptárexport, szerver failover és gyártói akkumulátor-beállítás irányító.
 - **1.0:** A fork talpra állítása: `MainActivity`, TLS tanúsítvány-ellenőrzés, munkamenet-frissítés, 2FA alapok és Google Play build szétválasztás.
 
+## Tervezett fejlesztések (Roadmap)
+
+| Funkció | Leírás | Tervezett megjelenés (ETA) |
+| --- | --- | --- |
+| **On-Device AI / Hangasszisztens integráció (Gemini & Siri)** | Természetes nyelvű lekérdezések közvetlenül a készüléken, felhőszerver nélkül: Androidon **Google Gemini (`AppFunctions`)**, iOS-en **Siri & Apple Intelligence (`AppIntents`)** támogatás (pl. *„Milyen órám lesz ma?”*, *„Mennyi az átlagom?”*, *„Jött új Neptun üzenetem?”*), kétszintű biometrikus védelemmel. | **2027 ősz (v2.2 / TDK)** |
+| **Interaktív félév- és ösztöndíj-szimulátor** | Teljes „Mi lenne, ha” (What-if) félévtervező és kreditindex-/ösztöndíj-kalkulátor a jelenlegi szellemjegy funkció továbbfejlesztéseként. | **2027 vége – 2028 tavasz** |
+| **NHNK v3.0 Architektúra & Offline-First motor** | A maradék örökölt (legacy) kód teljes kiváltása tiszta Repository architektúrára, strukturált helyi adatbázisra és egységes, akadálymentes (WCAG AAA) komponenskönyvtárra. | **2028 (v3.0)** |
+
 ## Hibabejelentés
 
 **https://github.com/Bali0531-RC/NHNK/issues/new/choose**
@@ -193,6 +201,14 @@ Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
 - **1.2 (1.2.0 – 1.2.10):** Android home-screen widget, Upcoming events page, semester statistics & degree progress, web demo build, PII-redacted diagnostics tab, startup optimization, and screen-reader accessibility.
 - **1.1:** Background grade & message notifications, `.ics` calendar export, multi-server failover, and OEM battery helper.
 - **1.0:** Initial stabilization of the fork: fixed `MainActivity`, TLS certificate validation, session renewal, 2FA support, and Google Play build flavors.
+
+## Planned Features (Roadmap)
+
+| Feature | Description | Target ETA |
+| --- | --- | --- |
+| **On-Device AI / Assistant Integration (Gemini & Siri)** | Zero-cloud, privacy-preserving voice & AI queries right on the device via Android **Google Gemini (`AppFunctions`)** and iOS **Siri & Apple Intelligence (`AppIntents`)** (e.g. *"What classes do I have today?"*, *"What is my current GPA?"*, *"Do I have new Neptun messages?"*), protected by biometric privacy tiers. | **Autumn 2027 (v2.2)** |
+| **Interactive Semester & Scholarship Simulator** | Full "What-if" semester planner and credit-index / scholarship calculator expanding on ghost grades. | **Late 2027 – Spring 2028** |
+| **NHNK v3.0 Architecture & Offline-First Engine** | Complete replacement of remaining legacy code with a clean Repository architecture, structured local database, and unified WCAG AAA component library. | **2028 (v3.0)** |
 
 ## Building & Testing
 
