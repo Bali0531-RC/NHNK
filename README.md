@@ -93,8 +93,10 @@ Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-R
 
 | Funkció | Leírás | Tervezett megjelenés (ETA) |
 | --- | --- | --- |
+| **Megajánlott jegyek & Ösztöndíj-követő** | Háttérértesítés az új megajánlott jegyekről (`OfferedGrades`) és a beérkező ösztöndíjak / kifizetések (`Scholarship`) követése. | **2027 tavasz – nyár (v2.1)** |
 | **On-Device AI / Hangasszisztens integráció (Gemini & Siri)** | Természetes nyelvű lekérdezések közvetlenül a készüléken, felhőszerver nélkül: Androidon **Google Gemini (`AppFunctions`)**, iOS-en **Siri & Apple Intelligence (`AppIntents`)** támogatás (pl. *„Milyen órám lesz ma?”*, *„Mennyi az átlagom?”*, *„Jött új Neptun üzenetem?”*), kétszintű biometrikus védelemmel. | **2027 ősz (v2.2 / TDK)** |
-| **Interaktív félév- és ösztöndíj-szimulátor** | Teljes „Mi lenne, ha” (What-if) félévtervező és kreditindex-/ösztöndíj-kalkulátor a jelenlegi szellemjegy funkció továbbfejlesztéseként. | **2027 vége – 2028 tavasz** |
+| **Live Updates / Live Activities & Okosóra nézet** | Óra előtt 15 perccel élő visszaszámláló a lezárt képernyőn (Android Live Updates / iOS Dynamic Island) és okosórán a következő órád termével. | **2027 ősz – tél (v2.3)** |
+| **Mintatanterv-gráf & Ütközésmentes órarend-tervező** | Interaktív előkövetelmény-térkép (csúszásszimulációval), féléves ösztöndíj-szimulátor és automatikus órarend-kombináció generátor (pl. minimum lyukasóra / szabad nap optimalizálással). | **2027 vége – 2028 tavasz** |
 | **NHNK v3.0 Architektúra & Offline-First motor** | A maradék örökölt (legacy) kód teljes kiváltása tiszta Repository architektúrára, strukturált helyi adatbázisra és egységes, akadálymentes (WCAG AAA) komponenskönyvtárra. | **2028 (v3.0)** |
 
 ## Hibabejelentés
@@ -206,8 +208,10 @@ Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
 
 | Feature | Description | Target ETA |
 | --- | --- | --- |
+| **Offered Grades & Scholarship Tracker** | Background alerts for newly posted offered grades (`OfferedGrades`) and tracking of incoming scholarship payouts (`Scholarship`). | **Spring – Summer 2027 (v2.1)** |
 | **On-Device AI / Assistant Integration (Gemini & Siri)** | Zero-cloud, privacy-preserving voice & AI queries right on the device via Android **Google Gemini (`AppFunctions`)** and iOS **Siri & Apple Intelligence (`AppIntents`)** (e.g. *"What classes do I have today?"*, *"What is my current GPA?"*, *"Do I have new Neptun messages?"*), protected by biometric privacy tiers. | **Autumn 2027 (v2.2)** |
-| **Interactive Semester & Scholarship Simulator** | Full "What-if" semester planner and credit-index / scholarship calculator expanding on ghost grades. | **Late 2027 – Spring 2028** |
+| **Live Updates / Live Activities & Watch Companion** | Lock-screen live countdown (Android Live Updates / iOS Dynamic Island) and smartwatch view showing your next room 15 minutes before class. | **Late 2027 (v2.3)** |
+| **Curriculum Graph & Clash-Free Schedule Planner** | Interactive prerequisite DAG map (with delay impact simulation), scholarship simulator, and automatic clash-free timetable generator (e.g. minimize gaps / free day optimization). | **Late 2027 – Spring 2028** |
 | **NHNK v3.0 Architecture & Offline-First Engine** | Complete replacement of remaining legacy code with a clean Repository architecture, structured local database, and unified WCAG AAA component library. | **2028 (v3.0)** |
 
 ## Building & Testing
