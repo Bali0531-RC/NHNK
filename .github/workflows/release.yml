@@ -218,15 +218,13 @@ jobs:
               ("en-US", f"NHNK {tag} bug fixes and improvements."),
           ]:
               m = re.search(rf"<{locale}>\s*(.*?)\s*</{locale}>", text, re.DOTALL)
-              body = (m.group(1).strip() if m else fallback)[:500]
+              body = (m.group(1).strip() if m else fallback)[:495]
               with open(os.path.join(out_dir, f"whatsnew-{locale}"), "w", encoding="utf-8") as f:
-                  f.write(body + "\n")
+                  f.write(body)
           PY
 
-      - name: Upload to Google Play Production (auto-submit for review)
-        id: play_upload_auto
+      - name: Upload to Google Play Production
         if: steps.play_notes.outputs.enabled == 'true'
-        continue-on-error: true
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
@@ -234,17 +232,4 @@ jobs:
           releaseFiles: dist/NHNK-*-playstore.aab
           track: production
           status: completed
-          changesNotSentForReview: false
-          whatsNewDirectory: ${{ runner.temp }}/whatsnew
-
-      - name: Upload to Google Play Production (fallback when manual review send is required)
-        if: steps.play_notes.outputs.enabled == 'true' && steps.play_upload_auto.outcome == 'failure'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          packageName: hu.bali0531.nhnk.app
-          releaseFiles: dist/NHNK-*-playstore.aab
-          track: production
-          status: completed
-          changesNotSentForReview: true
           whatsNewDirectory: ${{ runner.temp }}/whatsnew
