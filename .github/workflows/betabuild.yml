@@ -3,8 +3,29 @@ name: Beta Build
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'API-DOCS/**'
+      - 'nhnk-web'
+      - 'universityNameUrlPairs.json'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/release-notes/**'
+      - '.github/FUNDING.yml'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'API-DOCS/**'
+      - 'nhnk-web'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/release-notes/**'
+      - '.github/FUNDING.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
