@@ -38,7 +38,9 @@ import '../Pages/startup_page.dart' as root_page;
 import '../Misc/app_drawer.dart';
 import '../Misc/average_calculator.dart';
 import '../Misc/offline_notice.dart';
+import '../Misc/popup.dart';
 import 'package:nhnk/platform_support.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -368,6 +370,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
         }
         setupCalendar(true);
         StartupTrace.finish('timetable visible');
+        _maybePromptPlayStoreReview();
       });
 
       Future.delayed(Duration.zero, () async{
@@ -421,6 +424,54 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   }
 
   bool _showingCorruptedDialog = false;
+
+  /// Prompts a Play Store user to rate the app at most ONCE ever, only after 14 days
+  /// of usage, and only when they are not in a class or within 30 minutes of one.
+  void _maybePromptPlayStoreReview() {
+    if (!AppPlatform.isAndroid) return;
+    const String dist = String.fromEnvironment('NHNK_DISTRIBUTION', defaultValue: 'github');
+    if (dist != 'playstore' && storage.DataCache.getIsInstalledFromGPlay() != 1) {
+      return;
+    }
+    if (storage.DataCache.getIsDemoAccount() ?? false) return;
+    if (storage.DataCache.getHasShownRatePrompt()) return;
+
+    final firstUsed = storage.DataCache.getFirstUsedEpoch();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (firstUsed <= 0 || now - firstUsed < const Duration(days: 14).inMilliseconds) {
+      return;
+    }
+
+    // Never bother a student during a class/exam or within 30 minutes before it starts.
+    const int bufferMs = 30 * 60 * 1000;
+    for (final entry in calendarEntries) {
+      if (HiddenClasses.isHidden(entry)) continue;
+      if (now >= entry.startEpoch - bufferMs && now <= entry.endEpoch) {
+        return;
+      }
+    }
+
+    Future.delayed(const Duration(seconds: 6), () async {
+      if (!mounted || _showingCorruptedDialog || storage.DataCache.getHasShownRatePrompt()) {
+        return;
+      }
+      // Mark shown immediately so even dismissing the dialog never prompts again.
+      await storage.DataCache.setHasShownRatePrompt(true);
+      if (!mounted) return;
+      PopupWidgetHandler(
+        mode: 2,
+        callback: (_) async {
+          final uri = Uri.parse(
+            'https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app',
+          );
+          try {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } catch (_) {}
+        },
+      );
+      PopupWidgetHandler.doPopup(context);
+    });
+  }
 
   void _showCorruptedSessionDialog() {
     if (_showingCorruptedDialog || !mounted) return;

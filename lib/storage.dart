@@ -151,6 +151,8 @@ class DataCache{
     setUserSelectedLanguage(_persistentSetting_userSelectedLanguage!);
     setNeedsHaptics(_persistentSetting_needBetterHaptics! ? 1 : 0);
     setIsInstalledFromGPlay(_permanentConfiguration_isInstalledFromGooglePlay!);
+    setFirstUsedEpoch(_permanentConfiguration_firstUsedEpoch);
+    setHasShownRatePrompt(_permanentConfiguration_hasShownRatePrompt);
     setDownloadedSupportedLanguages(_languageJsonSupportedLangs);
     setDownloadedSupportedLanguagesData(_languageJsonBatch);
     setPreferredAppTheme(_themePreference!);
@@ -247,6 +249,8 @@ class DataCache{
   late int? _persistentSetting_userSelectedLanguage = -1;
 
   late int? _permanentConfiguration_isInstalledFromGooglePlay = 0;
+  late int _permanentConfiguration_firstUsedEpoch = 0;
+  late bool _permanentConfiguration_hasShownRatePrompt = false;
 
 
 
@@ -390,6 +394,17 @@ class DataCache{
 
     tmp = await getInt('CONFIG_IsInstalledFromGPlay');
     _permanentConfiguration_isInstalledFromGooglePlay = tmp ?? 0;
+
+    tmp = await getInt('CONFIG_FirstUsedEpoch');
+    if (tmp == null || tmp <= 0) {
+      _permanentConfiguration_firstUsedEpoch = DateTime.now().millisecondsSinceEpoch;
+      await saveInt('CONFIG_FirstUsedEpoch', _permanentConfiguration_firstUsedEpoch);
+    } else {
+      _permanentConfiguration_firstUsedEpoch = tmp;
+    }
+
+    tmp = await getInt('CONFIG_HasShownRatePrompt');
+    _permanentConfiguration_hasShownRatePrompt = tmp != null && tmp != 0;
 
 
     _languageJsonSupportedLangs = await getStringList('LANGUAGE_DownloadedSupportedLangs') ?? [];
@@ -870,6 +885,18 @@ class DataCache{
   static Future<void> setIsInstalledFromGPlay(int? value)async{
     _instance._permanentConfiguration_isInstalledFromGooglePlay = value ?? 0;
     await saveInt('CONFIG_IsInstalledFromGPlay', value ?? 0);
+  }
+
+  static int getFirstUsedEpoch() => _instance._permanentConfiguration_firstUsedEpoch;
+  static Future<void> setFirstUsedEpoch(int value) async {
+    _instance._permanentConfiguration_firstUsedEpoch = value;
+    await saveInt('CONFIG_FirstUsedEpoch', value);
+  }
+
+  static bool getHasShownRatePrompt() => _instance._permanentConfiguration_hasShownRatePrompt;
+  static Future<void> setHasShownRatePrompt(bool value) async {
+    _instance._permanentConfiguration_hasShownRatePrompt = value;
+    await saveInt('CONFIG_HasShownRatePrompt', value ? 1 : 0);
   }
 
   static List<String> getDownloadedSupportedLanguages(){return _instance._languageJsonSupportedLangs;}
