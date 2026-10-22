@@ -9,6 +9,8 @@ import '../Pages/startup_page.dart' as root_page;
 import '../Misc/emojirich_text.dart';
 import '../language.dart';
 import '../notifications.dart';
+import '../background_worker.dart';
+import '../startup_trace.dart';
 import '../Pages/settings_page.dart';
 import '../Pages/about_page.dart';
 import '../Pages/statistics_page.dart';
@@ -156,15 +158,17 @@ class AppDrawer extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.logout_rounded, color: AppColors.getTheme().errorRed),
               title: Text(AppStrings.getLanguagePack().topmenu_buttons_Logout, style: TextStyle(color: AppColors.getTheme().errorRed, fontWeight: FontWeight.w700)),
-              onTap: () {
+              onTap: () async {
                 AppHaptics.lightImpact();
-                Future.delayed(Duration.zero, ()async{
-                  await storage.DataCache.dataWipe();
-                  await AppNotifications.cancelScheduledNotifs();
-                }).whenComplete((){
-                  Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const root_page.Splitter()));
-                });
+                final nav = Navigator.of(context);
+                await storage.DataCache.fullCleanReset();
+                await AppNotifications.cancelScheduledNotifs();
+                await BackgroundWorker.cancel();
+                NetTrace.clear();
+                nav.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const root_page.Splitter()),
+                  (route) => false,
+                );
                 if(AppPlatform.isMobile){
                   Fluttertoast.showToast(msg: AppStrings.getLanguagePack().topmenu_buttons_LogoutSuccessToast, toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
                 }

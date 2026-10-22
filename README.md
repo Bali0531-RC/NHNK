@@ -76,8 +76,8 @@ Azóta a kódbázis több mint fele már saját fejlesztés: teljesen új 2.0-s 
 
 Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-RC/NHNK/releases**
 
-- **2.0 (2.0.0 – 2.0.9):**
-  - **2.0.8 – 2.0.9:** Automatikus, öngyógyító natív kulcsmigráció (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`), teljes `FlutterSecureStorage` törlés kijelentkezéskor, valamint a Statisztika és Közelgő fül tokenfrissítési és gyorsítótár-fallback javítása.
+- **2.0 (2.0.0 – 2.0.10):**
+  - **2.0.8 – 2.0.10:** Automatikus, öngyógyító natív kulcsmigráció (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`), sérült munkamenet automatikus felismerése egyérintéses tiszta OOBE újrakezdéssel, teljes `FlutterSecureStorage` + `AndroidKeyStore` törlés kijelentkezéskor, valamint a Statisztika és Közelgő fül javítása.
   - **2.0.7:** Biometrikus / képernyőzáras alkalmazászár (alapból bekapcsolva, első indításkor és a Beállításokban kapcsolható), teljes stack frissítés (Flutter 3.47, AGP 9.4, Gradle 9.8, Kotlin 2.4), R8 erőforrás-optimalizálás és automatizált Google Play kiadási pipeline.
   - **2.0.6:** Új, saját NHNK alkalmazásikon és indítóképernyő minden platformon.
   - **2.0.5:** Részletes tárgyoldal PDF tematika-letöltéssel, Fizetések fül automatikus elrejtése állami ösztöndíjasoknak, külön szellemjegy gomb.
@@ -192,8 +192,8 @@ Since then, over half of the codebase has been rewritten or newly built: full mo
 
 Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
 
-- **2.0 (2.0.0 – 2.0.9):**
-  - **2.0.8 – 2.0.9:** Self-healing native legacy-to-v11 credential migration (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`), complete secure-storage wipe on logout, and token-refresh / cache fallback fixes for Statistics and Upcoming views.
+- **2.0 (2.0.0 – 2.0.10):**
+  - **2.0.8 – 2.0.10:** Self-healing native legacy-to-v11 credential migration (`RSA-PKCS1`/`AES-CBC` → `RSA-OAEP`/`AES-GCM`), automatic corrupted-session detection with one-tap clean OOBE reset, complete `FlutterSecureStorage` + `AndroidKeyStore` wipe on logout, and Statistics / Upcoming fixes.
   - **2.0.7:** Default biometric / screen-lock protection (with onboarding opt-out and settings toggle), full stack upgrade (Flutter 3.47, AGP 9.4, Gradle 9.8, Kotlin 2.4), R8 resource shrinking, and automated Google Play production release pipeline.
   - **2.0.6:** Redesigned custom NHNK app icon and splash assets across all platforms.
   - **2.0.5:** Subject detail page with PDF syllabus downloads, automatic hiding of the Payments tab for full state-scholarship students, dedicated ghost-grade button.

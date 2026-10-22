@@ -332,26 +332,42 @@ Future<http.Response?> _tryGet(Uri url) async {
     static Future<void> _renewSession() async {
       if (!_isRefreshingToken) {
         _isRefreshingToken = true;
-        debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
+        try {
+          debug.log("Token lejárt! Automatikus újra-bejelentkezés indítása...");
 
-        bool refreshSuccess = false;
-        if (storage.DataCache.getIsModernApi()) {
-          refreshSuccess = await tryTokenRefresh();
+          bool refreshSuccess = false;
+          if (storage.DataCache.getIsModernApi()) {
+            refreshSuccess = await tryTokenRefresh();
+          }
+
+          if (!refreshSuccess) {
+            final username = storage.DataCache.getUsername();
+            final password = await storage.DataCache.getPassword();
+            final baseUrl = storage.DataCache.getInstituteUrl();
+
+            if (username == null ||
+                username.isEmpty ||
+                password == null ||
+                password.isEmpty ||
+                baseUrl == null ||
+                baseUrl.isEmpty) {
+              InstitutesRequest.onCorruptedSessionDetected?.call();
+              return;
+            }
+
+            await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
+          }
+        } catch (e) {
+          debug.log("Hiba a munkamenet megújításakor: $e");
+        } finally {
+          _isRefreshingToken = false;
         }
-
-        if (!refreshSuccess) {
-          final username = storage.DataCache.getUsername()!;
-          final password = (await storage.DataCache.getPassword())!;
-          final baseUrl = storage.DataCache.getInstituteUrl()!;
-
-          await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);
-        }
-
-        _isRefreshingToken = false;
       } else {
         debug.log("Egy másik fül már frissít, várakozás...");
-        while (_isRefreshingToken) {
+        int waitedMs = 0;
+        while (_isRefreshingToken && waitedMs < 15000) {
           await Future.delayed(const Duration(milliseconds: 100));
+          waitedMs += 100;
         }
       }
     }
@@ -513,6 +529,11 @@ Future<http.Response?> _tryGet(Uri url) async {
 
     /// True when the attempt never got an answer, as opposed to being refused.
     static bool lastLoginWasNetworkFailure = false;
+
+    /// Invoked when a background/foreground session renewal discovers that stored
+    /// credentials could not be decoded (e.g. after an unmigrated keystore or OEM
+    /// cloud backup restore), so the UI can offer a one-tap clean OOBE reset.
+    static void Function()? onCorruptedSessionDetected;
 
     /// Pulls the human readable part out of the `notification` envelope.
     ///
@@ -1164,6 +1185,7 @@ class CalendarRequest {
             final username = storage.DataCache.getUsername();
             final password = await storage.DataCache.getPassword();
             if (username == null || username.isEmpty || password == null || password.isEmpty) {
+              InstitutesRequest.onCorruptedSessionDetected?.call();
               return await fromIcsOnly();
             }
             await InstitutesRequest.validateLoginCredentialsUrl(baseUrl, username, password);

@@ -204,6 +204,19 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       ICSCalendar.initialize();
     }
 
+    api.InstitutesRequest.onCorruptedSessionDetected = () {
+      if (mounted) {
+        _showCorruptedSessionDialog();
+      }
+    };
+
+    Future.microtask(() async {
+      if (await storage.DataCache.isSessionCorrupted()) {
+        if (!mounted) return;
+        _showCorruptedSessionDialog();
+      }
+    });
+
     Future.delayed(const Duration(seconds: 4), () async {
       // Az új letöltő meghívása
       await AppUpdater.checkAndInstallUpdate(context);
@@ -407,15 +420,54 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     });
   }
 
+  bool _showingCorruptedDialog = false;
+
+  void _showCorruptedSessionDialog() {
+    if (_showingCorruptedDialog || !mounted) return;
+    _showingCorruptedDialog = true;
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final theme = AppColors.getTheme();
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.rootBackground,
+        title: Text(
+          hu ? 'Adatok helyreállítása szükséges' : 'Session recovery required',
+          style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        content: Text(
+          hu
+              ? 'A biztonsági frissítés vagy újratelepítés után a korábbi titkosított belépési adatok nem olvashatók, ezért az alkalmazás nem tudja betölteni az adatokat.\n\nEgy érintéssel törölheted a beragadt gyorsítótárat, és tisztán bejelentkezhetsz újra.'
+              : 'After a security update or reinstall, your previous encrypted credentials could not be decoded.\n\nTap below to wipe stuck app data and sign in cleanly.',
+          style: TextStyle(color: theme.textColor.withValues(alpha: 0.8), fontSize: 14, height: 1.45),
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: theme.errorRed),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              userUnavailableAccountLogout();
+            },
+            child: Text(
+              hu ? 'Összes adat törlése és újrakezdés' : 'Wipe all data & start fresh',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void userUnavailableAccountLogout(){
     Future.delayed(Duration.zero, ()async{
-      await storage.DataCache.dataWipe();
+      await storage.DataCache.fullCleanReset();
       await AppNotifications.cancelScheduledNotifs();
     }).whenComplete((){
-      Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-      Navigator.push(
-        context,
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const root_page.Splitter()),
+        (route) => false,
       );
     });
   }

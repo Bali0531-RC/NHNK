@@ -38,6 +38,8 @@
     <application
         android:label="NHNK"
         android:name="${applicationName}"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher">
         <receiver

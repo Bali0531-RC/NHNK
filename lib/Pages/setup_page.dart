@@ -13,10 +13,12 @@ import 'package:nhnk/local_file_actions.dart';
 import 'package:nhnk/language.dart';
 import '../API/api_coms.dart' as api;
 import '../Misc/custom_snackbar.dart';
+import '../biometric_lock.dart';
 import '../storage.dart' as storage;
 import '../storage.dart';
 import 'main_page.dart' as main_page;
 import 'onboarding/onboarding_shell.dart';
+import 'onboarding/onboarding_steps.dart' as onboarding;
 import '../Misc/popup.dart';
 
 class SetupPageInstituteSelection extends StatefulWidget{
@@ -930,32 +932,107 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
 
   bool _showNeptunServerError = false;
 
+  Future<void> _performFullCleanReset() async {
+    AppHaptics.lightImpact();
+    await storage.DataCache.fullCleanReset();
+    PageDTO.institutes = null;
+    PageDTO.selected = null;
+    PageDTO.username = null;
+    PageDTO.password = null;
+    PageDTO.customURL = null;
+    PageDTO.validatedURL = false;
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const onboarding.OnboardingTermsPage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _offerCleanResetDialog({String? reason}) async {
+    if (!mounted) return;
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final theme = AppColors.getTheme();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.rootBackground,
+        title: Text(
+          hu ? 'Adatok alaphelyzetbe állítása' : 'Reset app data',
+          style: TextStyle(color: theme.textColor, fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        content: Text(
+          reason ??
+              (hu
+                  ? 'Ha frissítés vagy újratelepítés után beragadtak a korábbi titkosított adatok, egy érintéssel teljesen törölheted az alkalmazás gyorsítótárát és tisztán újrakezdheted a beállítást.'
+                  : 'If encrypted data from a previous install got stuck after an update or reinstall, you can wipe all app data and start fresh from the welcome screen.'),
+          style: TextStyle(color: theme.textColor.withValues(alpha: 0.8), fontSize: 14, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              hu ? 'Mégse' : 'Cancel',
+              style: TextStyle(color: theme.textColor.withValues(alpha: 0.6)),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: theme.errorRed),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _performFullCleanReset();
+            },
+            child: Text(
+              hu ? 'Összes adat törlése és újrakezdés' : 'Wipe all data & start fresh',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void finishLogin(){
     api.Institute selected = api.Institute('ERROR', '');
-    if(PageDTO.validatedURL){
-      if(PageDTO.customURL != null && PageDTO.customURL!.isNotEmpty){
-        RegExp regex = RegExp(r'/hallgato/login\.aspx');
-        var correctedURL = PageDTO.customURL!.trim().toLowerCase();
+    try {
+      if(PageDTO.validatedURL){
+        if(PageDTO.customURL != null && PageDTO.customURL!.isNotEmpty){
+          RegExp regex = RegExp(r'/hallgato/login\.aspx');
+          var correctedURL = PageDTO.customURL!.trim().toLowerCase();
 
-        if(correctedURL.contains(regex)){
-          correctedURL = correctedURL.replaceAll(regex, '/hallgato/MobileService.svc');
-          PageDTO.customURL = correctedURL;
-        }
-        // ÚJ: Óbudai Egyetem linkjének megtisztítása
-        else if (correctedURL.contains("uni-obuda.hu/ujhallgato")) {
-          correctedURL = correctedURL.replaceAll(RegExp(r'/login/?$'), '');
-          PageDTO.customURL = correctedURL;
-        }
+          if(correctedURL.contains(regex)){
+            correctedURL = correctedURL.replaceAll(regex, '/hallgato/MobileService.svc');
+            PageDTO.customURL = correctedURL;
+          }
+          // ÚJ: Óbudai Egyetem linkjének megtisztítása
+          else if (correctedURL.contains("uni-obuda.hu/ujhallgato")) {
+            correctedURL = correctedURL.replaceAll(RegExp(r'/login/?$'), '');
+            PageDTO.customURL = correctedURL;
+          }
 
-        selected = api.Institute('URL', PageDTO.customURL!);
+          selected = api.Institute('URL', PageDTO.customURL!);
+        }
       }
-    }
-    else{
-      for(var item in PageDTO.institutes!){
-        if(item.Name == PageDTO.selected!){
-          selected = item;
-          break;
+      else if (PageDTO.institutes != null && PageDTO.selected != null) {
+        for(var item in PageDTO.institutes!){
+          if(item.Name == PageDTO.selected){
+            selected = item;
+            break;
+          }
         }
+      }
+    } catch (_) {}
+
+    if (selected.URL.isEmpty) {
+      final fallbackUrl = storage.DataCache.getInstituteUrl() ?? '';
+      if (fallbackUrl.isNotEmpty) {
+        selected = api.Institute(PageDTO.selected ?? 'URL', fallbackUrl);
+      } else {
+        _offerCleanResetDialog(
+          reason: AppStrings.getCurrentLangCode() == 'hu'
+              ? 'Nem található a kiválasztott intézmény címe (érvénytelen gyorsítótár). Töröld az adatokat a tiszta újrakezdéshez.'
+              : 'Selected institution URL is missing (invalid cache). Wipe app data to start fresh.',
+        );
+        return;
       }
     }
 
@@ -977,18 +1054,20 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
       });
     });
 
-    api.InstitutesRequest.validateLoginCredentials(selected, _username.toUpperCase(), _password).then((value)
+    api.InstitutesRequest.validateLoginCredentials(selected, _username.toUpperCase(), _password).then((value) async
     {
       if(value == 1){ // 1: SIKERES BELÉPÉS
-        storage.DataCache.setUsername(_username.toUpperCase());
-        storage.DataCache.setPassword(_password);
-        storage.DataCache.setInstituteUrl(selected.URL);
-        storage.DataCache.setHasLogin(1);
-        // proceed logic
-        Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-        Navigator.push(
-          context,
+        await storage.DataCache.setUsername(_username.toUpperCase());
+        await storage.DataCache.setPassword(_password);
+        if ((storage.DataCache.getInstituteUrl() ?? '').isEmpty) {
+          await storage.DataCache.setInstituteUrl(selected.URL);
+        }
+        await storage.DataCache.setHasLogin(1);
+        BiometricLock.markSessionUnlocked();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+          (route) => false,
         );
         return;
       }
@@ -1003,18 +1082,23 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
               bool isOk = await api.InstitutesRequest.submitTwoFactorCode( _username.toUpperCase(), _password, kod.toString());
 
               if (isOk) {
-                PopupWidgetHandler.closePopup(context);
+                if (mounted) {
+                  PopupWidgetHandler.closePopup(context);
+                }
 
                 // Mivel jó a kód, elmentjük az adatokat és beléptetjük
-                storage.DataCache.setUsername(_username.toUpperCase());
-                storage.DataCache.setPassword(_password);
-                storage.DataCache.setInstituteUrl(selected.URL);
-                storage.DataCache.setHasLogin(1);
+                await storage.DataCache.setUsername(_username.toUpperCase());
+                await storage.DataCache.setPassword(_password);
+                if ((storage.DataCache.getInstituteUrl() ?? '').isEmpty) {
+                  await storage.DataCache.setInstituteUrl(selected.URL);
+                }
+                await storage.DataCache.setHasLogin(1);
+                BiometricLock.markSessionUnlocked();
 
-                Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-                Navigator.push(
-                  context,
+                if (!mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+                  (route) => false,
                 );
               } else {
                 // The popup stays open so a wrong code can be retyped without
@@ -1067,12 +1151,28 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
               8);
         }
 
+        if (mounted) {
+          setState(() {
+            _paintRed = true;
+            _canProceed = true;
+            _isLoading = false;
+            _showNeptunServerError = false;
+          });
+        }
+      }
+    }).catchError((Object err) {
+      if (mounted) {
         setState(() {
           _paintRed = true;
           _canProceed = true;
           _isLoading = false;
           _showNeptunServerError = false;
         });
+        _offerCleanResetDialog(
+          reason: AppStrings.getCurrentLangCode() == 'hu'
+              ? 'Váratlan hiba történt a belépés során ($err). Szeretnéd törölni a beragadt alkalmazásadatokat és tisztán újrakezdeni?'
+              : 'An unexpected error occurred during sign-in ($err). Would you like to wipe all cached app data and start fresh?',
+        );
       }
     });
   }
@@ -1367,13 +1467,37 @@ class _SetupPageLoginState extends State<SetupPageLogin>{
                                           color: AppColors.getTheme().textColor.withValues(alpha: .6),
                                         ),
                                       ],
-                                    )
-                                )
-                              ],
+                                      )
+                                  )
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      )
+                            const SizedBox(height: 24),
+                            TextButton.icon(
+                              onPressed: () => _offerCleanResetDialog(),
+                              icon: Icon(
+                                Icons.restart_alt_rounded,
+                                size: 18,
+                                color: _paintRed
+                                    ? AppColors.getTheme().errorRed
+                                    : AppColors.getTheme().textColor.withValues(alpha: 0.55),
+                              ),
+                              label: Text(
+                                AppStrings.getCurrentLangCode() == 'hu'
+                                    ? 'Belépési hiba? Összes adat törlése és tiszta újrakezdés'
+                                    : 'Trouble signing in? Wipe all data & start fresh',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _paintRed ? FontWeight.w700 : FontWeight.w500,
+                                  color: _paintRed
+                                      ? AppColors.getTheme().errorRed
+                                      : AppColors.getTheme().textColor.withValues(alpha: 0.55),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                     ],
                   ),
                 ),
@@ -1477,14 +1601,16 @@ class _SetupPageURLCalendarState extends State<SetupPageCalendarLogin>{
       return;
     }
 
-    ICSCalendar.getFirstEventStartMs().whenComplete((){
-      storage.DataCache.setUsername('');
-      storage.DataCache.setPassword('');
-      storage.DataCache.setInstituteUrl('');
-      storage.DataCache.setHasLogin(1);
-      // proceed logic
-      Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const main_page.HomePage()));
+    ICSCalendar.getFirstEventStartMs().whenComplete(() async {
+      await storage.DataCache.setUsername('');
+      await storage.DataCache.setPassword('');
+      await storage.DataCache.setInstituteUrl('');
+      await storage.DataCache.setHasLogin(1);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+        (route) => false,
+      );
     });
   }
 

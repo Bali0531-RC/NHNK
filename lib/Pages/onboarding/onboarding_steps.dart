@@ -211,6 +211,7 @@ class _OnboardingWelcomePageState extends State<OnboardingWelcomePage> {
   void initState() {
     super.initState();
     _applyOverlayStyle();
+    FlutterNativeSplash.remove();
     AppColors.subThemeChangeCallback(() {
       if (mounted) setState(() {});
     });
@@ -395,6 +396,7 @@ class _OnboardingConnectPageState extends State<OnboardingConnectPage> {
   void initState() {
     super.initState();
     _applyOverlayStyle();
+    FlutterNativeSplash.remove();
     AppColors.subThemeChangeCallback(() {
       if (mounted) setState(() {});
     });
@@ -619,7 +621,8 @@ Future<void> startDemoMode(BuildContext context) async {
   await storage.DataCache.setInstituteUrl('');
   await storage.DataCache.setHasLogin(1);
   if (!context.mounted) return;
-  Navigator.popUntil(context, (route) => route.willHandlePopInternally);
-  Navigator.push(
-      context, MaterialPageRoute(builder: (context) => const main_page.HomePage()));
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+    (route) => false,
+  );
 }

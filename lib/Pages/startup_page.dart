@@ -1,6 +1,7 @@
 import 'package:nhnk/platform_support.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:nhnk/API/api_coms.dart' as api;
 import 'package:nhnk/colors.dart';
 import 'package:nhnk/haptics.dart';
@@ -63,7 +64,8 @@ class _SplitterState extends State<Splitter>{
         await api.Coloring.getAllThemes();
       });
     }).then((value) {
-      Navigator.popUntil(context, (route) => route.willHandlePopInternally);
+      if (!mounted) return;
+      FlutterNativeSplash.remove();
       // The web build exists only to let people try the app from the site. A real
       // login could not work anyway: Neptun servers send no CORS headers, and the
       // site must not invite anyone to type institutional credentials into a page.
@@ -76,34 +78,34 @@ class _SplitterState extends State<Splitter>{
           await DataCache.setHasLogin(1);
           await DataCache.setHasAcceptedTerms(1);
           if (!context.mounted) return;
-          Navigator.push(
-            context,
+          Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const main_page.HomePage()),
+            (route) => false,
           );
         });
         return;
       }
       if (DataCache.getHasLogin() != null && DataCache.getHasLogin()!) {
         StartupTrace.mark('push HomePage');
-        Navigator.push(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const BiometricLockGate()),
+          (route) => false,
         );
         return;
       }
       // Terms are the first step of onboarding rather than a wall in front of it.
       // Existing users who already accepted are not re-prompted.
       if (!DataCache.getHasAcceptedTerms()) {
-        Navigator.push(
-          context,
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const onboarding.OnboardingTermsPage()),
+          (route) => false,
         );
         return;
       }
-      Navigator.push(
-        context,
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
             builder: (context) => const onboarding.OnboardingWelcomePage()),
+        (route) => false,
       );
     });
   }

@@ -68,6 +68,49 @@ class DataCache{
     await _clearWidget();
   }
 
+  /// Complete nuclear wipe of all SharedPreferences, FlutterSecureStorage, and Android
+  /// KeyStore aliases, returning the app to a fresh first-launch OOBE state.
+  static Future<void> fullCleanReset() async {
+    if (AppPlatform.isAndroid) {
+      try {
+        await _legacySecureChannel.invokeMethod<bool>('hardResetSecureStorage');
+      } catch (_) {}
+    }
+    try {
+      await _secureStorage.deleteAll();
+    } catch (_) {}
+    _instance._password = null;
+    _instance._accessToken = null;
+    _instance._refreshToken = null;
+    _instance._sessionCookie = null;
+    _instance._icsExportUrl = null;
+    _instance._totpSecret = null;
+    _totpSecretPresent = false;
+    _secureRead = null;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    await prefs.reload();
+    _instance._localWipe();
+    _instance._hasLogin = false;
+    _instance._hasAcceptedTerms = false;
+    await _clearWidget();
+  }
+
+  /// True when SharedPreferences claims the user is logged in, but the secure
+  /// credentials could not be decoded (e.g. after an unmigrated keystore or OEM
+  /// cloud backup restore on reinstall).
+  static Future<bool> isSessionCorrupted() async {
+    if (!(getHasLogin() ?? false)) return false;
+    if (getIsDemoAccount() ?? false) return false;
+    if (getHasICSFile() ?? false) return false;
+    await secureValues();
+    final user = (getUsername() ?? '').trim();
+    final pass = (_instance._password ?? '').trim();
+    final url = (getInstituteUrl() ?? '').trim();
+    if (user.isEmpty || url.isEmpty || pass.isEmpty) return true;
+    return false;
+  }
+
   static Future<void> _clearWidget() async{
     if(!AppPlatform.isAndroid) return;
     await HomeWidget.saveWidgetData<String>('calendar_snapshot', null);
@@ -467,7 +510,39 @@ class DataCache{
         }
         catch(_){ }
       }
+      if (out.isEmpty && AppPlatform.isAndroid) {
+        try {
+          await _legacySecureChannel.invokeMethod<bool>('hardResetSecureStorage');
+        } catch (_) {}
+      }
       return out;
+    }
+  }
+
+  static Future<void> _safeWriteSecure(String key, String? value) async {
+    try {
+      if (value == null) {
+        await _secureStorage.delete(key: key);
+      } else {
+        await _secureStorage.write(key: key, value: value);
+      }
+    } catch (_) {
+      if (AppPlatform.isAndroid) {
+        try {
+          await _legacySecureChannel.invokeMethod<bool>('hardResetSecureStorage');
+          if (value != null) {
+            await _secureStorage.write(key: key, value: value);
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  static Future<String?> _safeReadSecure(String key) async {
+    try {
+      return await _secureStorage.read(key: key);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -498,8 +573,8 @@ class DataCache{
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(
       resetOnError: true,
-      migrateOnAlgorithmChange: true,
-      migrateWithBackup: true,
+      migrateOnAlgorithmChange: false,
+      migrateWithBackup: false,
     ),
   );
   // PASSWORD HANDLING:
@@ -519,12 +594,7 @@ class DataCache{
   static Future<void> setPassword(String? password) async {
     await secureValues(); // so a late-resolving read cannot clobber this
     _instance._password = password; // Frissítjük a memóriában is
-
-    if (password == null) {
-      await _secureStorage.delete(key: 'neptun_password');
-    } else {
-      await _secureStorage.write(key: 'neptun_password', value: password);
-    }
+    await _safeWriteSecure('neptun_password', password);
   }
 
   static String? getInstituteUrl(){return _instance._instituteUrl;}
@@ -547,12 +617,7 @@ class DataCache{
   static Future<void> setAccessToken(String? token) async {
     await secureValues();
     _instance._accessToken = token; // Frissítjük a memóriában
-
-    if (token == null) {
-      await _secureStorage.delete(key: 'neptun_jwt_token');
-    } else {
-      await _secureStorage.write(key: 'neptun_jwt_token', value: token);
-    }
+    await _safeWriteSecure('neptun_jwt_token', token);
   }
 
   static Future<String?> getAccessToken() async {
@@ -568,11 +633,7 @@ class DataCache{
   static Future<void> setRefreshToken(String? token) async {
     await secureValues();
     _instance._refreshToken = token;
-    if (token == null) {
-      await _secureStorage.delete(key: 'neptun_refresh_token');
-    } else {
-      await _secureStorage.write(key: 'neptun_refresh_token', value: token);
-    }
+    await _safeWriteSecure('neptun_refresh_token', token);
   }
 
   /// Full "name=value" pair; GetNewTokens rejects the request without it.
@@ -584,11 +645,7 @@ class DataCache{
   static Future<void> setSessionCookie(String? cookie) async {
     await secureValues();
     _instance._sessionCookie = cookie;
-    if (cookie == null) {
-      await _secureStorage.delete(key: 'neptun_session_cookie');
-    } else {
-      await _secureStorage.write(key: 'neptun_session_cookie', value: cookie);
-    }
+    await _safeWriteSecure('neptun_session_cookie', cookie);
   }
 
   /// Self-authenticating timetable export link, so the calendar survives session loss.
@@ -600,11 +657,7 @@ class DataCache{
   static Future<void> setIcsExportUrl(String? url) async {
     await secureValues();
     _instance._icsExportUrl = url;
-    if (url == null) {
-      await _secureStorage.delete(key: 'neptun_ics_url');
-    } else {
-      await _secureStorage.write(key: 'neptun_ics_url', value: url);
-    }
+    await _safeWriteSecure('neptun_ics_url', url);
   }
 
   /// Opt-in: lets the app answer the 2FA prompt itself instead of asking on every re-login.
@@ -616,23 +669,15 @@ class DataCache{
   static Future<void> setTotpSecret(String? secret) async {
     await secureValues();
     _instance._totpSecret = secret;
-    if (secret == null) {
-      await _secureStorage.delete(key: 'neptun_totp_secret');
-    } else {
-      await _secureStorage.write(key: 'neptun_totp_secret', value: secret);
-    }
+    await _safeWriteSecure('neptun_totp_secret', secret);
     await _rememberTotpPresence((secret ?? '').isNotEmpty);
   }
 
   static Future<String?> getDeviceCookie(String username) async {
-    return await _secureStorage.read(key: 'devicecookie_${username.toUpperCase()}');
+    return await _safeReadSecure('devicecookie_${username.toUpperCase()}');
   }
   static Future<void> setDeviceCookie(String username, String? cookieValue) async {
-    if (cookieValue == null) {
-      await _secureStorage.delete(key: 'devicecookie_${username.toUpperCase()}');
-    } else {
-      await _secureStorage.write(key: 'devicecookie_${username.toUpperCase()}', value: cookieValue);
-    }
+    await _safeWriteSecure('devicecookie_${username.toUpperCase()}', cookieValue);
   }
 
 // --- SECURE DATA clear ---
@@ -644,7 +689,14 @@ class DataCache{
     _instance._sessionCookie = null;
     _instance._icsExportUrl = null;
     _instance._totpSecret = null;
-    await _secureStorage.deleteAll();
+    if (AppPlatform.isAndroid) {
+      try {
+        await _legacySecureChannel.invokeMethod<bool>('hardResetSecureStorage');
+      } catch (_) {}
+    }
+    try {
+      await _secureStorage.deleteAll();
+    } catch (_) {}
     await _rememberTotpPresence(false);
   }
 
