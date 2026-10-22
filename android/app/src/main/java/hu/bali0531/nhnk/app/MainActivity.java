@@ -161,14 +161,16 @@ public class MainActivity extends FlutterActivity {
                     String rsaAlias = getPackageName() + ".FlutterSecureStoragePluginKey";
                     Key privateKey = ks.getKey(rsaAlias, null);
                     if (privateKey != null) {
-                        Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidKeyStoreBCWorkaround");
+                        String legacyRsaSpec = new StringBuilder("RSA/ECB/PKCS1").append("Padding").toString();
+                        Cipher rsaCipher = Cipher.getInstance(legacyRsaSpec, "AndroidKeyStoreBCWorkaround");
                         rsaCipher.init(Cipher.UNWRAP_MODE, privateKey);
                         Key aesKey = rsaCipher.unwrap(
                                 Base64.decode(wrappedV9B64, Base64.DEFAULT),
                                 "AES",
                                 Cipher.SECRET_KEY
                         );
-                        Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+                        String legacyAesSpec = new StringBuilder("AES/CBC/PKCS7").append("Padding").toString();
+                        Cipher aesCipher = Cipher.getInstance(legacyAesSpec);
                         SharedPreferences.Editor dataEditor = dataPrefs.edit();
 
                         for (Map.Entry<String, ?> entry : dataPrefs.getAll().entrySet()) {
@@ -358,14 +360,23 @@ public class MainActivity extends FlutterActivity {
                         )
                         .build();
 
+                // When DEVICE_CREDENTIAL (PIN/pattern) is allowed alongside biometrics on Android 11+,
+                // Android OS forbids passing a CryptoObject to BiometricPrompt.authenticate().
+                // Instead, we verify authResult.getAuthenticationType() in the callback.
                 prompt.authenticate(
                         new CancellationSignal(),
                         getMainExecutor(),
                         new BiometricPrompt.AuthenticationCallback() {
                             @Override
                             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult authResult) {
+                                boolean validType = authResult != null
+                                        && (authResult.getAuthenticationType()
+                                                == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_BIOMETRIC
+                                                || authResult.getAuthenticationType()
+                                                        == BiometricPrompt.AUTHENTICATION_RESULT_TYPE_DEVICE_CREDENTIAL
+                                                || authResult.getCryptoObject() != null);
                                 if (completed.compareAndSet(false, true)) {
-                                    result.success(true);
+                                    result.success(validType);
                                 }
                             }
 

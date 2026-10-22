@@ -3,12 +3,17 @@ subset to just those."""
 
 import json
 import pathlib
-import re
 
-EMOJI = re.compile(
-    "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF"
-    "\U00002190-\U000021FF\U00002B00-\U00002BFF\U00002700-\U000027BF]"
-)
+
+def is_emoji_codepoint(cp: int) -> bool:
+    return (
+        0x1F300 <= cp <= 0x1FAFF
+        or 0x2600 <= cp <= 0x27BF
+        or 0x1F1E6 <= cp <= 0x1F1FF
+        or 0x2190 <= cp <= 0x21FF
+        or 0x2B00 <= cp <= 0x2BFF
+    )
+
 
 root = pathlib.Path("/home/bali0531/Documents/Neptun-Mobile")
 groups = {
@@ -22,7 +27,8 @@ for label, files in groups.items():
     found = set()
     for f in files:
         try:
-            found.update(EMOJI.findall(f.read_text(encoding="utf-8")))
+            text = f.read_text(encoding="utf-8")
+            found.update(ch for ch in text if is_emoji_codepoint(ord(ch)))
         except Exception:
             pass
     everything |= found
