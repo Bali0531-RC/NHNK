@@ -2150,18 +2150,22 @@ class PopupWidget extends State<PopupWidgetState> with TickerProviderStateMixin{
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     controller: PopupWidgetHandler._instance!.scrollController,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
-                      margin: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: AppColors.getTheme().rootBackground,
-                        borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: getWidgets(PopupWidgetHandler._instance!.mode),
+                    child: GestureDetector(
+                      onTap: () {},
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
+                        margin: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: AppColors.getTheme().rootBackground,
+                          borderRadius: const BorderRadius.all(Radius.circular(AppRadius.large)),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: getWidgets(PopupWidgetHandler._instance!.mode),
+                        ),
                       ),
                     ),
                   )
