@@ -122,7 +122,7 @@ class AppDrawer extends StatelessWidget {
                 AppHaptics.lightImpact();
                 Navigator.pop(context);
                 if(AppPlatform.isMobile){
-                  launchUrl(Uri.parse('https://nhnk.bali0531.hu/tamogatas')).whenComplete(() {
+                  launchUrl(Uri.parse('https://nhnk.hu/tamogatas')).whenComplete(() {
                     Fluttertoast.showToast(msg: '❤️', toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
                   });
                 }
