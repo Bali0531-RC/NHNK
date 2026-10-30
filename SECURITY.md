@@ -38,7 +38,7 @@ Az NHNK tervezésekor az elsődleges szempont az volt, hogy a hallgatói belép�
 Ha biztonsági hibát vagy sérülékenységet találsz az alkalmazásban vagy a weboldalon:
 
 - **Kérjük, NE nyiss nyilvános GitHub Issue-t** a sérülékenység részleteivel!
-- Jelentsd privátban a [**GitHub Security Advisories**](https://github.com/Bali0531-RC/NHNK/security/advisories/new) felületen, vagy írj közvetlenül az **`nhnk@bali0531.hu`** e-mail címre.
+- Jelentsd privátban a [**GitHub Security Advisories**](https://github.com/Bali0531-RC/NHNK/security/advisories/new) felületen, vagy írj közvetlenül az **`admin@nhnk.hu`** (vagy `contact@nhnk.hu`) e-mail címre.
 - A bejelentéshez mellékeld az érintett verziót, a reprodukálás lépéseit és (ha releváns) a javasolt javítást. **Soha ne küldj valódi Neptun belépési adatokat vagy személyes tanulmányi adatokat!**
 - A bejelentésekre 72 órán belül válaszolunk, és a javítás kiadása után (kérésre) feltüntetjük a nevedet a kiadási jegyzetben.
 
@@ -82,7 +82,7 @@ NHNK is designed so that student credentials and academic records never leave th
 If you discover a security vulnerability in the NHNK app or website:
 
 - **Please do NOT open a public GitHub Issue** with exploit details.
-- Report it privately via [**GitHub Security Advisories**](https://github.com/Bali0531-RC/NHNK/security/advisories/new) or email **`nhnk@bali0531.hu`**.
+- Report it privately via [**GitHub Security Advisories**](https://github.com/Bali0531-RC/NHNK/security/advisories/new) or email **`admin@nhnk.hu`** (or `contact@nhnk.hu`).
 - Include the affected version and reproduction steps. **Never include real Neptun credentials or personal student records.**
 - Reports are acknowledged within 72 hours, and credit is given in the release notes upon disclosure if desired.
 

@@ -41,7 +41,7 @@ Ez a Magatartási Kódex minden közösségi térre érvényes (GitHub Issues, P
 
 ## Bejelentés és Betartatás
 
-A visszaéléseket, zaklatásokat vagy egyéb elfogadhatatlan viselkedést a projekt karbantartójának lehet jelenteni az **`nhnk@bali0531.hu`** e-mail címen. Minden panaszt kivizsgálunk, és a körülményeknek megfelelően, bizalmasan kezelünk.
+A visszaéléseket, zaklatásokat vagy egyéb elfogadhatatlan viselkedést a projekt karbantartójának lehet jelenteni a **`contact@nhnk.hu`** (vagy **`admin@nhnk.hu`**) e-mail címen. Minden panaszt kivizsgálunk, és a körülményeknek megfelelően, bizalmasan kezelünk.
 
 ## Forrás
 
@@ -88,7 +88,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abuse, harassment, or otherwise unacceptable behavior may be reported to the project maintainer at **`nhnk@bali0531.hu`**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abuse, harassment, or otherwise unacceptable behavior may be reported to the project maintainer at **`contact@nhnk.hu`** (or **`admin@nhnk.hu`**). All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 
