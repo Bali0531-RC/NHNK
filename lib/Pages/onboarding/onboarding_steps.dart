@@ -38,8 +38,8 @@ class OnboardingTermsPage extends StatefulWidget {
 }
 
 class _OnboardingTermsPageState extends State<OnboardingTermsPage> {
-  static const String privacyUrl = 'https://nhnk.bali0531.hu/adatvedelem';
-  static const String termsUrl = 'https://nhnk.bali0531.hu/felhasznalasi-feltetelek';
+  static const String privacyUrl = 'https://nhnk.hu/adatvedelem';
+  static const String termsUrl = 'https://nhnk.hu/felhasznalasi-feltetelek';
 
   @override
   void initState() {

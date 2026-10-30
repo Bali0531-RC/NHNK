@@ -19,10 +19,10 @@ class AboutPage extends StatefulWidget {
 }
 
 class _AboutPageState extends State<AboutPage> {
-  static const String websiteUrl = 'https://nhnk.bali0531.hu';
-  static const String privacyUrl = 'https://nhnk.bali0531.hu/adatvedelem';
-  static const String termsUrl = 'https://nhnk.bali0531.hu/felhasznalasi-feltetelek';
-  static const String donateUrl = 'https://nhnk.bali0531.hu/tamogatas';
+  static const String websiteUrl = 'https://nhnk.hu';
+  static const String privacyUrl = 'https://nhnk.hu/adatvedelem';
+  static const String termsUrl = 'https://nhnk.hu/felhasznalasi-feltetelek';
+  static const String donateUrl = 'https://nhnk.hu/tamogatas';
   static const String repoUrl = 'https://github.com/Bali0531-RC/NHNK';
 
   String _version = '';

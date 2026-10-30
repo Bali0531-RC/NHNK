@@ -6,7 +6,7 @@
 [![Legújabb kiadás](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
 [![Google Play](https://img.shields.io/badge/Google_Play-Elérhető-34A853?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app)
 
-Weboldal (élő böngészős demóval): **https://nhnk.bali0531.hu**
+Weboldal (élő böngészős demóval): **https://nhnk.hu**
 
 > [!IMPORTANT]
 > Ez egy független, nem hivatalos alkalmazás. Semmilyen kapcsolatban nem áll a Campus Codeworks Zrt.-vel (korábban SDA Informatika Zrt., a Neptun fejlesztője), sem egyetemekkel, és egyikük sem hagyta jóvá. A „Neptun” név a jogosultja tulajdona, itt kizárólag leíró jelleggel szerepel. A belépési adatok közvetlenül az intézményed Neptun-szerverére mennek, én nem üzemeltetek köztes szervert és nem gyűjtök adatot. Ha az app és a webes Neptun mást mond, mindig a webes felület a mérvadó.
@@ -42,8 +42,8 @@ Azóta a kódbázis több mint fele már saját fejlesztés: teljesen új 2.0-s 
 
 - **Google Play Áruház (ajánlott):** [**NHNK Kliens Neptunhoz a Google Play-en**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatikus áruházi frissítésekkel)*.
 - **GitHub Releases (Android APK sideload):** [**Legújabb kiadás letöltése**](https://github.com/Bali0531-RC/NHNK/releases/latest). A legtöbb mai telefonra az `arm64-v8a` APK kell. Beépített frissítéskezelőt tartalmaz, vagy bekötheted [Obtainium](https://github.com/ImranR98/Obtainium)-ba is.
-- **Webes kipróbálás (telepítés nélkül):** [**https://nhnk.bali0531.hu**](https://nhnk.bali0531.hu) — a nyitóoldalon lévő telefonban maga a valódi Flutter app fut demó módban.
-- **iPhone (`.ipa`):** Minden kiadásnál ott az `unsigned.ipa`. Fizetős Apple Developer fiók híján ($99/év) egyelőre [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy [Sideloadly](https://sideloadly.io/) segítségével tudod aláírni a saját Apple ID-ddal — ha szeretnéd, hogy felkerüljön a hivatalos App Store-ba is, [**itt tudod támogatni a fejlesztést**](https://nhnk.bali0531.hu/tamogatas).
+- **Webes kipróbálás (telepítés nélkül):** [**https://nhnk.hu**](https://nhnk.hu) — a nyitóoldalon lévő telefonban maga a valódi Flutter app fut demó módban.
+- **iPhone (`.ipa`):** Minden kiadásnál ott az `unsigned.ipa`. Fizetős Apple Developer fiók híján ($99/év) egyelőre [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy [Sideloadly](https://sideloadly.io/) segítségével tudod aláírni a saját Apple ID-ddal — ha szeretnéd, hogy felkerüljön a hivatalos App Store-ba is, [**itt tudod támogatni a fejlesztést**](https://nhnk.hu/tamogatas).
 
 ## Funkciók
 
@@ -98,7 +98,7 @@ Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-R
 | **Live Updates / Live Activities & Okosóra nézet** | Óra előtt 15 perccel élő visszaszámláló a lezárt képernyőn (Android Live Updates / iOS Dynamic Island) és okosórán a következő órád termével. | **2027 ősz – tél (v2.3)** |
 | **Mintatanterv-gráf & Ütközésmentes órarend-tervező** | Interaktív előkövetelmény-térkép (csúszásszimulációval), féléves ösztöndíj-szimulátor és automatikus órarend-kombináció generátor (pl. minimum lyukasóra / szabad nap optimalizálással). | **2027 vége – 2028 tavasz** |
 | **NHNK v3.0 Architektúra & Offline-First motor** | A maradék örökölt (legacy) kód teljes kiváltása tiszta Repository architektúrára, strukturált helyi adatbázisra és egységes, akadálymentes (WCAG AAA) komponenskönyvtárra. | **2028 (v3.0)** |
-| **Hivatalos iOS App Store kiadás** | Az iOS verzió már most is minden kiadásnál lefordul (`.ipa`), de az Apple évi 99 USD (~36 000 Ft) fejlesztői tagdíjat kér az App Store publikálásért. | **Amint összejön rá a $99 [támogatásokból](https://nhnk.bali0531.hu/tamogatas)** |
+| **Hivatalos iOS App Store kiadás** | Az iOS verzió már most is minden kiadásnál lefordul (`.ipa`), de az Apple évi 99 USD (~36 000 Ft) fejlesztői tagdíjat kér az App Store publikálásért. | **Amint összejön rá a $99 [támogatásokból](https://nhnk.hu/tamogatas)** |
 
 ## Hibabejelentés
 
@@ -158,8 +158,8 @@ Since then, over half of the codebase has been rewritten or newly built: full mo
 
 - **Google Play (recommended):** [**NHNK on Google Play**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatic updates via Play Store)*.
 - **GitHub Releases (Android sideload):** [**Latest release**](https://github.com/Bali0531-RC/NHNK/releases/latest). Most current phones need the `arm64-v8a` APK. Includes an in-app updater and works with [Obtainium](https://github.com/ImranR98/Obtainium).
-- **Try in browser (no install):** [**https://nhnk.bali0531.hu**](https://nhnk.bali0531.hu) — runs the real Flutter app compiled to Web in demo mode.
-- **iPhone (`.ipa`):** Each release attaches an `unsigned.ipa` that you can sign with your own Apple ID using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [Sideloadly](https://sideloadly.io/). If you'd like to help fund the $99/year Apple Developer account for an official App Store release, you can [**support the project here**](https://nhnk.bali0531.hu/tamogatas).
+- **Try in browser (no install):** [**https://nhnk.hu**](https://nhnk.hu) — runs the real Flutter app compiled to Web in demo mode.
+- **iPhone (`.ipa`):** Each release attaches an `unsigned.ipa` that you can sign with your own Apple ID using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [Sideloadly](https://sideloadly.io/). If you'd like to help fund the $99/year Apple Developer account for an official App Store release, you can [**support the project here**](https://nhnk.hu/tamogatas).
 
 ## Features
 
@@ -214,7 +214,7 @@ Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
 | **Live Updates / Live Activities & Watch Companion** | Lock-screen live countdown (Android Live Updates / iOS Dynamic Island) and smartwatch view showing your next room 15 minutes before class. | **Late 2027 (v2.3)** |
 | **Curriculum Graph & Clash-Free Schedule Planner** | Interactive prerequisite DAG map (with delay impact simulation), scholarship simulator, and automatic clash-free timetable generator (e.g. minimize gaps / free day optimization). | **Late 2027 – Spring 2028** |
 | **NHNK v3.0 Architecture & Offline-First Engine** | Complete replacement of remaining legacy code with a clean Repository architecture, structured local database, and unified WCAG AAA component library. | **2028 (v3.0)** |
-| **Official iOS App Store Release** | The iOS build is already compiled on every release (`.ipa`), but publishing to the App Store requires Apple's $99/year Developer Program fee. | **Once community [donations](https://nhnk.bali0531.hu/tamogatas) reach $99** |
+| **Official iOS App Store Release** | The iOS build is already compiled on every release (`.ipa`), but publishing to the App Store requires Apple's $99/year Developer Program fee. | **Once community [donations](https://nhnk.hu/tamogatas) reach $99** |
 
 ## Building & Testing
 
