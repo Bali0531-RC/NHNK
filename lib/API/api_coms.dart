@@ -2843,14 +2843,22 @@ class CashinEntry{
 
   CashinEntry(this.ammount, this.dueDateMs, this.comment, this.ID, String completedStatus){
     status = completedStatus;
-    if(completedStatus.toLowerCase() == 'teljesített' ||
-        completedStatus.toLowerCase() == 'törölt' ||
-        completedStatus.toLowerCase() == 'pénzügyileg igazolt'){
+    final s = completedStatus.toLowerCase().trim();
+    if(s == 'teljesített' ||
+        s == 'törölt' ||
+        s == 'pénzügyileg igazolt' ||
+        s == 'kifizetett' ||
+        s == 'kiutalva' ||
+        s == 'jóváhagyott'){
       completed = true;
     }
   }
 
-  bool get isCancelled => status.toLowerCase() == 'törölt';
+  /// University-to-student payouts (such as scholarships) arrive from the
+  /// modern transactions endpoint with `sign == '-'` (`ammount < 0`).
+  bool get isPayout => ammount < 0;
+
+  bool get isCancelled => status.toLowerCase().trim() == 'törölt';
 
   /// Neptun only ever answers in Hungarian, so the raw status is kept for the
   /// logic above and translated here purely for display.
@@ -2860,6 +2868,10 @@ class CashinEntry{
       case 'teljesített': return _demoText('teljesített', 'paid');
       case 'törölt': return _demoText('törölt', 'cancelled');
       case 'pénzügyileg igazolt': return _demoText('pénzügyileg igazolt', 'financially confirmed');
+      case 'kifizetett': return _demoText('kifizetett', 'paid out');
+      case 'kiutalva': return _demoText('kiutalva', 'transferred');
+      case 'jóváhagyott': return _demoText('jóváhagyott', 'approved');
+      case 'utalás alatt': return _demoText('utalás alatt', 'in transfer');
       default: return status;
     }
   }

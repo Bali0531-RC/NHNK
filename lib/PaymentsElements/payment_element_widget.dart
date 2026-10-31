@@ -13,17 +13,37 @@ class PaymentElementWidget extends StatelessWidget{
   final bool completed;
   final String status;
   final bool isCancelled;
+  final bool isPayout;
 
-  const PaymentElementWidget({super.key, required this.ammount, required this.dueDateMs, required this.name, required this.ID, required this.completed, this.status = '', this.isCancelled = false});
+  const PaymentElementWidget({
+    super.key,
+    required this.ammount,
+    required this.dueDateMs,
+    required this.name,
+    required this.ID,
+    required this.completed,
+    this.status = '',
+    this.isCancelled = false,
+    this.isPayout = false,
+  });
+
+  bool get _effectivePayout => isPayout || ammount < 0;
 
   /// Read out as one item. Without this the card is announced as a pile of
   /// fragments starting with the emoji, so "money bag" arrives before the amount.
   String _spokenValue(bool isMissed, bool isNonTimed, DateTime dueDate){
     final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final formattedMoney = AppStrings.getStringWithParams(
+      AppStrings.getLanguagePack().paymentPage_MoneyDisplay,
+      [_effectivePayout ? ammount.abs() : ammount],
+    );
     final bits = <String>[
-      AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_MoneyDisplay, [ammount]),
+      _effectivePayout ? '+$formattedMoney' : formattedMoney,
     ];
 
+    if(_effectivePayout){
+      bits.add(hu ? 'Kifizetés / Ösztöndíj' : 'Payout / Scholarship');
+    }
     if(status.isNotEmpty){
       bits.add(status);
     }
@@ -46,17 +66,29 @@ class PaymentElementWidget extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
     double fontScale = DataCache.getFontScale();
+    final hu = AppStrings.getCurrentLangCode() == 'hu';
+    final payout = _effectivePayout;
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final dueDate = DateTime.fromMillisecondsSinceEpoch(dueDateMs);
     final isNonTimed = dueDateMs <= 0;
-    final isMissed = dueDateMs < nowMs && !isNonTimed && !completed;
+    final isMissed = !payout && dueDateMs < nowMs && !isNonTimed && !completed;
 
 
     final cardColor = isCancelled ? AppColors.getTheme().textColor.withValues(alpha: 0.55) :
-    completed ? AppColors.getTheme().currentClassGreen :
+    (payout || completed) ? AppColors.getTheme().currentClassGreen :
     isMissed ? AppColors.getTheme().errorRed :
     Colors.amber.shade600;
+
+    final badgeText = payout
+        ? (status.isNotEmpty
+            ? '${hu ? 'Kifizetés / Ösztöndíj' : 'Payout / Scholarship'} · $status'
+            : (hu ? 'Kifizetés / Ösztöndíj' : 'Payout / Scholarship'))
+        : status;
+
+    final moneyText = payout
+        ? '+${AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_MoneyDisplay, [ammount.abs()])}'
+        : AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_MoneyDisplay, [ammount]);
 
     return Semantics(
       container: true,
@@ -86,7 +118,7 @@ class PaymentElementWidget extends StatelessWidget{
               fontSize: 15.0 * fontScale,
             ),
           ),
-          if(status.isNotEmpty) ...[
+          if(badgeText.isNotEmpty) ...[
             const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -95,7 +127,7 @@ class PaymentElementWidget extends StatelessWidget{
                 borderRadius: BorderRadius.circular(AppRadius.large),
               ),
               child: Text(
-                status,
+                badgeText,
                 style: TextStyle(
                   color: cardColor,
                   fontWeight: FontWeight.w700,
@@ -111,7 +143,7 @@ class PaymentElementWidget extends StatelessWidget{
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               EmojiRichText(
-                text: isCancelled ? '❌' : completed ? '✅' : isMissed ? '🙉' : '💰',
+                text: isCancelled ? '❌' : payout ? '🎓' : completed ? '✅' : isMissed ? '🙉' : '💰',
                 defaultStyle: TextStyle(
                   color: AppColors.getTheme().onPrimaryContainer,
                   fontWeight: FontWeight.w900,
@@ -126,7 +158,7 @@ class PaymentElementWidget extends StatelessWidget{
               Expanded(
                   flex: 2,
                   child: Text(
-                    AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_MoneyDisplay, [ammount]),
+                    moneyText,
                     style: TextStyle(
                       color: cardColor,
                       fontWeight: FontWeight.w900,
@@ -166,7 +198,7 @@ class PaymentElementWidget extends StatelessWidget{
             ],
           ),
           const SizedBox(height: 5),
-          !isNonTimed && !completed ? Text(
+          !payout && !isNonTimed && !completed ? Text(
             isMissed ? AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_PaymentMissedTime, [-(Duration(milliseconds: dueDateMs - nowMs).inDays + 1)]) : AppStrings.getStringWithParams(AppStrings.getLanguagePack().paymentPage_PaymentDeadlineTime, [Duration(milliseconds: dueDateMs - nowMs).inDays + 1]),
             style: TextStyle(
               color: isMissed ? AppColors.getTheme().errorRed.withValues(alpha: 0.8) : AppColors.getTheme().textColor.withValues(alpha: 0.5),

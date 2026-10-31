@@ -1257,7 +1257,14 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
     }
 
     bool isEmpty = true;
+    final payouts = <api.CashinEntry>[];
     for(var item in paymentsEntries){
+      if(item.isPayout){
+        if(!item.isCancelled){
+          payouts.add(item);
+        }
+        continue;
+      }
       if(item.completed){
         // "Törölt" counts as completed so it stops nagging, but a cancelled
         // transaction is not money the student ever spent.
@@ -1269,6 +1276,35 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
       if(item.dueDateMs > DateTime.now().millisecondsSinceEpoch || item.dueDateMs == 0){
         _paymentsNotificationList.add(item);
       }
+    }
+
+    if(payouts.isNotEmpty){
+      payouts.sort((a, b) => b.dueDateMs.compareTo(a.dueDateMs));
+      if(!isEmpty){
+        paymentsList.add(const SizedBox(height: 8));
+      }
+      paymentsList.add(
+        _getSeparatorLine(
+          AppStrings.getCurrentLangCode() == 'hu'
+              ? 'Kifizetések / Ösztöndíjak'
+              : 'Payouts / Scholarships',
+        ),
+      );
+      for(final item in payouts){
+        paymentsList.add(
+          PaymentElementWidget(
+            ammount: item.ammount,
+            dueDateMs: item.dueDateMs,
+            ID: item.ID,
+            name: item.comment,
+            completed: true,
+            status: item.statusLabel,
+            isCancelled: item.isCancelled,
+            isPayout: true,
+          ),
+        );
+      }
+      isEmpty = false;
     }
 
     if(_paymentsNotificationList.isNotEmpty){
@@ -2051,7 +2087,7 @@ class HomePageState extends State<HomePage> with TickerProviderStateMixin{
   bool get paymentsTabVisible{
     if(!storage.DataCache.isStateFunded()) return true;
     if(storage.DataCache.getAlwaysShowPayments()) return true;
-    return paymentsEntries.any((p) => !p.completed && !p.isCancelled);
+    return paymentsEntries.any((p) => !p.isPayout && !p.completed && !p.isCancelled);
   }
 
   bool _viewAvailable(int view) => view != 2 || paymentsTabVisible;
