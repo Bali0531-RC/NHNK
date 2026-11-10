@@ -115,19 +115,20 @@ class AppDrawer extends StatelessWidget {
                 });
               },
             ),
-            ListTile(
-              leading: Icon(Icons.favorite_rounded, color: Colors.pinkAccent),
-              title: Text(AppStrings.getLanguagePack().topmenu_buttons_SupportDev, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
-              onTap: () {
-                AppHaptics.lightImpact();
-                Navigator.pop(context);
-                if(AppPlatform.isMobile){
-                  launchUrl(Uri.parse('https://nhnk.hu/tamogatas')).whenComplete(() {
-                    Fluttertoast.showToast(msg: '❤️', toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
-                  });
-                }
-              },
-            ),
+            if (!AppPlatform.isIOS)
+              ListTile(
+                leading: Icon(Icons.favorite_rounded, color: Colors.pinkAccent),
+                title: Text(AppStrings.getLanguagePack().topmenu_buttons_SupportDev, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  AppHaptics.lightImpact();
+                  Navigator.pop(context);
+                  if(AppPlatform.isMobile){
+                    launchUrl(Uri.parse('https://nhnk.hu/tamogatas')).whenComplete(() {
+                      Fluttertoast.showToast(msg: '❤️', toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.SNACKBAR, backgroundColor: AppColors.getTheme().rootBackground, textColor: AppColors.getTheme().textColor);
+                    });
+                  }
+                },
+              ),
             ListTile(
               leading: Icon(Icons.bug_report_rounded, color: AppColors.getTheme().textColor),
               title: Text(AppStrings.getLanguagePack().topmenu_buttons_Bugreport, style: TextStyle(color: AppColors.getTheme().textColor, fontWeight: FontWeight.w600)),

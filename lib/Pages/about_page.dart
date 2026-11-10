@@ -134,7 +134,8 @@ class _AboutPageState extends State<AboutPage> {
           _linkTile(theme, Icons.article_outlined, _t('Felhasználási feltételek', 'Terms of service'), () => _open(termsUrl)),
           _linkTile(theme, Icons.code_rounded, _t('Forráskód (GitHub)', 'Source code (GitHub)'), () => _open(repoUrl)),
           _linkTile(theme, Icons.bug_report_outlined, _t('Hibabejelentés', 'Report a bug'), () => _open('$repoUrl/issues/new/choose')),
-          _linkTile(theme, Icons.favorite_rounded, _t('Támogatás', 'Donate'), () => _open(donateUrl), tint: Colors.pinkAccent),
+          if (!AppPlatform.isIOS)
+            _linkTile(theme, Icons.favorite_rounded, _t('Támogatás', 'Donate'), () => _open(donateUrl), tint: Colors.pinkAccent),
           const SizedBox(height: 24),
           Center(
             child: Text(
