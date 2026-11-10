@@ -53,7 +53,7 @@ jobs:
           IOS_DIST_CERT_BASE64: ${{ secrets.IOS_DIST_CERT_BASE64 }}
           IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
         run: |
-          if [ -n "$IOS_TEAM_ID" ] && [ -n "$IOS_DIST_CERT_BASE64" ] && [ -n "$IOS_PROVISION_PROFILE_BASE64" ]; then
+          if [ -n "$IOS_TEAM_ID" ] && [ "$IOS_TEAM_ID" != "TODO" ] && [ -n "$IOS_DIST_CERT_BASE64" ] && [ "$IOS_DIST_CERT_BASE64" != "TODO" ] && [ -n "$IOS_PROVISION_PROFILE_BASE64" ] && [ "$IOS_PROVISION_PROFILE_BASE64" != "TODO" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
@@ -126,7 +126,7 @@ jobs:
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
         run: |
-          if [ -z "$APPSTORE_API_KEY_ID" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ -z "$APPSTORE_API_PRIVATE_KEY" ]; then
+          if [ -z "$APPSTORE_API_KEY_ID" ] || [ "$APPSTORE_API_KEY_ID" = "TODO" ] || [ -z "$APPSTORE_ISSUER_ID" ] || [ "$APPSTORE_ISSUER_ID" = "TODO" ] || [ -z "$APPSTORE_API_PRIVATE_KEY" ] || [ "$APPSTORE_API_PRIVATE_KEY" = "TODO" ]; then
             echo "::notice::App Store Connect API key secrets are not set; skipping TestFlight upload."
             exit 0
           fi
