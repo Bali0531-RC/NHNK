@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "NHNK",
+    "slug": "nhnk-ios",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nhnk",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "hu.bmx.nhnk",
+      "supportsTablet": false,
+      "infoPlist": {
+        "CFBundleDisplayName": "NHNK",
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleLocalizations": [
+          "hu",
+          "en"
+        ]
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/images/nhnk-logo.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "32a26541-e8d4-4bf7-9d26-f26a8ea313e1"
+      }
+    },
+    "owner": "bmx"
+  }
+}
