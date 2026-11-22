@@ -148,10 +148,21 @@ function shortPath(path: string): string {
   return q === -1 ? path : path.slice(0, q);
 }
 
-// neptun loves hiding a 401 inside a 200. 403 just means no access to that endpoint
+// neptun hides 401s inside 200s. only the top level counts, so a message quoting it cant log anyone out
 function isAuthFailure(status: number, text: string): boolean {
   if (status === 401) return true;
-  return /"statusCode"\s*:\s*(401|410)/.test(text) || text.includes('Authorization has been denied');
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return false;
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
+  const top = body as Record<string, unknown>;
+  const code = Number(top.statusCode ?? top.StatusCode);
+  if (code === 401 || code === 410) return true;
+  const msg = top.Message ?? top.message;
+  return typeof msg === 'string' && msg.startsWith('Authorization has been denied');
 }
 
 async function send(method: 'GET' | 'POST' | 'DELETE', path: string, body?: unknown): Promise<{ status: number; text: string }> {
