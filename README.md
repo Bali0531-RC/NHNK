@@ -1,10 +1,11 @@
 # NHNK
 
-**Nem Hivatalos Neptun Kliens** / Unofficial Neptun Client. Flutter alkalmazás magyar egyetemistáknak, akiknek muszáj Neptunt használniuk, de nem akarnak szenvedni vele.
+**Nem Hivatalos Neptun Kliens** / Unofficial Neptun Client. Modern mobilalkalmazás magyar egyetemistáknak, akiknek muszáj Neptunt használniuk, de nem akarnak szenvedni vele — **Androidra** (Flutter) és **iOS-re** (natív Expo / React Native).
 
 [![Letöltések](https://img.shields.io/github/downloads/Bali0531-RC/NHNK/total?style=for-the-badge&color=blue)](https://github.com/Bali0531-RC/NHNK/releases)
 [![Legújabb kiadás](https://img.shields.io/github/v/release/Bali0531-RC/NHNK?style=for-the-badge&color=green)](https://github.com/Bali0531-RC/NHNK/releases/latest)
 [![Google Play](https://img.shields.io/badge/Google_Play-Elérhető-34A853?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app)
+[![App Store](https://img.shields.io/badge/App_Store-Előrendelhető_(Nov_30)-0D96F6?style=for-the-badge&logo=app-store&logoColor=white)](https://apps.apple.com/us/app/nhnk-uni-schedule-grades/id6835257595)
 
 Weboldal (élő böngészős demóval): **https://nhnk.hu**
 
@@ -38,12 +39,14 @@ Azóta a kódbázis több mint fele már saját fejlesztés: teljesen új 2.0-s 
 
 **Google Play.** A Play Áruház tiltja az önmagukat frissítő APK-kat, viszont a GitHubról (sideload) telepítőknek pont erre van szükségük — ezért két külön build flavor (`playstore` és `github`) készül. A Play emellett visszadobja az olyan jogosultságokat is, amiket egy-egy külső függőség húz be a háttérben, úgyhogy a manifestből ezeket kifejezetten ki kellett gyomlálni, a CI pedig minden kiadásnál ellenőrzi az aláírást és az engedélyeket.
 
-## Letöltés
+## Letöltés és Platformok
 
-- **Google Play Áruház (ajánlott):** [**NHNK Kliens Neptunhoz a Google Play-en**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatikus áruházi frissítésekkel)*.
-- **GitHub Releases (Android APK sideload):** [**Legújabb kiadás letöltése**](https://github.com/Bali0531-RC/NHNK/releases/latest). A legtöbb mai telefonra az `arm64-v8a` APK kell. Beépített frissítéskezelőt tartalmaz, vagy bekötheted [Obtainium](https://github.com/ImranR98/Obtainium)-ba is.
-- **Webes kipróbálás (telepítés nélkül):** [**https://nhnk.hu**](https://nhnk.hu) — a nyitóoldalon lévő telefonban maga a valódi Flutter app fut demó módban.
-- **iPhone (`.ipa`):** Minden kiadásnál ott az `unsigned.ipa`. Fizetős Apple Developer fiók híján ($99/év) egyelőre [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/) vagy [Sideloadly](https://sideloadly.io/) segítségével tudod aláírni a saját Apple ID-ddal — ha szeretnéd, hogy felkerüljön a hivatalos App Store-ba is, [**itt tudod támogatni a fejlesztést**](https://nhnk.hu/tamogatas).
+A projekt két dedikált, egymással azonos Neptun API-t és biztonsági modellt használó kliensből áll:
+
+- **Android — Google Play Áruház (ajánlott):** [**NHNK Kliens Neptunhoz a Google Play-en**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatikus áruházi frissítésekkel; fejlesztő és kiadó: **Turi Balázs – `Bali0531`**)*.
+- **Android — GitHub Releases (APK sideload):** [**Legújabb kiadás letöltése**](https://github.com/Bali0531-RC/NHNK/releases/latest). A legtöbb mai telefonra az `arm64-v8a` APK kell. Beépített frissítéskezelőt tartalmaz, vagy bekötheted [Obtainium](https://github.com/ImranR98/Obtainium)-ba is.
+- **iOS (iPhone) — Apple App Store:** [**NHNK – Uni Schedule & Grades az App Store-ban**](https://apps.apple.com/us/app/nhnk-uni-schedule-grades/id6835257595). Natív iOS alkalmazás (`ios-app/`, Expo / React Native, SF Symbols, iOS Keychain; fejlesztő és App Store kiadó: **Béres Marcell – `mp_bmx`**). **Kizárólag a hivatalos Apple App Store-ból tölthető le** *(v1.0.0 megjelenés: **2026. november 30.** — az áruházi adatlap már él és előrendelhető; GitHubon aláíratlan `.ipa` nem készül).*
+- **Webes kipróbálás (telepítés nélkül):** [**https://nhnk.hu**](https://nhnk.hu) — a nyitóoldalon lévő interaktív demóban közvetlenül a böngészőben próbálhatod ki az alkalmazást.
 
 ## Funkciók
 
@@ -98,16 +101,17 @@ Részletes kiadási jegyzetek minden verzióhoz: **https://github.com/Bali0531-R
 | **Live Updates / Live Activities & Okosóra nézet** | Óra előtt 15 perccel élő visszaszámláló a lezárt képernyőn (Android Live Updates / iOS Dynamic Island) és okosórán a következő órád termével. | **2027 ősz – tél (v2.3)** |
 | **Mintatanterv-gráf & Ütközésmentes órarend-tervező** | Interaktív előkövetelmény-térkép (csúszásszimulációval), féléves ösztöndíj-szimulátor és automatikus órarend-kombináció generátor (pl. minimum lyukasóra / szabad nap optimalizálással). | **2027 vége – 2028 tavasz** |
 | **NHNK v3.0 Architektúra & Offline-First motor** | A maradék örökölt (legacy) kód teljes kiváltása tiszta Repository architektúrára, strukturált helyi adatbázisra és egységes, akadálymentes (WCAG AAA) komponenskönyvtárra. | **2028 (v3.0)** |
-| **Hivatalos iOS App Store kiadás** | Az iOS verzió már most is minden kiadásnál lefordul (`.ipa`), de az Apple évi 99 USD (~36 000 Ft) fejlesztői tagdíjat kér az App Store publikálásért. | **Amint összejön rá a $99 [támogatásokból](https://nhnk.hu/tamogatas)** |
+| **Hivatalos iOS App Store kiadás (`ios-app/`)** | Dedikált natív iOS kliens (Expo / React Native, SF Symbols, iOS Keychain), fejlesztő és App Store kiadó: **Béres Marcell (`mp_bmx`)**. | **[Előrendelhető az App Store-ban](https://apps.apple.com/us/app/nhnk-uni-schedule-grades/id6835257595) — Megjelenés: 2026. nov. 30. (v1.0.0)** |
 
 ## Hibabejelentés
 
 **https://github.com/Bali0531-RC/NHNK/issues/new/choose**
-Kérlek, írd bele a telefon típusát, az Android verziót és az app verzióját.
+Kérlek, jelöld meg a platformot (**Android** vagy **iOS**), a készülék típusát, az operációs rendszer verzióját és az app verzióját.
 
 ## Fordítás és Fejlesztés
 
-Két build flavor van a Google Play szabályai miatt:
+### Android & Web (`lib/`, `android/`, `web/` — Flutter)
+Két Android build flavor van a Google Play szabályai miatt:
 
 | Flavor | Terjesztés | Beépített frissítő | `REQUEST_INSTALL_PACKAGES` |
 | --- | --- | --- | --- |
@@ -126,14 +130,26 @@ flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBU
 
 Tesztek futtatása: `flutter test`
 
+### iOS (`ios-app/` — Expo / React Native)
+Az iOS alkalmazás forráskódja az `ios-app/` mappában található, és kizárólag a hivatalos Apple App Store-on keresztül kerül terjesztésre:
+
+```sh
+cd ios-app
+npm ci
+npx tsc --noEmit
+npx expo start --ios
+```
+
 ### Intézmények hozzáadása
 
-Az intézménylistát a `universityNameUrlPairs.json` tartalmazza, és az app **futásidőben** tölti le a `main` ágról. Régi bejegyzést átnevezni vagy törölni nem szabad, csak bővíteni. Több szerveres egyetemnél a tartalék kiszolgálók a `Fallbacks` tömbbe vehetők fel.
+Az intézménylistát a `universityNameUrlPairs.json` tartalmazza, és mind az Android, mind az iOS alkalmazás **futásidőben** tölti le a `main` ágról. Régi bejegyzést átnevezni vagy törölni nem szabad, csak bővíteni. Több szerveres egyetemnél a tartalék kiszolgálók a `Fallbacks` tömbbe vehetők fel.
 
-## Származás és Licenc
+## Készítők, Származás és Licenc
 
-A projekt a [Neptun 2](https://github.com/domedav/Neptun-2) (domedav) forkja, a [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (zoligamer) forkon keresztül.
-**MIT licenc** — lásd a [LICENSE](LICENSE) fájlt.
+- **Turi Balázs (`Bali0531`)** — NHNK vezető fejlesztő, Android & Web kliens, Google Play & GitHub kiadó
+- **Béres Marcell (`mp_bmx`)** — NHNK natív iOS kliens (`ios-app/`) fejlesztő és Apple App Store kiadó
+- A projekt a [Neptun 2](https://github.com/domedav/Neptun-2) (**Dömötör Dávid – `domedav`**) forkja, a [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) (**Kurucz Zoltán – `zoligamer`**) forkon keresztül.
+- **MIT licenc** — lásd a [LICENSE](LICENSE) fájlt.
 
 </details>
 
@@ -154,12 +170,14 @@ When I pulled the repository, several core parts were broken:
 
 Since then, over half of the codebase has been rewritten or newly built: full modern Neptun REST API mapping (`API-DOCS/`), default biometric / PIN lock, 2FA with hardware-backed TOTP secret storage, background grade and message alerts, offline resilience, multi-server failover, an Android home screen widget, subject detail pages with PDF syllabus downloads, a true `#000000` OLED theme, an automated test suite (`test/`), and Google Play production builds.
 
-## Download
+## Download & Platforms
 
-- **Google Play (recommended):** [**NHNK on Google Play**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatic updates via Play Store)*.
-- **GitHub Releases (Android sideload):** [**Latest release**](https://github.com/Bali0531-RC/NHNK/releases/latest). Most current phones need the `arm64-v8a` APK. Includes an in-app updater and works with [Obtainium](https://github.com/ImranR98/Obtainium).
-- **Try in browser (no install):** [**https://nhnk.hu**](https://nhnk.hu) — runs the real Flutter app compiled to Web in demo mode.
-- **iPhone (`.ipa`):** Each release attaches an `unsigned.ipa` that you can sign with your own Apple ID using [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [Sideloadly](https://sideloadly.io/). If you'd like to help fund the $99/year Apple Developer account for an official App Store release, you can [**support the project here**](https://nhnk.hu/tamogatas).
+NHNK consists of two dedicated native clients sharing the same Neptun API layer and zero-server security model:
+
+- **Android — Google Play (recommended):** [**NHNK on Google Play**](https://play.google.com/store/apps/details?id=hu.bali0531.nhnk.app) *(automatic updates via Play Store; developed and published by **Balázs Turi – `Bali0531`**)*.
+- **Android — GitHub Releases (sideload):** [**Latest release**](https://github.com/Bali0531-RC/NHNK/releases/latest). Most current phones need the `arm64-v8a` APK. Includes an in-app updater and works with [Obtainium](https://github.com/ImranR98/Obtainium).
+- **iOS (iPhone) — Apple App Store:** [**NHNK – Uni Schedule & Grades on the App Store**](https://apps.apple.com/us/app/nhnk-uni-schedule-grades/id6835257595). Native iOS application (`ios-app/`, Expo / React Native, SF Symbols, iOS Keychain; developed and published on the App Store by **Marcell Béres – `mp_bmx`**). **Distributed exclusively through the official Apple App Store** *(v1.0.0 release date: **November 30, 2026** — storefront live now for pre-order; unsigned `.ipa` builds are no longer distributed on GitHub).*
+- **Try in browser (no install):** [**https://nhnk.hu**](https://nhnk.hu) — runs the interactive demo directly in your browser.
 
 ## Features
 
@@ -214,10 +232,11 @@ Full release notes: **https://github.com/Bali0531-RC/NHNK/releases**
 | **Live Updates / Live Activities & Watch Companion** | Lock-screen live countdown (Android Live Updates / iOS Dynamic Island) and smartwatch view showing your next room 15 minutes before class. | **Late 2027 (v2.3)** |
 | **Curriculum Graph & Clash-Free Schedule Planner** | Interactive prerequisite DAG map (with delay impact simulation), scholarship simulator, and automatic clash-free timetable generator (e.g. minimize gaps / free day optimization). | **Late 2027 – Spring 2028** |
 | **NHNK v3.0 Architecture & Offline-First Engine** | Complete replacement of remaining legacy code with a clean Repository architecture, structured local database, and unified WCAG AAA component library. | **2028 (v3.0)** |
-| **Official iOS App Store Release** | The iOS build is already compiled on every release (`.ipa`), but publishing to the App Store requires Apple's $99/year Developer Program fee. | **Once community [donations](https://nhnk.hu/tamogatas) reach $99** |
+| **Official iOS App Store Release (`ios-app/`)** | Dedicated native iOS client (Expo / React Native, SF Symbols, iOS Keychain) developed and published on the App Store by **Marcell Béres (`mp_bmx`)**. | **[Pre-order on the App Store](https://apps.apple.com/us/app/nhnk-uni-schedule-grades/id6835257595) — Releases Nov 30, 2026 (v1.0.0)** |
 
 ## Building & Testing
 
+### Android & Web (`lib/`, `android/`, `web/` — Flutter)
 ```sh
 flutter pub get
 
@@ -231,9 +250,20 @@ flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBU
 flutter test
 ```
 
+### iOS (`ios-app/` — Expo / React Native)
+The iOS client lives under `ios-app/` and is distributed exclusively via the Apple App Store:
+```sh
+cd ios-app
+npm ci
+npx tsc --noEmit
+npx expo start --ios
+```
+
 ## Credits & License
 
-Forked from [Neptun 2](https://github.com/domedav/Neptun-2) by domedav, via [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) by zoligamer.
-Released under the **MIT License** — see [LICENSE](LICENSE).
+- **Balázs Turi (`Bali0531`)** — Lead developer, Android & Web client, Google Play & GitHub publisher
+- **Marcell Béres (`mp_bmx`)** — Native iOS client (`ios-app/`) developer & Apple App Store publisher
+- Forked from [Neptun 2](https://github.com/domedav/Neptun-2) by **Dávid Dömötör (`domedav`)**, via [Neptun Mobile](https://github.com/zoligamer/Neptun-Mobile-fork) by **Zoltán Kurucz (`zoligamer`)**.
+- Released under the **MIT License** — see [LICENSE](LICENSE).
 
 </details>

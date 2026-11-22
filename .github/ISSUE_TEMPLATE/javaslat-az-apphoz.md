@@ -1,11 +1,15 @@
 ---
-name: Javaslat az apphoz
-about: Ha van ötleted hogyan lehetne jobb az app, ide írd le
-title: "[IDEA]"
+name: Javaslat az apphoz / Feature Request
+about: Ha van ötleted, hogyan lehetne jobb az app (Android / iOS), írd le itt
+title: "[IDEA] "
 labels: enhancement
 assignees: Bali0531-RC
-
 ---
 
-**Írd le az ötletedet pontosan és alaposan, minél bővebb annál jobb!**
-Hiányolom hogy ez meg ez nincs az appban, mert itt meg itt milyen jól jönne stb [...]
+### Érintett platform / Target Platform
+- [ ] Android
+- [ ] iOS
+- [ ] Mindkettő / Both
+
+### Írd le az ötletedet pontosan és alaposan! / Describe your idea
+Milyen funkciót vagy fejlesztést látnál szívesen az alkalmazásban, és milyen helyzetben segítene?

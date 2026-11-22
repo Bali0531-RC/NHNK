@@ -40,26 +40,39 @@ Az intézmények listáját a gyökérkönyvtárban található **`universityNam
 
 ---
 
-## 3. Fejlesztői környezet és Build Flavorök
+## 3. Projektfelépítés, Fejlesztői környezet és Build Flavorök
 
-### Előfeltételek
+A repository két natív platformklienst tartalmaz:
+- **Android és Webes demó (`lib/`, `android/`, `web/`):** Flutter / Dart alapú kliens (vezető fejlesztő és Google Play / GitHub kiadó: **Turi Balázs – `Bali0531`**).
+- **iOS (`ios-app/`):** Natív Expo / React Native (TypeScript) kliens (iOS fejlesztő és Apple App Store kiadó: **Béres Marcell – `mp_bmx`**).
+
+### 3.1 Android & Web (Flutter)
 - **Flutter SDK:** `3.47.x` vagy újabb stabil verzió (Dart `>=3.5.0 <4.0.0`)
 - **Java / JDK:** Java 21 (Temurin ajánlott az Android Gradle buildhez)
 
-### Függőségek telepítése és tesztelés
 ```sh
 flutter pub get
 flutter analyze
 flutter test
 ```
 
-### Build Flavorök (`github` vs `playstore`)
 A Google Play Áruház szabályzata tiltja az önfrissítő (`REQUEST_INSTALL_PACKAGES`) csomagokat, ezért két külön build flavor létezik:
 
 | Flavor | Parancs | Leírás |
 | --- | --- | --- |
 | `github` | `flutter build apk --debug --no-shrink --flavor github --dart-define=NHNK_DISTRIBUTION=github` | Tartalmazza a GitHubos beépített frissítőt (`lib/Misc/auto_updater.dart`). |
 | `playstore` | `flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore` | Google Play kompatibilis `.aab`, eltávolított sideload jogosultsággal. |
+
+### 3.2 iOS (`ios-app/` — Expo / React Native)
+- **Node.js:** `20+` / `npm`
+- **Xcode:** macOS környezet iOS Simulator vagy készülékes futtatáshoz
+
+```sh
+cd ios-app
+npm ci
+npx tsc --noEmit
+npx expo start --ios
+```
 
 ---
 
@@ -117,26 +130,39 @@ Institution URLs live in **`universityNameUrlPairs.json`** at the repository roo
 
 ---
 
-## 3. Development Setup & Build Flavors
+## 3. Repository Layout, Development Setup & Build Flavors
 
-### Prerequisites
+The repository contains two platform clients sharing the Neptun API specification and `universityNameUrlPairs.json`:
+- **Android & Web Demo (`lib/`, `android/`, `web/`):** Flutter / Dart client (maintained and published on Google Play & GitHub by **Balázs Turi – `Bali0531`**).
+- **iOS (`ios-app/`):** Native Expo / React Native (TypeScript) client (developed and published on the Apple App Store by **Marcell Béres – `mp_bmx`**).
+
+### 3.1 Android & Web (Flutter)
 - **Flutter SDK:** `3.47.x` or newer stable (Dart `>=3.5.0 <4.0.0`)
 - **Java / JDK:** Java 21 (Temurin recommended for Android Gradle builds)
 
-### Install dependencies & run tests
 ```sh
 flutter pub get
 flutter analyze
 flutter test
 ```
 
-### Build Flavors (`github` vs `playstore`)
-Google Play policy forbids self-updating APKs (`REQUEST_INSTALL_PACKAGES`), so the project uses two flavors:
+Google Play policy forbids self-updating APKs (`REQUEST_INSTALL_PACKAGES`), so the Android project uses two flavors:
 
 | Flavor | Command | Description |
 | --- | --- | --- |
 | `github` | `flutter build apk --debug --no-shrink --flavor github --dart-define=NHNK_DISTRIBUTION=github` | Includes the GitHub in-app updater (`lib/Misc/auto_updater.dart`). |
 | `playstore` | `flutter build appbundle --release --flavor playstore --dart-define=NHNK_DISTRIBUTION=playstore` | Google Play compliant `.aab` with sideload permissions stripped. |
+
+### 3.2 iOS (`ios-app/` — Expo / React Native)
+- **Node.js:** `20+` / `npm`
+- **Xcode:** macOS environment for iOS Simulator or device builds
+
+```sh
+cd ios-app
+npm ci
+npx tsc --noEmit
+npx expo start --ios
+```
 
 ---
 

@@ -5,13 +5,13 @@
 
 ## Támogatott verziók
 
-Kizárólag a legfrissebb kiadási ág (`2.0.x`) kap biztonsági frissítéseket. Kérjük, mindig frissíts a legújabb verzióra (Google Play-en vagy GitHub Releases-en keresztül).
+Kizárólag a legfrissebb kiadási ágak kapnak biztonsági frissítéseket. Kérjük, mindig frissíts a legújabb verzióra (Google Play-en, GitHub Releases-en vagy az Apple App Store-on keresztül).
 
-| Verzió | Támogatott | Megjegyzés |
-| --- | --- | --- |
-| `2.0.10+` | Igen | `RSA-OAEP` + `AES-GCM` tárolás, biometrikus zár, automatikus KeyStore önteszt |
-| `2.0.0 – 2.0.9` | Frissítés javasolt | Frissíts `2.0.10` vagy újabb verzióra |
-| `< 2.0.0` | Nem | Elavult; nem kap javításokat |
+| Platform | Verzió | Támogatott | Megjegyzés |
+| --- | --- | --- | --- |
+| **Android** (`lib/`, `android/`) | `2.0.10+` | Igen | `RSA-OAEP` + `AES-GCM` tárolás (`AndroidKeyStore`), biometrikus zár, automatikus KeyStore önteszt |
+| **iOS** (`ios-app/`) | `1.0.0+` | Igen | Hardveres iOS Keychain (`expo-secure-store`), Face ID / Touch ID alkalmazászár (App Store megjelenés: 2026. nov. 30.) |
+| **Android** | `< 2.0.10` | Nem | Elavult; frissíts a legújabb `2.0.x` verzióra |
 
 ## Biztonsági architektúra
 
@@ -49,13 +49,13 @@ Ha biztonsági hibát vagy sérülékenységet találsz az alkalmazásban vagy a
 
 ## Supported Versions
 
-Only the latest release branch (`2.0.x`) receives security updates. Please keep your installation up to date via Google Play or GitHub Releases.
+Only the latest release branches receive security updates. Please keep your installation up to date via Google Play, GitHub Releases, or the Apple App Store.
 
-| Version | Supported | Notes |
-| --- | --- | --- |
-| `2.0.10+` | Yes | `RSA-OAEP` + `AES-GCM` storage, default biometric lock, startup KeyStore self-test |
-| `2.0.0 – 2.0.9` | Upgrade advised | Please update to `2.0.10` or newer |
-| `< 2.0.0` | No | End of life |
+| Platform | Version | Supported | Notes |
+| --- | --- | --- | --- |
+| **Android** (`lib/`, `android/`) | `2.0.10+` | Yes | `RSA-OAEP` + `AES-GCM` storage (`AndroidKeyStore`), default biometric lock, startup KeyStore self-test |
+| **iOS** (`ios-app/`) | `1.0.0+` | Yes | Hardware-backed iOS Keychain (`expo-secure-store`), Face ID / Touch ID app lock (App Store launch: Nov 30, 2026) |
+| **Android** | `< 2.0.10` | No | End of life; please upgrade to the latest `2.0.x` release |
 
 ## Security Architecture
 

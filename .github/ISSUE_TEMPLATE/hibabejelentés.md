@@ -1,23 +1,26 @@
 ---
-name: Hibabejelentés
-about: Írd le mi a probléma
-title: "[BUG]"
+name: Hibabejelentés / Bug Report
+about: Írd le a tapasztalt hibát (Android vagy iOS)
+title: "[BUG] "
 labels: bug
 assignees: Bali0531-RC
-
 ---
 
-**Milyen problémát tapasztalsz?**
-Egy pontos leírás a problémáról.
+### Platform és környezet / Platform & Environment
+- **Platform:** [ ] Android (Google Play / GitHub APK)  |  [ ] iOS (Apple App Store)  |  [ ] Webes demó (`nhnk.hu`)
+- **Készülék típusa és OS verzió:** *(pl. Honor Magic6 Pro – Android 15 / iPhone 15 – iOS 18)*
+- **Alkalmazás verziója:** *(pl. Android `v2.0.11` / iOS `v1.0.0`)*
+- **Intézmény (opcionális):** *(pl. PTE / BGE / ELTE)*
 
-**Mit csináltál a probléma előhívásához?**
-Részletes leírás hogyan lehet replikálni a problémát
-1.  Csináld ezt '...'
-2. Majd ezt'....'
-3. Stb '....'
-4. Probléma itt ilyen módon jelentkezett
+### Milyen problémát tapasztalsz? / Describe the bug
+Írd le pontosan a tapasztalt hibát.
 
-**Képernyőképek**
-Ha lehet, küldj képernyőképeket a probléma kapcsán
+### Lépések az előidézéshez / Steps to reproduce
+1. Nyisd meg a '...' oldalt
+2. Koppints a '...' gombra
+3. A hiba itt jelentkezik: '...'
 
-**Ha nem a legfrissebb applikáció verzióval jelentkezett a probléma, figyelmen kívül lesz hagyva!**
+### Képernyőképek / Screenshots
+Ha lehetséges, csatolj képernyőképet *(figyelj rá, hogy valódi Neptun-kód, jelszó vagy személyes adat ne látszódjon rajta!)*.
+
+> **Fontos:** Kérjük, bejelentés előtt ellenőrizd, hogy a legfrissebb alkalmazásverziót használod-e!
