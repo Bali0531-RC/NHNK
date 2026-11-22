@@ -1,10 +1,8 @@
-// Low-level HTTP helpers shared by the Neptun client. Kept dependency-free so it runs
-// unchanged in Expo Go.
+// low level http helpers, no deps
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-// Neptun codes are ASCII, so a byte-for-byte base64 is enough and avoids depending on a
-// global btoa that is not guaranteed on every engine.
+// neptun codes are ascii, no btoa drama
 export function base64Ascii(input: string): string {
   let out = '';
   for (let i = 0; i < input.length; i += 3) {
@@ -28,7 +26,8 @@ export async function fetchWithTimeout(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    // ios cookie jar keeps swapping our session cookie behind our back. we handle cookies, not it
+    return await fetch(url, { credentials: 'omit', ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -36,9 +35,7 @@ export async function fetchWithTimeout(
 
 export type SetCookies = { deviceCookie: string | null; sessionCookie: string | null; refreshToken: string | null };
 
-// iOS NSURLSession usually hides Set-Cookie from fetch, so every field here is allowed to
-// come back null. When it does, the native cookie store still replays the cookies to the
-// same host, so the refresh path can survive without us ever seeing the values.
+// ios hides set-cookie half the time so everything here can be null
 export function parseSetCookie(header: string | null): SetCookies {
   const empty: SetCookies = { deviceCookie: null, sessionCookie: null, refreshToken: null };
   if (!header) return empty;

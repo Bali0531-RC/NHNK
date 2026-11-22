@@ -3,8 +3,7 @@ import { useCallback } from 'react';
 
 import { usePreferences } from '@/providers/preferences';
 
-// Thin wrapper so every call site respects the user's haptics toggle and only fires on iOS.
-// Android's generic vibration feels nothing like these, so it is left out on purpose.
+// respects the haptics toggle, ios only. android vibration sucks
 export function useHaptics() {
   const { haptics } = usePreferences();
   const enabled = haptics && process.env.EXPO_OS === 'ios';

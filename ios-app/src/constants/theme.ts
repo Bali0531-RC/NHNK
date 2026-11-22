@@ -1,64 +1,123 @@
-import { Platform } from 'react-native';
+// native = ios system colours (default), android = the old teal nhnk palette
+export type ThemeStyle = 'native' | 'android';
 
-// iOS grouped-list feel: a slightly recessed page background with cards sitting on top.
-// Light/dark values track Apple's system palette so the app looks native in both.
-export const Colors = {
+const native = {
   light: {
     text: '#000000',
-    textSecondary: '#6C6C70',
-    textTertiary: '#8E8E93',
+    textSecondary: 'rgba(60,60,67,0.6)',
+    textTertiary: 'rgba(60,60,67,0.3)',
     background: '#F2F2F7',
     card: '#FFFFFF',
+    cardBorder: 'transparent',
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#E5E5EA',
+    fill: 'rgba(120,120,128,0.12)',
     separator: 'rgba(60,60,67,0.18)',
-    brand: '#2563EB',
-    brandSubtle: 'rgba(37,99,235,0.12)',
+    brand: '#007AFF',
+    brandText: '#007AFF',
+    brandSubtle: 'rgba(0,122,255,0.12)',
     brandOn: '#FFFFFF',
-    success: '#2E9E5B',
-    warning: '#C8700A',
-    danger: '#D6322E',
+    success: '#34C759',
+    live: '#34C759',
+    liveSubtle: 'rgba(52,199,89,0.14)',
+    warning: '#FF9500',
+    warningSubtle: 'rgba(255,149,0,0.14)',
+    danger: '#FF3B30',
+    dangerSubtle: 'rgba(255,59,48,0.1)',
+    purple: '#AF52DE',
+    grade: ['#8E8E93', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE'],
+    tabBar: undefined as string | undefined,
   },
   dark: {
     text: '#FFFFFF',
-    textSecondary: '#AEAEB2',
-    textTertiary: '#8E8E93',
+    textSecondary: 'rgba(235,235,245,0.6)',
+    textTertiary: 'rgba(235,235,245,0.3)',
     background: '#000000',
     card: '#1C1C1E',
+    cardBorder: 'transparent',
     backgroundElement: '#1C1C1E',
     backgroundSelected: '#2C2C2E',
-    separator: 'rgba(84,84,88,0.55)',
-    brand: '#5B9DFF',
-    brandSubtle: 'rgba(91,157,255,0.18)',
+    fill: 'rgba(120,120,128,0.24)',
+    separator: 'rgba(84,84,88,0.6)',
+    brand: '#0A84FF',
+    brandText: '#0A84FF',
+    brandSubtle: 'rgba(10,132,255,0.18)',
     brandOn: '#FFFFFF',
-    success: '#34C759',
+    success: '#30D158',
+    live: '#30D158',
+    liveSubtle: 'rgba(48,209,88,0.16)',
     warning: '#FF9F0A',
+    warningSubtle: 'rgba(255,159,10,0.16)',
     danger: '#FF453A',
+    dangerSubtle: 'rgba(255,69,58,0.14)',
+    purple: '#BF5AF2',
+    grade: ['#8E8E93', '#FF453A', '#FF9F0A', '#FFD60A', '#30D158', '#63E6E2'],
+    tabBar: undefined as string | undefined,
   },
-} as const;
+};
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+const android = {
+  light: {
+    text: '#000000',
+    textSecondary: 'rgba(0,0,0,0.66)',
+    textTertiary: 'rgba(0,0,0,0.5)',
+    background: '#E2E2E2',
+    card: '#F0F0F0',
+    cardBorder: 'rgba(0,0,0,0.08)',
+    backgroundElement: '#F0F0F0',
+    backgroundSelected: '#D3DDDD',
+    fill: 'rgba(0,0,0,0.06)',
+    separator: 'rgba(0,0,0,0.12)',
+    brand: '#6C8F96',
+    brandText: '#446B74',
+    brandSubtle: '#C9DADC',
+    brandOn: '#FFFFFF',
+    success: '#357226',
+    live: '#357226',
+    liveSubtle: 'rgba(53,114,38,0.12)',
+    warning: '#B7791F',
+    warningSubtle: 'rgba(183,121,31,0.14)',
+    danger: '#CD0000',
+    dangerSubtle: 'rgba(205,0,0,0.08)',
+    purple: '#7E57C2',
+    grade: ['#8E8E93', '#BD2E2E', '#955151', '#6B6639', '#596A46', '#4C6C4D'],
+    tabBar: '#F0F0F0' as string | undefined,
+  },
+  dark: {
+    text: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.72)',
+    textTertiary: 'rgba(255,255,255,0.5)',
+    background: '#222222',
+    card: '#2B2B2B',
+    cardBorder: 'rgba(255,255,255,0.09)',
+    backgroundElement: '#2B2B2B',
+    backgroundSelected: '#314242',
+    fill: 'rgba(255,255,255,0.08)',
+    separator: 'rgba(255,255,255,0.12)',
+    brand: '#6C8F96',
+    brandText: '#8AB6BF',
+    brandSubtle: '#314242',
+    brandOn: '#FFFFFF',
+    success: '#8BD481',
+    live: '#8BD481',
+    liveSubtle: 'rgba(139,212,129,0.12)',
+    warning: '#F2B33D',
+    warningSubtle: 'rgba(242,179,61,0.13)',
+    danger: '#FFB0B0',
+    dangerSubtle: 'rgba(255,176,176,0.08)',
+    purple: '#B39DDB',
+    grade: ['#8E8E93', '#FF5252', '#EF9A9A', '#FFF59D', '#C5E1A5', '#A5D6A7'],
+    tabBar: '#1A1A1A' as string | undefined,
+  },
+};
 
-export const Fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const Themes = { native, android } as const;
+
+export type Palette = typeof native.light & { style: ThemeStyle; scheme: 'light' | 'dark' };
+
+export function palette(style: ThemeStyle, scheme: 'light' | 'dark'): Palette {
+  return { ...Themes[style][scheme], style, scheme } as Palette;
+}
 
 export const Spacing = {
   half: 2,
@@ -73,9 +132,7 @@ export const Spacing = {
 export const Radius = {
   sm: 8,
   md: 12,
-  lg: 16,
-  xl: 22,
+  lg: 20,
+  xl: 30,
+  pill: 90,
 } as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;

@@ -48,3 +48,12 @@ example
 # AI tooling (local only, never commit)
 AGENTS.md
 .claude/
+
+# Local research/spec notes (never commit)
+research/
+
+# docs and licenses from the template, never commit
+LICENSE
+*.md
+docs/
+.vscode/

@@ -1,9 +1,10 @@
-import { Colors } from '@/constants/theme';
-import { useResolvedScheme } from '@/providers/preferences';
+import { useMemo } from 'react';
 
-// Colours for the active scheme. The scheme comes from the user's theme override (which
-// falls back to the system setting), not straight from the OS.
-export function useTheme() {
-  const scheme = useResolvedScheme();
-  return Colors[scheme];
+import { palette, type Palette } from '@/constants/theme';
+import { usePreferences } from '@/providers/preferences';
+
+// colours for the current look and scheme
+export function useTheme(): Palette {
+  const { resolvedScheme, themeStyle } = usePreferences();
+  return useMemo(() => palette(themeStyle, resolvedScheme), [themeStyle, resolvedScheme]);
 }

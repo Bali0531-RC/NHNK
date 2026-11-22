@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSFaceIDUsageDescription": "Az NHNK a Face ID-val oldja fel az alkalmazást.",
+    "NSPhotoLibraryUsageDescription": "Az NHNK csak a kiválasztott képeket csatolja a számonkérésekhez."
+  }
+}

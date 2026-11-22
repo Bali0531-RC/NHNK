@@ -14,8 +14,7 @@ type Props = {
   onSelect: (institute: Institute) => void;
 };
 
-// Native page sheet with a live-filtered list. The list is fetched each time it opens, so
-// a failed first load retries simply by reopening.
+// list refetches on every open so a failed load just needs a reopen
 export function InstitutionPicker({ visible, onClose, onSelect }: Props) {
   const c = useTheme();
   const { t } = useI18n();
@@ -26,9 +25,6 @@ export function InstitutionPicker({ visible, onClose, onSelect }: Props) {
   useEffect(() => {
     if (!visible) return;
     let active = true;
-    setQuery('');
-    setFailed(false);
-    setInstitutes(null);
     fetchInstitutes()
       .then((list) => {
         if (!active) return;
@@ -38,8 +34,12 @@ export function InstitutionPicker({ visible, onClose, onSelect }: Props) {
       .catch(() => {
         if (active) setFailed(true);
       });
+    // Reset on close so the next open starts fresh (and a failed load retries).
     return () => {
       active = false;
+      setQuery('');
+      setFailed(false);
+      setInstitutes(null);
     };
   }, [visible]);
 

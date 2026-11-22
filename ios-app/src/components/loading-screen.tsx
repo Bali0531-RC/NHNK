@@ -6,8 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 const logo = require('../../assets/images/nhnk-logo.png');
 
-// Shown only while the stored session is being read on launch. Kept to the logo and a
-// spinner so it reads as an instant hand-off, not a screen.
+// launch splash while the session loads, nothing fancy
 export function LoadingScreen() {
   const c = useTheme();
   return (

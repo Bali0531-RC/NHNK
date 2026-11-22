@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSFaceIDUsageDescription": "NHNK entsperrt die App mit Face ID.",
+    "NSPhotoLibraryUsageDescription": "NHNK hängt nur die ausgewählten Fotos an deine Prüfungen an."
+  }
+}

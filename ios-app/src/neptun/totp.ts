@@ -1,9 +1,7 @@
-// RFC 6238 TOTP, ported from the Flutter app's totp.dart. A stored authenticator secret
-// lets the app answer Neptun's 2FA prompt on silent re-login instead of making the user
-// retype a code every time the ~5 minute session dies.
+// RFC 6238 TOTP ported from totp.dart
 
-import { hmac } from '@noble/hashes/hmac';
-import { sha1 } from '@noble/hashes/sha1';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha1 } from '@noble/hashes/legacy.js';
 
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -23,8 +21,7 @@ export function decodeBase32(secret: string): Uint8Array | null {
     if (bitsLeft >= 8) {
       bitsLeft -= 8;
       out.push((buffer >> bitsLeft) & 0xff);
-      // Only the low bitsLeft bits are ever read again; masking keeps buffer inside 32-bit
-      // range for long secrets, which the Dart big-int version did not have to worry about.
+      // mask so long secrets dont overflow 32 bits
       buffer &= (1 << bitsLeft) - 1;
     }
   }

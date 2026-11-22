@@ -1,6 +1,4 @@
-// Credential and session store. Everything auth-related lives in the iOS Keychain through
-// expo-secure-store. The stored password and TOTP secret are what let the app re-login
-// silently after the ~5 minute token dies, exactly as the Flutter app does.
+// all auth stuff in the keychain, stored password + totp let us re-login silently
 
 import * as SecureStore from 'expo-secure-store';
 
@@ -16,8 +14,7 @@ const K = {
   fallbacks: 'nhnk.fallbacks',
 } as const;
 
-// SecureStore keys allow only [A-Za-z0-9._-], and Neptun codes are alphanumeric, so this
-// only has to neutralise the odd stray character.
+// securestore keys are picky, strip the odd char
 function deviceCookieKey(username: string): string {
   return 'nhnk.deviceCookie.' + username.toUpperCase().replace(/[^A-Za-z0-9]/g, '_');
 }
@@ -35,8 +32,7 @@ async function set(key: string, value: string | null): Promise<void> {
     if (value == null) await SecureStore.deleteItemAsync(key);
     else await SecureStore.setItemAsync(key, value);
   } catch {
-    // A write that fails (locked keychain, backup restore) must not crash the flow; the
-    // caller treats missing stored state as "log in again".
+    // failed keychain write shouldnt crash anything, caller just logs in again
   }
 }
 

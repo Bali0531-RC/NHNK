@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSFaceIDUsageDescription": "NHNK uses Face ID to unlock the app.",
+    "NSPhotoLibraryUsageDescription": "NHNK only attaches the photos you pick to your tests and quizzes."
+  }
+}

@@ -1,17 +1,14 @@
-// Neptun auth client, ported from api_coms.dart (InstitutesRequest + _APIRequest).
-// Modern API only for now: Account/Authenticate and Account/GetNewTokens. Legacy
-// (.aspx / MobileService.svc) institutions are detected and reported, not yet driven.
+// neptun auth, ported from api_coms.dart. legacy .aspx schools just get told no for now
 
 import { base64Ascii, fetchWithTimeout, parseSetCookie } from './http';
+import { log } from './log';
 import { Store } from './storage';
+import { neptunLcid } from './lang';
 import { generateTotp } from './totp';
 import type { Institute, LoginOutcome } from './types';
 
-const LCID = 1038; // Hungarian. The web client sends this and Neptun echoes locale from it.
 
-// Strips the bits of a stored institution URL that are not the API origin: a trailing
-// slash, a /login(.aspx) page, a /MobileService.svc suffix. Returns whether the URL named
-// a legacy (.aspx) endpoint, which routes to a different API.
+// cleans an institution url down to the api origin and flags legacy endpoints
 export function normalizeInstituteUrl(rawUrl: string): { baseUrl: string; isAspx: boolean } {
   let url = rawUrl.trim();
   if (url.endsWith('/')) url = url.slice(0, -1);
@@ -26,8 +23,7 @@ function deviceCookieHeader(username: string, value: string): string {
   return `devicecookie-${base64Ascii(username.toUpperCase())}=${value}`;
 }
 
-// Pulls Neptun's own explanation out of the `notification` envelope, which separates a
-// locked account or an expired password from a plain wrong password.
+// neptuns own reason, so a locked account isnt shown as a wrong password
 function serverMessageFrom(decoded: unknown): string | null {
   if (typeof decoded !== 'object' || decoded === null) return null;
   const notifications = (decoded as Record<string, unknown>).notification;
@@ -50,8 +46,7 @@ function serverMessageFrom(decoded: unknown): string | null {
   return messages.length === 0 ? null : messages.join(' ');
 }
 
-// Best-effort cookie capture. On iOS these are usually invisible to fetch and the native
-// store replays them for us, so a miss here is not a failure.
+// best effort, ios mostly hides cookies from fetch anyway
 async function captureCookies(response: Response, username: string): Promise<void> {
   const parsed = parseSetCookie(response.headers.get('set-cookie'));
   if (parsed.deviceCookie) await Store.setDeviceCookie(username, parsed.deviceCookie);
@@ -70,7 +65,7 @@ async function postAuthenticate(
     captcha: '',
     captchaIdentifier: '',
     token,
-    LCID,
+    LCID: await neptunLcid(),
   });
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -102,62 +97,74 @@ async function authenticateModern(
     const data = json?.data;
     const is2fa = data != null && (data.isTwoFactorRequired === true || data.requiresTwoFactor === true);
 
-    // A refused request must never open the code prompt: asking for codes against
-    // credentials the server already rejected is what burns attempts and locks accounts.
+    // never ask for a code after a rejected password, thats how accounts get locked
     if (is2fa && raw.status < 400) {
+      log.info('login', 'server requires 2FA');
       await Store.setInstituteUrl(baseUrl);
 
       const secret = await Store.getTotpSecret();
       if (secret) {
         const code = generateTotp(secret);
-        if (code && (await submitTwoFactorCode(username, password, code))) {
+        if (code && (await submitTwoFactorCode(username, password, code)).ok) {
+          log.info('login', 'auto-2FA (stored TOTP) accepted');
           await persistSuccess(baseUrl, username, password);
           return { kind: 'ok' };
         }
+        log.warn('login', 'auto-2FA with stored TOTP did not pass; asking for a code');
       }
       return { kind: 'twoFactor' };
     }
 
     if (data?.accessToken) {
+      log.info('login', 'authenticated (modern, no 2FA)');
       await Store.setAccessToken(data.accessToken);
       await persistSuccess(baseUrl, username, password);
       return { kind: 'ok' };
     }
 
+    log.warn('login', message ? `rejected: ${message}` : `rejected (HTTP ${raw.status}, no accessToken)`);
     return { kind: 'failed', message };
-  } catch {
+  } catch (err) {
     // Never reached the server, or an unparseable answer. Not the same as wrong password.
+    log.error('login', 'network or parse failure during Authenticate', err);
     return { kind: 'network' };
   }
 }
 
 // Second leg of 2FA: the same Authenticate endpoint with the code in `token`.
-export async function submitTwoFactorCode(
-  username: string,
-  password: string,
-  code: string,
-): Promise<boolean> {
-  try {
-    const baseUrl = await Store.getInstituteUrl();
-    if (!baseUrl) return false;
+export type TwoFactorResult = { ok: true } | { ok: false; reason: 'rejected' | 'network' | 'server'; message: string | null };
 
-    const raw = await postAuthenticate(baseUrl, username, password, code);
+// neptun's own (localized) rejection text goes back to the screen, never into the log
+export async function submitTwoFactorCode(username: string, password: string, code: string): Promise<TwoFactorResult> {
+  const baseUrl = await Store.getInstituteUrl();
+  if (!baseUrl) return { ok: false, reason: 'rejected', message: null };
+  let raw: Response;
+  try {
+    raw = await postAuthenticate(baseUrl, username, password, code);
+  } catch (err) {
+    log.error('login', '2FA submit failed', err);
+    return { ok: false, reason: 'network', message: null };
+  }
+  try {
     const json: any = await raw.json().catch(() => null);
     await captureCookies(raw, username);
-
     if (json?.data?.accessToken) {
+      log.info('login', '2FA code accepted');
       await Store.setAccessToken(json.data.accessToken);
       await persistSuccess(baseUrl, username, password);
-      return true;
+      return { ok: true };
     }
-  } catch {
-    // fall through to false
+    log.warn('login', `2FA code rejected (${raw.status})`);
+    if (raw.status >= 500) return { ok: false, reason: 'server', message: null };
+    const msg = [json?.message, json?.errorMessage, json?.data?.message].find((m) => typeof m === 'string' && m.trim());
+    return { ok: false, reason: 'rejected', message: msg ? String(msg).trim() : null };
+  } catch (err) {
+    log.error('login', '2FA answer unreadable', err);
+    return { ok: false, reason: 'server', message: null };
   }
-  return false;
 }
 
-// Renews the access token without 2FA, using the access token plus the session cookie.
-// Either one alone is rejected. New token sits at the root here, not under `data`.
+// renew without 2fa. needs token AND session cookie, either alone gets rejected
 export async function getNewTokens(): Promise<boolean> {
   try {
     const accessToken = await Store.getAccessToken();
@@ -186,7 +193,10 @@ export async function getNewTokens(): Promise<boolean> {
       headers,
       body: '{}',
     });
-    if (raw.status !== 200) return false;
+    if (raw.status !== 200) {
+      log.warn('auth', `GetNewTokens HTTP ${raw.status}`);
+      return false;
+    }
 
     const json: any = await raw.json().catch(() => null);
     const newToken = json?.accessToken ?? json?.data?.accessToken;
@@ -195,20 +205,21 @@ export async function getNewTokens(): Promise<boolean> {
       if (username) await captureCookies(raw, username);
       return true;
     }
-  } catch {
-    // fall through to false
+    log.warn('auth', 'GetNewTokens: no token in response');
+  } catch (err) {
+    log.warn('auth', 'GetNewTokens request failed', err);
   }
   return false;
 }
 
-// Entry point used by the login screen. Handles the DEMO account, records the failover
-// pool, normalizes the URL and routes modern vs legacy.
+// login entry: demo, failover pool, url cleanup, modern vs legacy
 export async function login(
   institute: Institute,
   username: string,
   password: string,
 ): Promise<LoginOutcome> {
   if (username === 'DEMO' && password === 'DEMO') {
+    log.info('login', 'demo account');
     await Store.setIsDemo(true);
     await Store.setUsername('DEMO');
     return { kind: 'ok' };
@@ -218,22 +229,21 @@ export async function login(
 
   const { baseUrl, isAspx } = normalizeInstituteUrl(institute.url);
   if (isAspx) {
-    // Legacy MobileService.svc login is not ported yet. Reported plainly so a student at
-    // one of these schools is not left staring at a generic failure.
-    return { kind: 'failed', message: 'This institution still uses the legacy Neptun API, which is not supported yet.' };
+    // legacy login not ported, at least say so instead of a generic error
+    log.warn('login', 'legacy (.aspx / MobileService.svc) institution, not supported yet');
+    return { kind: 'failed', message: null, legacy: true };
   }
 
+  log.info('login', 'authenticating against modern /api');
   return authenticateModern(baseUrl, username, password);
 }
 
-// Last-resort re-login with the stored password, used only after a token refresh has
-// already failed. One attempt; the caller (renewSession) must never loop on the result,
-// since each failure is a password attempt Neptun counts toward a lockout.
-export async function reauthenticate(): Promise<boolean> {
+// one shot password re-login after renewal failed. NEVER loop this, neptun counts every miss
+export async function reauthenticate(): Promise<LoginOutcome['kind'] | 'noPassword'> {
   const username = await Store.getUsername();
   const password = await Store.getPassword();
   const baseUrl = await Store.getInstituteUrl();
-  if (!username || !password || !baseUrl) return false;
+  if (!username || !password || !baseUrl) return 'noPassword';
   const outcome = await authenticateModern(baseUrl, username, password);
-  return outcome.kind === 'ok';
+  return outcome.kind;
 }

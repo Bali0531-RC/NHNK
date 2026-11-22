@@ -7,17 +7,33 @@
     "icon": "./assets/images/icon.png",
     "scheme": "nhnk",
     "userInterfaceStyle": "automatic",
+    "updates": {
+      "url": "https://u.expo.dev/32a26541-e8d4-4bf7-9d26-f26a8ea313e1"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "bundleIdentifier": "hu.bmx.nhnk",
       "supportsTablet": false,
       "infoPlist": {
         "CFBundleDisplayName": "NHNK",
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true,
         "CFBundleLocalizations": [
           "hu",
-          "en"
+          "en",
+          "de"
         ]
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
       }
+    },
+    "locales": {
+      "hu": "./locales/hu.json",
+      "en": "./locales/en.json",
+      "de": "./locales/de.json"
     },
     "plugins": [
       "expo-router",
@@ -32,7 +48,30 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Az NHNK a Face ID-val oldja fel az alkalmazást."
+        }
+      ],
+      "expo-web-browser",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#6C8F96"
+        }
+      ],
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Az NHNK csak a kiválasztott képeket csatolja a számonkérésekhez.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

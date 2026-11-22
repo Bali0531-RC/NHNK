@@ -1,5 +1,4 @@
-// The institution list is not bundled; it is a JSON file in the NHNK repo so new schools
-// can be added without an app release. Same source the Flutter app reads.
+// institution list lives in the nhnk repo, no app release needed for new schools
 
 import { fetchWithTimeout } from './http';
 import type { Institute } from './types';
