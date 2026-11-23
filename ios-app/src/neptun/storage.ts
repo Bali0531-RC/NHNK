@@ -27,10 +27,30 @@ async function get(key: string): Promise<string | null> {
   }
 }
 
+// the background sync runs with the phone locked, the default when unlocked made every token read come back empty
+export const KEYCHAIN: SecureStore.SecureStoreOptions = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
+const MIGRATED = 'nhnk.keychain.v2';
+
+// rewrites old items in place with the new accessibility, runs once while the app is open and unlocked
+export async function migrateKeychain(extra: string[]): Promise<void> {
+  try {
+    if ((await SecureStore.getItemAsync(MIGRATED)) === '1') return;
+    const username = await get(K.username);
+    const keys = [...Object.values(K), ...extra, ...(username ? [deviceCookieKey(username)] : [])];
+    for (const k of keys) {
+      const v = await SecureStore.getItemAsync(k);
+      if (v != null) await SecureStore.setItemAsync(k, v, KEYCHAIN);
+    }
+    await SecureStore.setItemAsync(MIGRATED, '1', KEYCHAIN);
+  } catch {
+    // try again next launch
+  }
+}
+
 async function set(key: string, value: string | null): Promise<void> {
   try {
     if (value == null) await SecureStore.deleteItemAsync(key);
-    else await SecureStore.setItemAsync(key, value);
+    else await SecureStore.setItemAsync(key, value, KEYCHAIN);
   } catch {
     // failed keychain write shouldnt crash anything, caller just logs in again
   }

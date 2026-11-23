@@ -6,7 +6,7 @@ import { DividerLabel, EmptyCard, QueryScreen, ScreenTitle } from '@/components/
 import { AlteredBanner, GradeBadge, mm, StatsCard, SubjectQuickMenu } from '@/components/subject-parts';
 import { Card, SkeletonList } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { useClassEnds } from '@/hooks/use-class-ends';
+import { useClassEnds, type CourseKind } from '@/hooks/use-class-ends';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useNeptunQuery } from '@/hooks/use-neptun-query';
 import { useOverrides } from '@/hooks/use-overrides';
@@ -108,10 +108,14 @@ function SubjectCard({
   onChange: (patch: Override | null) => void;
 }) {
   const c = useTheme();
-  const { tx } = useI18n();
+  const { tx, lang } = useI18n();
   const { selection } = useHaptics();
   const e = effective(s, override);
-  const minute = useClassEnds().minuteOf(s.name);
+  const ends = useClassEnds().minutesOf(s.name);
+  const kindName = (k: CourseKind) => (lang === 'de' ? tx.v2.subjects.classEnd.kinds[k] : tx.v2.subjects.classEnd.kinds[k].toLowerCase());
+  const endLabel = ends.length
+    ? tx.v2.subjects.classEnd.badge(ends.map((x) => (x.kind === 'all' ? `:${mm(x.minute)}` : `${kindName(x.kind)} :${mm(x.minute)}`)).join(', '))
+    : '';
 
   return (
     <Animated.View entering={FadeInDown.duration(250).delay(Math.min(index, 10) * 30)} layout={LinearTransition}>
@@ -126,7 +130,7 @@ function SubjectCard({
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>{s.name}</Text>
             <Text numberOfLines={1} style={{ color: c.textSecondary, fontSize: 13 }}>
-              {[tx.subjects.creditCount(s.credit), s.requirement, s.code, minute === null ? '' : tx.v2.subjects.classEnd.badge(mm(minute))]
+              {[tx.subjects.creditCount(s.credit), s.requirement, s.code, endLabel]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>

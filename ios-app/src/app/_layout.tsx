@@ -15,6 +15,7 @@ import { I18nProvider } from '@/i18n';
 import { useNotificationSync } from '@/lib/notifications';
 import { useReviewPrompt } from '@/lib/review';
 import { needsInstallWipe, prepareInstall } from '@/lib/wipe';
+import { migrateKeychain } from '@/neptun/storage';
 import LoginScreen from './login';
 import { AppLockProvider, useAppLock } from '@/providers/app-lock';
 import { AuthProvider, useAuth } from '@/providers/auth';
@@ -26,7 +27,9 @@ export default function RootLayout() {
   // fresh install drops the keychain leftovers first, otherwise a reinstall skips onboarding and auto logs in
   const [ready, setReady] = useState(!needsInstallWipe);
   useEffect(() => {
-    void prepareInstall().finally(() => setReady(true));
+    void prepareInstall()
+      .finally(() => setReady(true))
+      .then(() => migrateKeychain(['nhnk.prefs.v2', 'nhnk.pref.lang']));
   }, []);
   if (!ready) return null;
   return (

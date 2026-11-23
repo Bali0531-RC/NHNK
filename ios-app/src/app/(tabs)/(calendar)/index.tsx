@@ -40,10 +40,10 @@ import { useTerm } from '@/hooks/use-term';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
 import { DAY_MS, fmtDate, fmtDuration, hhmm, sameDay } from '@/lib/format';
-import { genderOf, pickCheer, type Who } from '@/lib/cheer';
+import { pickCheer } from '@/lib/cheer';
 import { defaultExamTime, examsFor, isLoose, useExams, type ManualExam } from '@/lib/exams';
 import { iosMajor } from '@/lib/ios';
-import { firstStudyWeekMs, getPeriods, getProfile, getSubjects, getWeek, mondayOf, type ClassEntry, type PeriodEntry } from '@/neptun/data';
+import { firstStudyWeekMs, getPeriods, getSubjects, getWeek, mondayOf, type ClassEntry, type PeriodEntry } from '@/neptun/data';
 import { usePreferences } from '@/providers/preferences';
 
 const FALLBACK_WEEKS = 14;
@@ -123,8 +123,6 @@ export default function CalendarScreen() {
   const subjects = useNeptunQuery(termId ? `subjects.${termId}` : null, () => getSubjects(termId ?? ''));
   const allExams = useExams();
   const { endFor } = useClassEnds();
-  const profile = useNeptunQuery('profile', getProfile);
-  const who = genderOf(profile.data?.rows);
   const looseOn = (dayMs: number) => allExams.filter((x) => isLoose(x) && sameDay(x.atMs, dayMs));
   const doneTitles = new Set((subjects.data ?? []).filter((x) => x.completed).map((x) => norm(x.name)));
   const { refreshing, onRefresh } = useRefresh(() => Promise.all([week.refresh(), prev.refresh(), next.refresh(), periods.refresh()]));
@@ -306,7 +304,6 @@ export default function CalendarScreen() {
               refreshing={refreshing}
               onRefresh={onRefresh}
               doneTitles={doneTitles}
-              who={who}
             />
           </View>
         ))}
@@ -420,7 +417,6 @@ function DayPage({
   refreshing,
   onRefresh,
   doneTitles,
-  who,
 }: {
   dayMs: number;
   events: ClassEntry[] | null;
@@ -433,7 +429,6 @@ function DayPage({
   refreshing: boolean;
   onRefresh: () => void;
   doneTitles: Set<string>;
-  who: Who;
 }) {
   const c = useTheme();
   const { tx, lang } = useI18n();
@@ -494,7 +489,7 @@ function DayPage({
         const gap = e.startMs - before.endMs;
         rows.push(<Gap key={`gap-${e.id}`} cubes={between(before.endMs, e.startMs)} minutes={gap >= 15 * 60000 ? gap : 0} />);
       }
-      rows.push(<EventCard key={e.id} e={e} now={now} index={i} who={who} />);
+      rows.push(<EventCard key={e.id} e={e} now={now} index={i} />);
     });
     const tail = live.length ? between(live[live.length - 1].endMs, Infinity) : [];
     if (tail.length) rows.push(<Gap key="gap-tail" cubes={tail} />);
@@ -591,13 +586,13 @@ function Gap({ cubes, minutes = 0 }: { cubes: ClassEntry[]; minutes?: number }) 
         </Pressable>
       ))}
       {minutes ? (
-        <Text style={{ color: c.textTertiary, fontSize: 12 }}>{tx.calendar.breakFor(fmtDuration(minutes).replace(':00', ''))}</Text>
+        <Text style={{ color: c.textTertiary, fontSize: 12 }}>{tx.calendar.breakFor(Math.floor(Math.round(minutes / 60000) / 60), Math.round(minutes / 60000) % 60)}</Text>
       ) : null}
     </View>
   );
 }
 
-function EventCard({ e, now, index, who }: { e: ClassEntry; now: number; index: number; who: Who }) {
+function EventCard({ e, now, index }: { e: ClassEntry; now: number; index: number }) {
   const c = useTheme();
   const { tx } = useI18n();
   const { selection } = useHaptics();
@@ -610,7 +605,7 @@ function EventCard({ e, now, index, who }: { e: ClassEntry; now: number; index: 
     e.kind === 'exam' ? tx.calendar.exam : e.kind === 'task' ? tx.calendar.task : e.kind === 'other' ? tx.v2.calendar.officeHours : e.courseType;
   const exams = examsFor(useExams(), { title: e.title, startMs: e.startMs, instance: e.classInstanceId });
   const flagged = exams.length > 0 && !past;
-  const cheer = live && e.kind === 'class' ? pickCheer(tx.v2.cheer, who, e.id, e.endMs - now) : null;
+  const cheer = live && e.kind === 'class' ? pickCheer(tx.v2.cheer, e.id, e.endMs - now) : null;
 
   return (
     <Animated.View entering={FadeInDown.duration(260).delay(index * 40)}>

@@ -5,6 +5,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useState, type Rea
 import { useColorScheme } from 'react-native';
 
 import type { ThemeStyle } from '@/constants/theme';
+import { KEYCHAIN } from '@/neptun/storage';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -120,7 +121,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     setPrefs((p) => {
       const next = { ...p, [key]: value };
       snapshot = next;
-      SecureStore.setItemAsync(KEY, JSON.stringify(next)).catch(() => {});
+      SecureStore.setItemAsync(KEY, JSON.stringify(next), KEYCHAIN).catch(() => {});
       return next;
     });
   }, []);

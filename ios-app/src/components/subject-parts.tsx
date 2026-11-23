@@ -8,7 +8,7 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanim
 import { CreditGauge } from '@/components/credit-gauge';
 import { Card } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
-import { realEnd, useClassEnds } from '@/hooks/use-class-ends';
+import { COURSE_KINDS, realEnd, useClassEnds, type CourseKind } from '@/hooks/use-class-ends';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTheme } from '@/hooks/use-theme';
 import { useI18n } from '@/i18n';
@@ -192,17 +192,15 @@ export function SubjectQuickMenu({
   const { tx } = useI18n();
   const { selection } = useHaptics();
   const { minuteOf, setMinute } = useClassEnds();
-  const minute = minuteOf(s.name);
   const t = tx.v2.subjects.classEnd;
   const set = (patch: Override | null) => {
     selection();
     onChange(patch);
   };
-  const setEnd = (m: number | null) => {
+  const setEnd = (m: number | null, kind: CourseKind) => {
     selection();
-    setMinute(s, m);
+    setMinute(s, m, kind);
   };
-  const quick = minute === null || QUICK_MINUTES.includes(minute) ? QUICK_MINUTES : [...QUICK_MINUTES, minute].sort((a, b) => a - b);
   return (
     <Host matchContents colorScheme={c.scheme}>
       <Menu label="" systemImage="ellipsis.circle">
@@ -220,12 +218,20 @@ export function SubjectQuickMenu({
           <Button label={tx.v2.subjects.restore} systemImage="arrow.uturn.backward" role="destructive" onPress={() => set(null)} />
         ) : null}
         <Divider />
-        <Menu label={minute === null ? t.title : `${t.title} :${mm(minute)}`} systemImage="clock">
-          {quick.map((m) => (
-            <Button key={m} label={`:${mm(m)}`} systemImage={m === minute ? 'checkmark' : undefined} onPress={() => setEnd(m)} />
-          ))}
-          <Divider />
-          <Button label={t.neptun} systemImage={minute === null ? 'checkmark' : undefined} onPress={() => setEnd(null)} />
+        <Menu label={t.title} systemImage="clock">
+          {COURSE_KINDS.map((k) => {
+            const minute = minuteOf(s.name, k);
+            const quick = minute === null || QUICK_MINUTES.includes(minute) ? QUICK_MINUTES : [...QUICK_MINUTES, minute].sort((a, b) => a - b);
+            return (
+              <Menu key={k} label={minute === null ? t.kinds[k] : `${t.kinds[k]} :${mm(minute)}`}>
+                {quick.map((m) => (
+                  <Button key={m} label={`:${mm(m)}`} systemImage={m === minute ? 'checkmark' : undefined} onPress={() => setEnd(m, k)} />
+                ))}
+                <Divider />
+                <Button label={t.neptun} systemImage={minute === null ? 'checkmark' : undefined} onPress={() => setEnd(null, k)} />
+              </Menu>
+            );
+          })}
         </Menu>
       </Menu>
     </Host>
@@ -238,7 +244,8 @@ export function ClassEndCard({ s }: { s: SubjectEntry }) {
   const { tx } = useI18n();
   const { selection } = useHaptics();
   const { minuteOf, setMinute } = useClassEnds();
-  const minute = minuteOf(s.name);
+  const [kind, setKind] = useState<CourseKind>('all');
+  const minute = minuteOf(s.name, kind);
   const t = tx.v2.subjects.classEnd;
   const sample = new Date(2026, 0, 5, 10, 0).getTime();
   return (
@@ -246,11 +253,25 @@ export function ClassEndCard({ s }: { s: SubjectEntry }) {
       <Text style={{ color: c.textSecondary, fontSize: 13, lineHeight: 18 }}>{t.hint}</Text>
       <Host matchContents={{ vertical: true }} colorScheme={c.scheme} style={{ alignSelf: 'stretch' }}>
         <Picker
+          selection={kind}
+          onSelectionChange={(v: string) => {
+            selection();
+            setKind(v as CourseKind);
+          }}
+          modifiers={[pickerStyle('segmented')]}>
+          {COURSE_KINDS.map((k) => (
+            <SText key={k} modifiers={[tag(k)]}>{t.kinds[k]}</SText>
+          ))}
+        </Picker>
+      </Host>
+      {kind === 'all' ? <Text style={{ color: c.textTertiary, fontSize: 12, lineHeight: 16 }}>{t.kindHint}</Text> : null}
+      <Host matchContents={{ vertical: true }} colorScheme={c.scheme} style={{ alignSelf: 'stretch' }}>
+        <Picker
           selection={minute ?? -1}
           onSelectionChange={(v: number) => {
             if (v === (minute ?? -1)) return;
             selection();
-            setMinute(s, v < 0 ? null : v);
+            setMinute(s, v < 0 ? null : v, kind);
           }}
           modifiers={[pickerStyle('wheel')]}>
           <SText modifiers={[tag(-1)]}>{t.neptun}</SText>
@@ -270,7 +291,7 @@ export function ClassEndCard({ s }: { s: SubjectEntry }) {
             role="destructive"
             onPress={() => {
               selection();
-              setMinute(s, null);
+              setMinute(s, null, kind);
             }}
           />
         </Host>

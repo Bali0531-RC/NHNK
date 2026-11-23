@@ -5,7 +5,7 @@ import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-n
 
 import { DetailList, EmptyCard, QueryScreen } from '@/components/screen';
 import { Card, Segmented, SkeletonList } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useHaptics } from '@/hooks/use-haptics';
 import type { Query } from '@/hooks/use-neptun-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,9 +16,22 @@ import type { ListItem } from '@/neptun/data';
 type Sym = ComponentProps<typeof SymbolView>['name'];
 
 export type ItemTab = { key: string; label: string; query: Query<ListItem[]>; icon: Sym };
+export type ItemAction = { label: string; onPress: () => void };
 
 // segmented neptun records, cards unfold every field
-export function ItemTabs({ tabs, empty, hint, dateLabel }: { tabs: ItemTab[]; empty: string; hint?: string; dateLabel?: (d: string) => string }) {
+export function ItemTabs({
+  tabs,
+  empty,
+  hint,
+  dateLabel,
+  action,
+}: {
+  tabs: ItemTab[];
+  empty: string;
+  hint?: string;
+  dateLabel?: (d: string) => string;
+  action?: ItemAction;
+}) {
   const c = useTheme();
   const [active, setActive] = useState(tabs[0].key);
   const tab = tabs.find((x) => x.key === active) ?? tabs[0];
@@ -35,13 +48,25 @@ export function ItemTabs({ tabs, empty, hint, dateLabel }: { tabs: ItemTab[]; em
       }>
       {items.length === 0 ? <EmptyCard text={empty} icon={tab.icon} /> : null}
       {items.map((it, i) => (
-        <ItemCard key={`${tab.key}-${it.id}`} item={it} icon={tab.icon} index={i} dateLabel={dateLabel} />
+        <ItemCard key={`${tab.key}-${it.id}`} item={it} icon={tab.icon} index={i} dateLabel={dateLabel} action={action} />
       ))}
     </QueryScreen>
   );
 }
 
-function ItemCard({ item, icon, index, dateLabel }: { item: ListItem; icon: Sym; index: number; dateLabel?: (d: string) => string }) {
+function ItemCard({
+  item,
+  icon,
+  index,
+  dateLabel,
+  action,
+}: {
+  item: ListItem;
+  icon: Sym;
+  index: number;
+  dateLabel?: (d: string) => string;
+  action?: ItemAction;
+}) {
   const c = useTheme();
   const { lang } = useI18n();
   const { selection } = useHaptics();
@@ -78,9 +103,29 @@ function ItemCard({ item, icon, index, dateLabel }: { item: ListItem; icon: Sym;
             </View>
             <SymbolView name={open ? 'chevron.up' : 'chevron.down'} tintColor={c.textTertiary} size={12} />
           </View>
-          {open && item.rows.length ? (
-            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
-              <DetailList rows={item.rows} />
+          {open && (item.rows.length || action) ? (
+            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={{ gap: Spacing.two }}>
+              {item.rows.length ? <DetailList rows={item.rows} /> : null}
+              {action ? (
+                <Pressable
+                  onPress={() => {
+                    selection();
+                    action.onPress();
+                  }}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: Spacing.two,
+                    backgroundColor: c.brand,
+                    borderRadius: Radius.pill,
+                    paddingVertical: 10,
+                    opacity: pressed ? 0.7 : 1,
+                  })}>
+                  <SymbolView name="safari" tintColor="#FFFFFF" size={16} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{action.label}</Text>
+                </Pressable>
+              ) : null}
             </Animated.View>
           ) : null}
         </Card>

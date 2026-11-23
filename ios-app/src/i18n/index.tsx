@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { setNeptunLang } from '@/neptun/lang';
+import { KEYCHAIN } from '@/neptun/storage';
 
 import { appStrings, type AppStrings } from './app-strings';
 import { strings, type Lang, type Strings } from './strings';
@@ -42,14 +43,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback((l: Lang) => {
     setNeptunLang(l);
     setLangState(l);
-    SecureStore.setItemAsync(KEY_LANG, l).catch(() => {});
+    SecureStore.setItemAsync(KEY_LANG, l, KEYCHAIN).catch(() => {});
   }, []);
 
   const toggle = useCallback(() => {
     setLangState((l) => {
       const next = ORDER[(ORDER.indexOf(l) + 1) % ORDER.length];
       queueMicrotask(() => setNeptunLang(next));
-      SecureStore.setItemAsync(KEY_LANG, next).catch(() => {});
+      SecureStore.setItemAsync(KEY_LANG, next, KEYCHAIN).catch(() => {});
       return next;
     });
   }, []);
