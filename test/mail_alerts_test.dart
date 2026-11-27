@@ -138,4 +138,40 @@ void main() {
     await MailAlerts.notify([mail('retry')]);
     expect(shown, hasLength(1));
   });
+
+  test('mail cache serialization avoids NUL bytes and still reads legacy entries', () async {
+    final entry = api.MailEntry('[NEPTUN] Tárgy', 'Szöveg', 'Feladó', 123456, false, 'msg-42');
+    final encoded = entry.toString();
+    expect(encoded.contains('\u0000'), isFalse);
+
+    final decoded = api.MailEntry('', '', '', 0, false, '').fillWithExisting(encoded);
+    expect(decoded.subject, '[NEPTUN] Tárgy');
+    expect(decoded.detail, 'Szöveg');
+    expect(decoded.senderName, 'Feladó');
+    expect(decoded.sendDateMs, 123456);
+    expect(decoded.isRead, isFalse);
+    expect(decoded.ID, 'msg-42');
+
+    final legacy = api.MailEntry('', '', '', 0, false, '')
+        .fillWithExisting('[NEPTUN] Régi\u0000Szöveg\u0000Feladó\u0000999\u0000true\u0000legacy-1');
+    expect(legacy.subject, '[NEPTUN] Régi');
+    expect(legacy.isRead, isTrue);
+    expect(legacy.ID, 'legacy-1');
+  });
+
+  test('institute server failover does not re-notify for the same message', () async {
+    await MailAlerts.notify([mail('failover-msg')]);
+    await storage.DataCache.setInstituteUrl('https://ws03.example.invalid/hallgato');
+    await MailAlerts.notify([mail('failover-msg')]);
+    expect(shown, hasLength(1));
+  });
+
+  test('writeCache purges stale CachedMails slots beyond the new length', () async {
+    await MailAlerts.writeCache([mail('m0'), mail('m1'), mail('m2')], 3, 3);
+    await MailAlerts.writeCache([mail('m0')], 1, 1);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('CachedMails_0'), isNotNull);
+    expect(prefs.getString('CachedMails_1'), isNull);
+    expect(prefs.getString('CachedMails_2'), isNull);
+  });
 }

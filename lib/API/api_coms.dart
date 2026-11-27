@@ -3019,10 +3019,27 @@ class CashinEntry{
 
     @override
     String toString() {
-      return '$subject\u0000$detail\u0000$senderName\u0000$sendDateMs\u0000$isRead\u0000$ID';
+      return conv.jsonEncode([subject, detail, senderName, sendDateMs, isRead, ID]);
     }
 
     MailEntry fillWithExisting(String existing){
+      final trimmed = existing.trimLeft();
+      if (trimmed.startsWith('[')) {
+        try {
+          final decoded = conv.jsonDecode(existing);
+          if (decoded is List && decoded.length >= 6) {
+            subject = decoded[0]?.toString() ?? '';
+            detail = decoded[1]?.toString() ?? '';
+            senderName = decoded[2]?.toString() ?? '';
+            sendDateMs = (decoded[3] is int)
+                ? decoded[3] as int
+                : int.tryParse(decoded[3]?.toString() ?? '0') ?? 0;
+            isRead = decoded[4] == true || decoded[4]?.toString() == 'true';
+            ID = decoded[5]?.toString() ?? '';
+            return this;
+          }
+        } catch (_) {}
+      }
       var data = existing.split('\u0000');
       if(data.isEmpty || data.length < 6){
         return this;
